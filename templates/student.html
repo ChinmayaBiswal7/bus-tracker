@@ -192,6 +192,15 @@
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <style>
+        /* Hide the default instruction box of routing machine */
+        .leaflet-routing-container {
+            display: none !important;
+        }
+    </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 
     <!-- Firebase SDK & Logic -->
@@ -356,8 +365,8 @@
             }
         }
 
-        // Throttle API calls to avoid banning (1 request per 2 seconds)
-        let lastRouteUpdate = 0;
+        // Routing Machine Control
+        let routingControl = null;
 
         function startTrackingRoute(busId) {
             targetBusId = busId;
@@ -368,13 +377,19 @@
         function stopTrackingRoute() {
             targetBusId = null;
             tripCard.classList.add('hidden');
+
+            if (routingControl) {
+                map.removeControl(routingControl);
+                routingControl = null;
+            }
+            // Remove legacy lines just in case
             if (routeLine) {
                 map.removeLayer(routeLine);
                 routeLine = null;
             }
         }
 
-        async function updateRoute() {
+        function updateRoute() {
             if (!targetBusId || !markers[targetBusId]) return;
 
             // If we don't have user location yet
@@ -385,51 +400,53 @@
                 return;
             }
 
-            const now = Date.now();
-            if (now - lastRouteUpdate < 2000) return; // Throttling
-            lastRouteUpdate = now;
-
             const busMarker = markers[targetBusId];
             const busLatLng = busMarker.getLatLng();
+            const waypoints = [
+                L.latLng(userLat, userLng),
+                L.latLng(busLatLng.lat, busLatLng.lng)
+            ];
 
-            // OSRM API (Drive Mode)
-            const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${busLatLng.lng},${busLatLng.lat}?overview=full&geometries=geojson`;
-
-            try {
+            if (routingControl) {
+                // Update existing route
+                routingControl.setWaypoints(waypoints);
+            } else {
+                // Create new route control
                 tripDist.textContent = "Calculating...";
                 tripCard.classList.remove('hidden');
-                const response = await fetch(url);
-                const data = await response.json();
 
-                if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
-                    tripDist.textContent = "No route";
-                    return;
-                }
-
-                const route = data.routes[0];
-                const geometry = route.geometry;
-                const durationMins = Math.ceil(route.duration / 60);
-                const distanceKm = (route.distance / 1000).toFixed(1);
-
-                // 1. Draw Actual Road Line
-                if (routeLine) map.removeLayer(routeLine);
-
-                routeLine = L.geoJSON(geometry, {
-                    style: {
-                        color: '#3b82f6', // Blue-500
-                        weight: 5,
-                        opacity: 0.8,
-                        lineCap: 'round'
-                    }
+                routingControl = L.Routing.control({
+                    waypoints: waypoints,
+                    router: L.Routing.osrmv1({
+                        serviceUrl: 'https://router.project-osrm.org/route/v1'
+                    }),
+                    lineOptions: {
+                        styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }]
+                    },
+                    createMarker: function () { return null; }, // Don't create default markers
+                    addWaypoints: false,
+                    draggableWaypoints: false,
+                    fitSelectedRoutes: false,
+                    show: false // Hide instructions
                 }).addTo(map);
 
-                // 2. Update UI
-                tripEta.textContent = `${durationMins} min`;
-                tripDist.textContent = `(${distanceKm} km)`;
+                // Listen for results
+                routingControl.on('routesfound', function (e) {
+                    const routes = e.routes;
+                    const summary = routes[0].summary;
+                    // summary.totalDistance (meters), summary.totalTime (seconds)
 
-            } catch (err) {
-                console.error("Routing Error:", err);
-                tripDist.textContent = "Route error";
+                    const durationMins = Math.ceil(summary.totalTime / 60);
+                    const distanceKm = (summary.totalDistance / 1000).toFixed(1);
+
+                    tripEta.textContent = `${durationMins} min`;
+                    tripDist.textContent = `(${distanceKm} km)`;
+                });
+
+                routingControl.on('routingerror', function (e) {
+                    console.error("LRM Error:", e);
+                    tripDist.textContent = "Route error";
+                });
             }
         }
 
@@ -504,7 +521,6 @@
             refreshMap();
         }
 
-        // Listener for server search results
         // Listener for server search results
         socket.on('search_result', (data) => {
             if (data.status === 'offline' || data.status === 'not_found') {
