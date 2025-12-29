@@ -383,11 +383,12 @@
                         const signalEl = document.getElementById('accVal');
 
                         // ... (Accuracy check)
-                        if (accuracy > 30 && !allowLowAccuracy) {
-                            signalEl.textContent = "WEAK";
-                            signalEl.className = "text-yellow-500 font-bold mono animate-pulse";
+                        // Relaxed threshold: > 200m is considered "Unusable", 30-200m is "Weak but Usable"
+                        if (accuracy > 200 && !allowLowAccuracy) {
+                            signalEl.textContent = "VERY WEAK";
+                            signalEl.className = "text-red-500 font-bold mono animate-pulse";
                             if (warningModal.classList.contains('hidden')) warningModal.classList.remove('hidden');
-                            log(`Signal Weak (${Math.round(accuracy)}m). Waiting...`);
+                            log(`Signal Too Weak (${Math.round(accuracy)}m). Waiting...`);
                             return;
                         }
 
@@ -399,7 +400,8 @@
                             liveBadge.textContent = "GPS LIVE";
                             liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
                         } else {
-                            signalEl.textContent = "WEAK (OK)";
+                            // Weak but sending
+                            signalEl.textContent = `WEAK (${Math.round(accuracy)}m)`;
                             signalEl.className = "text-yellow-500 font-bold mono";
                             liveBadge.textContent = "LIVE (WEAK)";
                             liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-yellow-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
