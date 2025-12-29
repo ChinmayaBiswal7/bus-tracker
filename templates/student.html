@@ -160,6 +160,36 @@
         </div>
     </div>
 
+    <!-- Trip Info Card (GPS Tracking) -->
+    <div id="trip-info-card"
+        class="fixed bottom-6 left-4 right-4 z-[2000] hidden md:left-1/2 md:w-96 md:-translate-x-1/2">
+        <div
+            class="bg-slate-900/90 backdrop-blur-md border border-slate-700/50 p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider mb-0.5">ESTIMATED ARRIVAL</p>
+                    <div class="flex items-baseline gap-2">
+                        <span id="trip-eta" class="text-xl font-bold text-white">-- min</span>
+                        <span id="trip-dist" class="text-xs text-slate-400">(-- km)</span>
+                    </div>
+                </div>
+            </div>
+            <button onclick="stopTrackingRoute()"
+                class="p-2 hover:bg-white/10 rounded-full text-slate-400 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </div>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
@@ -286,6 +316,107 @@
         }).addTo(map);
 
         const socket = io();
+
+        // GPS & Routing State
+        let userMarker = null;
+        let routeLine = null;
+        let targetBusId = null;
+        let userLat = null, userLng = null;
+        const tripCard = document.getElementById('trip-info-card');
+        const tripEta = document.getElementById('trip-eta');
+        const tripDist = document.getElementById('trip-dist');
+
+        // User Location Icon
+        const userIcon = L.divIcon({
+            className: 'custom-user-icon',
+            html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg pulse-ring"></div>`,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+
+        // Initialize Geolocation
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    userLat = pos.coords.latitude;
+                    userLng = pos.coords.longitude;
+                    updateUserMarker(userLat, userLng);
+                    if (targetBusId) updateRoute();
+                },
+                (err) => console.error("GPS Error:", err),
+                { enableHighAccuracy: true }
+            );
+        }
+
+        function updateUserMarker(lat, lng) {
+            if (userMarker) {
+                userMarker.setLatLng([lat, lng]);
+            } else {
+                userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+            }
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        function startTrackingRoute(busId) {
+            targetBusId = busId;
+            tripCard.classList.remove('hidden');
+            updateRoute();
+        }
+
+        function stopTrackingRoute() {
+            targetBusId = null;
+            tripCard.classList.add('hidden');
+            if (routeLine) {
+                map.removeLayer(routeLine);
+                routeLine = null;
+            }
+        }
+
+        function updateRoute() {
+            if (!targetBusId || !userLat || !markers[targetBusId]) return;
+
+            const busMarker = markers[targetBusId];
+            const busLatLng = busMarker.getLatLng();
+
+            // 1. Draw Line
+            const latlngs = [
+                [userLat, userLng],
+                [busLatLng.lat, busLatLng.lng]
+            ];
+
+            if (routeLine) {
+                routeLine.setLatLngs(latlngs);
+            } else {
+                routeLine = L.polyline(latlngs, {
+                    color: '#3b82f6', // Blue-500
+                    weight: 4,
+                    opacity: 0.8,
+                    dashArray: '10, 10',
+                    lineCap: 'round'
+                }).addTo(map);
+            }
+
+            // 2. Calc ETA
+            const distKm = calculateDistance(userLat, userLng, busLatLng.lat, busLatLng.lng);
+            const speedKmh = 25; // Assume average speed in city
+            const timeHours = distKm / speedKmh;
+            const timeMins = Math.ceil(timeHours * 60);
+
+            // 3. Update UI
+            tripEta.textContent = `${timeMins} min`;
+            tripDist.textContent = `(${distKm.toFixed(1)} km)`;
+        }
+
         const markers = {};
         const circles = {};
         let currentFilter = "";
@@ -320,7 +451,22 @@
             currentFilter = val;
             offlineResult = null; // Reset offline result
 
+            // Logic to auto-select matching bus
+            let foundSid = null;
             if (val) {
+                for (let sid in markers) {
+                    if (markers[sid]._busNo === val) {
+                        foundSid = sid;
+                        break;
+                    }
+                }
+
+                if (foundSid) {
+                    startTrackingRoute(foundSid);
+                    // Optional: Center map
+                    // map.setView(markers[foundSid].getLatLng(), 15);
+                }
+
                 statusP.innerHTML = `<span>Filtered:</span> <b class="text-white">${val}</b> <button onclick="clearFilter()" class="ml-auto text-red-400 hover:text-red-300 text-xs underline">Reset</button>`;
                 statusP.classList.remove('hidden');
 
@@ -328,6 +474,7 @@
                 socket.emit('search_bus', val);
             } else {
                 clearFilter();
+                stopTrackingRoute();
             }
             refreshMap(); // Refresh immediately for local filtering
         }
@@ -337,6 +484,7 @@
             trackInput.value = "";
             offlineResult = null;
             statusP.classList.add('hidden');
+            stopTrackingRoute();
             refreshMap();
         }
 
@@ -491,6 +639,12 @@
             } else {
                 const marker = L.marker([lat, lng], { icon: createBusIcon(bus_no) });
                 marker._busNo = bus_no;
+
+                // Click to track route
+                marker.on('click', () => {
+                    startTrackingRoute(sid);
+                });
+
                 markers[sid] = marker;
 
                 const circle = L.circle([lat, lng], {
@@ -507,6 +661,11 @@
                     marker.addTo(map);
                     circle.addTo(map);
                 }
+            }
+
+            // Update route if this is the target bus
+            if (targetBusId === sid) {
+                updateRoute();
             }
         }
     </script>
