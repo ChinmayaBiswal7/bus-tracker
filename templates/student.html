@@ -16,9 +16,6 @@
         }
 
         #map {
-            height: 100vh;
-            width: 100%;
-            z-index: 1;
             /* Dark Mode Map Filter */
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
         }
@@ -37,13 +34,14 @@
     </style>
 </head>
 
-<body class="h-screen w-screen overflow-hidden relative bg-slate-900">
+<body class="h-screen w-screen overflow-hidden relative bg-slate-900 flex flex-col md:flex-row">
 
-    <div id="map"></div>
-
-    <!-- Overlay UI -->
-    <div
-        class="absolute top-4 left-4 right-4 md:right-auto md:w-80 z-[1000] glass-panel rounded-2xl p-5 text-white transition-all duration-300 transform max-h-[90vh] flex flex-col">
+    <!-- Sidebar / Overlay UI -->
+    <div class="absolute top-4 left-4 right-4 z-[1000] 
+                md:static md:z-0 md:w-96 md:h-full md:flex-shrink-0
+                glass-panel rounded-2xl md:rounded-none md:border-r md:border-y-0 md:border-l-0 border-slate-700
+                p-5 text-white transition-all duration-300 transform 
+                max-h-[90vh] md:max-h-full flex flex-col h-auto md:h-full shadow-2xl">
 
         <!-- Header & Nav -->
         <div class="flex items-center justify-between mb-4 shrink-0">
@@ -116,6 +114,9 @@
                 <p class="text-xs text-slate-500 text-center py-4 italic">Scanning for active buses...</p>
             </div>
         </div>
+
+        <!-- Map Container -->
+        <div id="map" class="absolute inset-0 z-0 md:static md:flex-1 md:h-full w-full h-full"></div>
     </div>
 
     <!-- Leaflet JS -->
