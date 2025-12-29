@@ -64,6 +64,14 @@
                 // Update username
                 const nameEl = document.getElementById('user-display-name');
                 if (nameEl) nameEl.textContent = user.displayName || user.email.split('@')[0];
+
+                // Fix Leaflet sizing issue (Map loads grey if init while hidden)
+                setTimeout(() => {
+                    if (window.map) {
+                        window.map.invalidateSize();
+                        console.log("Map resized");
+                    }
+                }, 100);
             } else {
                 // No user is signed in
                 console.log("Auth Guard: No user, redirecting...");
