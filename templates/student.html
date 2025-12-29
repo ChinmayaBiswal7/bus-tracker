@@ -77,6 +77,27 @@
 
         <p class="text-xs text-slate-400 mb-4">Welcome, <span class="text-blue-400 font-bold">{{ username }}</span></p>
 
+        <!-- Sidebar Menu Items -->
+        <div class="space-y-2 mb-6">
+            <button onclick="openAnnouncements()"
+                class="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700 hover:border-blue-500/50 transition-all group">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="p-2 bg-amber-500/20 rounded-lg text-amber-500 group-hover:text-amber-400 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z">
+                            </path>
+                        </svg>
+                    </div>
+                    <span class="font-bold text-slate-200 text-sm">Announcements</span>
+                </div>
+                <!-- Unread Badge -->
+                <span id="badge-count"
+                    class="hidden min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-red-500/20 ring-2 ring-slate-900 transform scale-100 transition-all">0</span>
+            </button>
+        </div>
+
         <!-- Search -->
         <div class="relative mb-4 shrink-0">
             <input type="text" id="trackInput" placeholder="Find bus (e.g. 42)"
@@ -133,6 +154,26 @@
         </div>
     </div>
 
+    <!-- Announcements Overlay -->
+    <div id="announcement-overlay"
+        class="fixed inset-0 z-[3000] bg-slate-900/95 backdrop-blur-xl hidden flex flex-col transition-all duration-300 transform scale-100 opacity-100">
+        <!-- Header -->
+        <div class="p-4 border-b border-slate-800 flex items-center gap-4 bg-slate-900 shadow-xl shrink-0">
+            <button onclick="closeAnnouncements()"
+                class="p-2 -ml-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+            <h2 class="text-lg font-bold text-white tracking-tight">Announcements</h2>
+        </div>
+
+        <!-- List -->
+        <div id="full-announcement-list" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            <!-- Items injected by JS -->
+        </div>
+    </div>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
@@ -160,30 +201,105 @@
         const textEl = document.getElementById('announcement-text');
         const metaEl = document.getElementById('announcement-meta');
 
-        // Real-time listener for latest announcement
-        const q = query(collection(db, "announcements"), orderBy("timestamp", "desc"), limit(1));
+        // Real-time listener for announcements (Last 50)
+        const q = query(collection(db, "announcements"), orderBy("timestamp", "desc"), limit(50));
+        let announcementsData = [];
+        const badgeEl = document.getElementById('badge-count');
+        const overlayEl = document.getElementById('announcement-overlay');
+        const listEl = document.getElementById('full-announcement-list');
+
         onSnapshot(q, (snapshot) => {
+            announcementsData = [];
             if (!snapshot.empty) {
-                const data = snapshot.docs[0].data();
-                textEl.textContent = data.message;
+                // Store data
+                snapshot.forEach(doc => {
+                    announcementsData.push(doc.data());
+                });
 
-                // Format timestamp
+                // 1. Update Latest Box (Keep existing functionality)
+                const latest = announcementsData[0];
+                textEl.textContent = latest.message;
                 let timeStr = "RECENT";
-                if (data.timestamp) {
-                    const date = data.timestamp.toDate();
+                if (latest.timestamp) {
+                    const date = latest.timestamp.toDate();
                     timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    // If older than 24h, show date
-                    if (Date.now() - date.getTime() > 86400000) {
-                        timeStr = date.toLocaleDateString();
-                    }
+                    if (Date.now() - date.getTime() > 86400000) timeStr = date.toLocaleDateString();
                 }
-
                 metaEl.textContent = `ANNOUNCEMENT • ${timeStr}`;
                 container.classList.remove('hidden');
+
+                // 2. Update Unread Badge
+                updateBadge();
+
             } else {
                 container.classList.add('hidden');
             }
         });
+
+        function updateBadge() {
+            const lastRead = localStorage.getItem('lastReadTime');
+            let unread = 0;
+
+            if (!lastRead) {
+                unread = announcementsData.length;
+            } else {
+                const lastDate = new Date(lastRead);
+                unread = announcementsData.filter(d => d.timestamp && d.timestamp.toDate() > lastDate).length;
+            }
+
+            if (unread > 0) {
+                badgeEl.textContent = unread > 9 ? '9+' : unread;
+                badgeEl.classList.remove('hidden');
+            } else {
+                badgeEl.classList.add('hidden');
+            }
+        }
+
+        window.openAnnouncements = function () {
+            // Show Overlay
+            overlayEl.classList.remove('hidden');
+
+            // Render List
+            listEl.innerHTML = '';
+            announcementsData.forEach(data => {
+                let dateStr = "Just now";
+                let fullDateStr = "";
+                if (data.timestamp) {
+                    const d = data.timestamp.toDate();
+                    dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    fullDateStr = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                }
+
+                const authorName = data.bus_no ? `Bus ${data.bus_no}` : (data.author || "Driver");
+
+                const item = document.createElement('div');
+                item.className = "bg-slate-800/50 border border-slate-700 rounded-xl p-4";
+                item.innerHTML = `
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center text-xs">🚌</div>
+                            <div>
+                                <p class="font-bold text-slate-200 text-sm">${authorName}</p>
+                                <p class="text-[10px] text-slate-500">${fullDateStr} • ${dateStr}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-slate-300 text-sm leading-relaxed">${data.message}</p>
+                `;
+                listEl.appendChild(item);
+            });
+
+            // Mark as read
+            localStorage.setItem('lastReadTime', new Date().toISOString());
+            updateBadge();
+
+            // Close Sidebar on mobile for better UX
+            if (window.innerWidth < 768) toggleSidebar();
+        }
+
+        window.closeAnnouncements = function () {
+            overlayEl.classList.add('hidden');
+        }
 
         // Sidebar Toggle Logic
         window.toggleSidebar = function () {
