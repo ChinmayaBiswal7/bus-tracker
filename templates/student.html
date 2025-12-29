@@ -604,6 +604,7 @@
             if (markers[sid] && map.hasLayer(markers[sid])) {
                 const ll = markers[sid].getLatLng();
                 map.flyTo(ll, 16);
+                startTrackingRoute(sid); // Start Ola-style tracking
             }
         };
 
