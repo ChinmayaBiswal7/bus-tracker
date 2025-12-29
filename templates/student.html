@@ -300,35 +300,44 @@
         const app = window.firebaseApp || initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Real-time listener for announcements (Last 50)
-        const q = query(collection(db, "announcements"), orderBy("timestamp", "desc"), limit(50));
-        let announcementsData = [];
+        // --- Refactored Announcement Logic (Hierarchical) ---
         const badgeEl = document.getElementById('badge-count');
         const overlayEl = document.getElementById('announcement-overlay');
         const listEl = document.getElementById('full-announcement-list');
 
-        onSnapshot(q, (snapshot) => {
-            announcementsData = [];
-            if (!snapshot.empty) {
-                // Store data
-                snapshot.forEach(doc => {
-                    announcementsData.push(doc.data());
-                });
+        // 1. Listen for Active Buses (Categories)
+        const qBuses = query(collection(db, "announcements"), orderBy("last_updated", "desc"));
+        let activeBuses = [];
+        let unsubscribeMessages = {}; // Store unsubscribe functions for message listeners
 
-                // Update Unread Badge
-                updateBadge();
-            }
+        onSnapshot(qBuses, (snapshot) => {
+            activeBuses = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                activeBuses.push({ id: doc.id, ...data });
+            });
+            updateBadge();
         });
 
         function updateBadge() {
-            const lastRead = localStorage.getItem('lastReadTime');
+            if (!badgeEl) return;
+            const lastReadStr = localStorage.getItem('lastReadTime');
             let unread = 0;
 
-            if (!lastRead) {
-                unread = announcementsData.length;
+            if (!activeBuses.length) {
+                badgeEl.classList.add('hidden');
+                return;
+            }
+
+            if (!lastReadStr) {
+                unread = activeBuses.length;
             } else {
-                const lastDate = new Date(lastRead);
-                unread = announcementsData.filter(d => d.timestamp && d.timestamp.toDate() > lastDate).length;
+                const lastRead = new Date(lastReadStr);
+                // Count buses updated after lastRead
+                unread = activeBuses.filter(bus => {
+                    if (!bus.last_updated) return false;
+                    return bus.last_updated.toDate() > lastRead;
+                }).length;
             }
 
             if (unread > 0) {
@@ -340,49 +349,115 @@
         }
 
         window.openAnnouncements = function () {
-            // Show Overlay
             overlayEl.classList.remove('hidden');
+            renderBusList();
 
-            // Render List
-            listEl.innerHTML = '';
-            announcementsData.forEach(data => {
-                let dateStr = "Just now";
-                let fullDateStr = "";
-                if (data.timestamp) {
-                    const d = data.timestamp.toDate();
-                    dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                    fullDateStr = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                }
-
-                const authorName = data.bus_no ? `Bus ${data.bus_no}` : (data.author || "Driver");
-
-                const item = document.createElement('div');
-                item.className = "bg-slate-800/50 border border-slate-700 rounded-xl p-4";
-                item.innerHTML = `
-                    <div class="flex items-start justify-between mb-2">
-                        <div class="flex items-center gap-2">
-                            <div class="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center text-xs">🚌</div>
-                            <div>
-                                <p class="font-bold text-slate-200 text-sm">${authorName}</p>
-                                <p class="text-[10px] text-slate-500">${fullDateStr} • ${dateStr}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="text-slate-300 text-sm leading-relaxed">${data.message}</p>
-                `;
-                listEl.appendChild(item);
-            });
-
-            // Mark as read
+            // Mark read when opening
             localStorage.setItem('lastReadTime', new Date().toISOString());
             updateBadge();
 
-            // Close Sidebar on mobile for better UX
             if (window.innerWidth < 768) toggleSidebar();
         }
 
         window.closeAnnouncements = function () {
             overlayEl.classList.add('hidden');
+            // Cleanup message listeners to save bandwidth? 
+            // For now, we keep them active while app is open or we could unsubscribe here.
+        }
+
+        function renderBusList() {
+            listEl.innerHTML = '';
+
+            if (activeBuses.length === 0) {
+                listEl.innerHTML = '<p class="text-slate-500 text-center italic mt-4">No active announcements channels.</p>';
+                return;
+            }
+
+            activeBuses.forEach(bus => {
+                // Bus Container (Accordion)
+                const busStr = bus.bus_no || bus.id;
+
+                const container = document.createElement('div');
+                container.className = "border border-slate-700 rounded-xl overflow-hidden mb-2 transition-all";
+                container.id = `bus-container-${bus.id}`;
+
+                // Header
+                const header = document.createElement('div');
+                header.className = "flex items-center justify-between p-4 bg-slate-800/80 hover:bg-slate-800 cursor-pointer";
+                header.onclick = () => toggleBusSection(bus.id);
+                header.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center text-xs">🚌</div>
+                        <span class="font-bold text-slate-200 text-sm">${busStr}</span>
+                    </div>
+                    <svg id="arrow-${bus.id}" class="w-5 h-5 text-slate-500 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                `;
+
+                // Content Area (Hidden by default)
+                const content = document.createElement('div');
+                content.id = `content-${bus.id}`;
+                content.className = "hidden bg-slate-900/50 p-4 space-y-3 min-h-[50px]";
+                content.innerHTML = '<div class="text-center text-xs text-slate-500 py-2"><span class="animate-pulse">Loading messages...</span></div>';
+
+                container.appendChild(header);
+                container.appendChild(content);
+                listEl.appendChild(container);
+            });
+        }
+
+        window.toggleBusSection = function (busId) {
+            const content = document.getElementById(`content-${busId}`);
+            const arrow = document.getElementById(`arrow-${busId}`);
+
+            if (content.classList.contains('hidden')) {
+                // Open
+                content.classList.remove('hidden');
+                arrow.classList.add('rotate-180');
+                loadMessagesForBus(busId);
+            } else {
+                // Close
+                content.classList.add('hidden');
+                arrow.classList.remove('rotate-180');
+            }
+        }
+
+        function loadMessagesForBus(busId) {
+            if (unsubscribeMessages[busId]) return; // Already listening
+
+            const contentDiv = document.getElementById(`content-${busId}`);
+            const qMsgs = query(collection(db, "announcements", busId, "messages"), orderBy("timestamp", "desc"), limit(20));
+
+            const unsub = onSnapshot(qMsgs, (snapshot) => {
+                if (snapshot.empty) {
+                    contentDiv.innerHTML = '<p class="text-xs text-slate-500 text-center italic">No messages yet.</p>';
+                } else {
+                    contentDiv.innerHTML = ''; // Clear loading
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        renderMessage(contentDiv, data);
+                    });
+                }
+            });
+
+            unsubscribeMessages[busId] = unsub;
+        }
+
+        function renderMessage(container, data) {
+            let dateStr = "Just now";
+            if (data.timestamp) {
+                const d = data.timestamp.toDate();
+                dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', ' + d.toLocaleDateString();
+            }
+
+            const item = document.createElement('div');
+            item.className = "bg-slate-800/40 border-l-2 border-blue-500 pl-3 py-1";
+            item.innerHTML = `
+                <p class="text-slate-300 text-sm leading-relaxed mb-1">${data.message}</p>
+                <p class="text-[10px] text-slate-500">${dateStr}</p>
+            `;
+            container.appendChild(item);
         }
 
         // Sidebar Toggle Logic
