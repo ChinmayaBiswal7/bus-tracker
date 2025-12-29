@@ -745,6 +745,22 @@
             });
         }
 
+        function createEvIcon(busNo) {
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style="position: relative;">
+                        <div style="background-color: #10b981; width: 40px; height: 40px; border-radius: 50%; border: 3px solid #064e3b; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">
+                            <span style="font-size: 20px;">🛺</span>
+                        </div>
+                        <div style="background: #064e3b; color: white; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 10px; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); white-space: nowrap; border: 1px solid #10b981; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
+                            ${busNo}
+                        </div>
+                       </div>`,
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+        }
+
         const trackInput = document.getElementById('trackInput');
         const statusP = document.getElementById('tracking-status');
 
@@ -821,73 +837,93 @@
             return busNo.includes(currentFilter);
         }
 
+
+
+        function renderBusCard(sid, marker) {
+            const isEv = marker._busNo.startsWith("EV-");
+            const typeIcon = isEv ? "⚡" : "🚌";
+            const typeColor = isEv ? "text-emerald-400" : "text-blue-100";
+            const iconBg = isEv ? "bg-emerald-900/50" : "bg-blue-900/50";
+            const activeColor = isEv ? "text-emerald-400" : "text-green-400";
+            const activeBg = isEv ? "bg-emerald-500" : "bg-green-500";
+
+            if (marker.isOffline) {
+                // OFFLINE CARD
+                const timeLabel = timeAgo(marker.disconnectTime);
+                return `
+                <div class="group flex items-center justify-between p-3 bg-slate-800/20 rounded-xl border border-dashed border-slate-600 grayscale opacity-80 cursor-pointer" onclick="zoomToBus('${sid}')">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg">😴</div>
+                        <div>
+                            <p class="font-bold text-sm text-slate-300">${marker._busNo}</p>
+                            <p class="text-[10px] text-slate-500 font-bold">
+                                OFFLINE • ${timeLabel}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                `;
+            } else {
+                // ACTIVE CARD
+                return `
+                <div class="group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer" onclick="zoomToBus('${sid}')">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center text-lg">${typeIcon}</div>
+                        <div>
+                            <p class="font-bold text-sm ${typeColor}">${marker._busNo}</p>
+                            <p class="text-[10px] ${activeColor} font-bold flex items-center gap-1">
+                                <span class="w-1.5 h-1.5 rounded-full ${activeBg} animate-pulse"></span>
+                                ACTIVE NOW
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-xs text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        LOCATE →
+                    </div>
+                </div>
+                `;
+            }
+        }
+
         function updateBusList() {
             const listDiv = document.getElementById('bus-list');
             let visibleCount = 0;
             let html = '';
 
-            // 1. Show Active Buses
-            // 1. Show Buses (Active & Recently Offline)
+            // Separate Lists
+            let evHtml = '';
+            let busHtml = '';
+            let hasEv = false;
+            let hasBus = false;
+
             for (const [sid, marker] of Object.entries(markers)) {
                 if (shouldShow(marker._busNo)) {
                     visibleCount++;
-
-                    if (marker.isOffline) {
-                        // OFFLINE CARD
-                        const timeLabel = timeAgo(marker.disconnectTime);
-                        html += `
-                        <div class="group flex items-center justify-between p-3 bg-slate-800/20 rounded-xl border border-dashed border-slate-600 grayscale opacity-80 cursor-pointer" onclick="zoomToBus('${sid}')">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg">😴</div>
-                                <div>
-                                    <p class="font-bold text-sm text-slate-300">${marker._busNo}</p>
-                                    <p class="text-[10px] text-slate-500 font-bold">
-                                        OFFLINE • ${timeLabel}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        `;
+                    const card = renderBusCard(sid, marker);
+                    if (marker._busNo.startsWith("EV-")) {
+                        evHtml += card;
+                        hasEv = true;
                     } else {
-                        // ACTIVE CARD
-                        html += `
-                        <div class="group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer" onclick="zoomToBus('${sid}')">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center text-lg">🚌</div>
-                                <div>
-                                    <p class="font-bold text-sm text-blue-100">${marker._busNo}</p>
-                                    <p class="text-[10px] text-green-400 font-bold flex items-center gap-1">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                                        ACTIVE NOW
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="text-xs text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                LOCATE →
-                            </div>
-                        </div>
-                        `;
+                        busHtml += card;
+                        hasBus = true;
                     }
                 }
             }
 
-            // 2. Show Offline Result (Legacy Search - if not in map list)
-            if (currentFilter && visibleCount === 0) {
-                // ... (keep existing legacy search logic if needed, or rely on map markers)
-                // Keeping logic simple: if filter matches nothing in markers, we act as before
+            if (hasEv) {
+                html += `<div class="mb-2"><h3 class="text-[10px] bg-emerald-900/30 text-emerald-400 px-3 py-1 rounded-lg font-bold uppercase tracking-wider mb-2 border border-emerald-900/50">⚡ EV Shuttles</h3><div class="space-y-2">${evHtml}</div></div>`;
             }
 
-            // 3. Show Empty States
+            if (hasBus) {
+                html += `<div class="mb-2"><h3 class="text-[10px] bg-blue-900/30 text-blue-400 px-3 py-1 rounded-lg font-bold uppercase tracking-wider mb-2 border border-blue-900/50">🚌 Campus Buses</h3><div class="space-y-2">${busHtml}</div></div>`;
+            }
+
+            // Empty States
             if (visibleCount === 0) {
-                if (currentFilter) {
-                    // If we have an offline result, we showed it above. If not...
-                    if (!offlineResult) {
-                        html = '<p class="text-xs text-slate-500 text-center py-4 italic">Bus not found.</p>';
-                    }
-                } else {
-                    if (Object.keys(markers).length === 0) {
-                        html = '<p class="text-xs text-slate-500 text-center py-4 italic">No buses active...</p>';
-                    }
+                if (currentFilter && !offlineResult) {
+                    html = '<p class="text-xs text-slate-500 text-center py-4 italic">No matching vehicle found.</p>';
+                } else if (!currentFilter) {
+                    html = '<p class="text-xs text-slate-500 text-center py-4 italic">No active vehicles.</p>';
                 }
             }
 
@@ -981,7 +1017,8 @@
                 if (marker.isOffline) {
                     // Waking up! Reset to active state
                     marker.isOffline = false;
-                    marker.setIcon(createBusIcon(bus_no));
+                    const isEv = bus_no.startsWith('EV-');
+                    marker.setIcon(isEv ? createEvIcon(bus_no) : createBusIcon(bus_no));
                     console.log(`Bus ${bus_no} is back online!`);
                 }
                 marker.setLatLng([lat, lng]);
@@ -991,7 +1028,8 @@
                     circles[sid].setRadius(accuracy || 0);
                 }
             } else {
-                const marker = L.marker([lat, lng], { icon: createBusIcon(bus_no) });
+                const isEv = bus_no.startsWith('EV-');
+                const marker = L.marker([lat, lng], { icon: isEv ? createEvIcon(bus_no) : createBusIcon(bus_no) });
                 marker._busNo = bus_no;
 
                 // Click to track route

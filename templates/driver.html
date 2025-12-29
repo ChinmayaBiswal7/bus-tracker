@@ -124,9 +124,29 @@
         <h2 class="text-white text-2xl font-bold mb-1">Driver Console</h2>
         <p class="text-slate-400 text-sm mb-8">Manage your route visibility</p>
 
+        <!-- Vehicle Type Toggle -->
+        <div class="flex bg-slate-800/50 p-1 rounded-xl mb-6 border border-slate-700 w-full relative">
+            <div id="active-blob"
+                class="absolute top-1 left-1 w-[calc(50%-4px)] h-[calc(100%-8px)] bg-blue-600 rounded-lg transition-all duration-300 z-0">
+            </div>
+
+            <button id="btn-bus"
+                class="flex-1 py-3 text-sm font-bold text-white relative z-10 transition-colors flex items-center justify-center gap-2"
+                onclick="setMode('BUS')">
+                <span>🚌</span> BUS
+            </button>
+            <button id="btn-ev"
+                class="flex-1 py-3 text-sm font-bold text-slate-400 relative z-10 transition-colors flex items-center justify-center gap-2"
+                onclick="setMode('EV')">
+                <span>⚡</span> EV
+            </button>
+        </div>
+
         <!-- Input -->
         <div class="w-full relative group mb-6">
-            <input type="text" id="busInput" placeholder="BUS-XX"
+            <span id="prefix-label"
+                class="absolute left-0 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xl hidden ml-4">EV-</span>
+            <input type="text" id="busInput" placeholder="BUS NUMBER (e.g. 12)"
                 class="w-full bg-transparent border-b-2 border-slate-600 text-center text-3xl font-bold text-white py-2 focus:outline-none focus:border-blue-500 transition-colors placeholder-slate-700 uppercase tracking-widest mono">
         </div>
 
@@ -203,11 +223,51 @@
             const socket = io();
             let watchId = null;
             let isSharing = false;
-            let allowLowAccuracy = false; // By default, STRICT mode
+            let allowLowAccuracy = false;
+            let currentMode = 'BUS';
 
             const btn = document.getElementById('toggleBtn');
             const btnText = document.getElementById('btnText');
             const btnIcon = document.getElementById('btnIcon');
+
+            // Toggle Elements
+            const btnBus = document.getElementById('btn-bus');
+            const btnEv = document.getElementById('btn-ev');
+            const activeBlob = document.getElementById('active-blob');
+            const prefixLabel = document.getElementById('prefix-label');
+
+            window.setMode = function (mode) {
+                if (isSharing) return; // Lock while sharing
+                currentMode = mode;
+
+                if (mode === 'BUS') {
+                    activeBlob.style.transform = 'translateX(0)';
+                    activeBlob.classList.remove('bg-emerald-500');
+                    activeBlob.classList.add('bg-blue-600');
+
+                    btnBus.classList.add('text-white');
+                    btnBus.classList.remove('text-slate-400');
+                    btnEv.classList.remove('text-white');
+                    btnEv.classList.add('text-slate-400');
+
+                    busInput.placeholder = "BUS NUMBER (e.g. 12)";
+                    prefixLabel.classList.add('hidden');
+                    busInput.classList.remove('pl-16');
+                } else {
+                    activeBlob.style.transform = 'translateX(100%)'; // Move to right
+                    activeBlob.classList.remove('bg-blue-600');
+                    activeBlob.classList.add('bg-emerald-500');
+
+                    btnEv.classList.add('text-white');
+                    btnEv.classList.remove('text-slate-400');
+                    btnBus.classList.remove('text-white');
+                    btnBus.classList.add('text-slate-400');
+
+                    busInput.placeholder = "SHUTTLE ID (e.g. 01)";
+                    prefixLabel.classList.remove('hidden');
+                    busInput.classList.add('pl-16'); // Make room for "EV-"
+                }
+            }
 
             const liveBadge = document.getElementById('liveBadge');
             const statusRing = document.getElementById('statusRing');
@@ -217,12 +277,12 @@
             const speedVal = document.getElementById('speedVal');
             const accVal = document.getElementById('accVal');
 
-            // Modal Elements
+            // ... (keep modal vars)
             const warningModal = document.getElementById('warningModal');
             const btnProceed = document.getElementById('btnProceed');
             const btnExit = document.getElementById('btnExit');
 
-            // Modal Handlers
+            // ... (keep modal handlers)
             btnProceed.addEventListener('click', () => {
                 allowLowAccuracy = true;
                 warningModal.classList.add('hidden');
@@ -234,21 +294,37 @@
                 stopTracking();
             });
 
-            // const MIN_ACCURACY = 30; // meters - Strict filter // This is now handled by the modal logic
-
             function log(msg) {
                 debugDiv.textContent = msg;
             }
 
             btn.addEventListener('click', () => {
                 if (!isSharing) {
-                    const busNo = busInput.value.trim().toUpperCase();
-                    if (!busNo) {
+                    let inputVal = busInput.value.trim().toUpperCase();
+
+                    // Validation
+                    if (!inputVal) {
                         busInput.classList.add('animate-pulse', 'border-red-500');
                         setTimeout(() => busInput.classList.remove('animate-pulse', 'border-red-500'), 1000);
                         return;
                     }
-                    startTracking(busNo);
+
+                    // Format Bus Number based on Mode
+                    let finalBusNo = inputVal;
+                    if (currentMode === 'EV') {
+                        // Ensure it doesn't already have EV-
+                        if (!finalBusNo.startsWith('EV-')) {
+                            finalBusNo = 'EV-' + finalBusNo;
+                        }
+                    } else {
+                        // Standard Bus: Keep as is (or maybe prefix BUS- if you want, but sticking to legacy behavior: user types what they want)
+                        // Actually, legacy behavior was just passing input. Let's keep it flexible but maybe add BUS- if it's just a number?
+                        // User request: "bus 1, bus 2". If they type "12", let's keep it "12" or "BUS-12"? 
+                        // The user said "up to 10 buses", currently they type "BUS-01". 
+                        // Let's trust the user input for BUS, but enforce EV- for EV.
+                    }
+
+                    startTracking(finalBusNo);
                 } else {
                     stopTracking();
                 }
@@ -266,18 +342,30 @@
                 btn.classList.replace('bg-blue-600', 'bg-red-500');
                 btn.classList.replace('hover:bg-blue-500', 'hover:bg-red-600');
 
+                // Disable Mode Switch
+                document.getElementById('btn-bus').disabled = true;
+                document.getElementById('btn-ev').disabled = true;
+                if (currentMode === 'EV') activeBlob.classList.replace('bg-emerald-500', 'bg-emerald-700');
+                else activeBlob.classList.replace('bg-blue-600', 'bg-blue-800');
+
                 liveBadge.textContent = "INIT GPS";
                 liveBadge.classList.replace('bg-red-500', 'bg-blue-500');
                 statusRing.classList.remove('hidden');
+
+                // Color ring based on mode
+                if (currentMode === 'EV') {
+                    statusRing.style.boxShadow = '0 0 0 0 rgba(16, 185, 129, 0.7)'; // Emerald
+                }
 
                 busInput.disabled = true;
                 busInput.classList.add('opacity-50');
                 statsPanel.classList.remove('opacity-50');
 
                 isSharing = true;
-                allowLowAccuracy = false; // Reset permission
-                log(`Initializing GPS...`);
+                allowLowAccuracy = false;
+                log(`Initializing GPS (${busNo})...`);
 
+                // ... (GPS Logic remains same)
                 // Warm up GPS
                 navigator.geolocation.getCurrentPosition(() => { }, () => { }, { enableHighAccuracy: true, timeout: 1000, maximumAge: 0 });
 
@@ -286,29 +374,21 @@
                         if (!isSharing) return;
                         const { latitude, longitude, accuracy, speed, heading } = position.coords;
 
-                        // Update stats
+                        // ... (Stats update)
                         const speedKmh = speed ? (speed * 3.6).toFixed(1) : 0;
                         speedVal.textContent = speedKmh;
-
                         const signalEl = document.getElementById('accVal');
 
-                        // CHECK ACCURACY
+                        // ... (Accuracy check)
                         if (accuracy > 30 && !allowLowAccuracy) {
-                            // BAD SIGNAL & NO PERMISSION
                             signalEl.textContent = "WEAK";
                             signalEl.className = "text-yellow-500 font-bold mono animate-pulse";
-
-                            // Show Warning Modal if not already shown
-                            if (warningModal.classList.contains('hidden')) {
-                                warningModal.classList.remove('hidden');
-                            }
-
-                            log(`Signal Weak (${Math.round(accuracy)}m). Waiting for approval...`);
-                            return; // Block data
+                            if (warningModal.classList.contains('hidden')) warningModal.classList.remove('hidden');
+                            log(`Signal Weak (${Math.round(accuracy)}m). Waiting...`);
+                            return;
                         }
 
-                        // GOOD SIGNAL (OR ALLOWED BAD SIGNAL)
-                        warningModal.classList.add('hidden'); // Hide modal if it suddenly gets good
+                        warningModal.classList.add('hidden');
 
                         if (accuracy <= 30) {
                             signalEl.textContent = "GPS LOCKED";
@@ -316,7 +396,6 @@
                             liveBadge.textContent = "GPS LIVE";
                             liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
                         } else {
-                            // Approved weak signal
                             signalEl.textContent = "WEAK (OK)";
                             signalEl.className = "text-yellow-500 font-bold mono";
                             liveBadge.textContent = "LIVE (WEAK)";
@@ -357,6 +436,12 @@
                 btn.classList.replace('bg-red-500', 'bg-blue-600');
                 btn.classList.replace('hover:bg-red-600', 'hover:bg-blue-500');
 
+                // Re-enable toggle
+                document.getElementById('btn-bus').disabled = false;
+                document.getElementById('btn-ev').disabled = false;
+                if (currentMode === 'EV') activeBlob.classList.replace('bg-emerald-700', 'bg-emerald-500');
+                else activeBlob.classList.replace('bg-blue-800', 'bg-blue-600');
+
                 liveBadge.textContent = "Offline";
                 liveBadge.classList.replace('bg-green-500', 'bg-red-500');
                 liveBadge.classList.replace('bg-blue-500', 'bg-red-500');
@@ -375,27 +460,14 @@
                 socket.emit('driver_update', null);
             }
 
-            // Ensure we stop tracking if the user closes the tab/browser
+            // ... (keep beforeunload helper)
             window.addEventListener('beforeunload', () => {
                 if (isSharing) {
                     socket.emit('driver_update', null);
                 }
             });
-        </script>
-        <script type="module">
-            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-            import { getFirestore, collection, addDoc, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-            const firebaseConfig = {
-                apiKey: "AIzaSyAW7XS_Q_Kdh2eiYEaKBEHvZDpOk7-ynDg",
-                authDomain: "bustracker-c0af6.firebaseapp.com",
-                projectId: "bustracker-c0af6",
-                storageBucket: "bustracker-c0af6.firebasestorage.app",
-                messagingSenderId: "103145940746",
-                appId: "1:103145940746:web:80a8444bff23e75b94fcf3",
-                measurementId: "G-PKF72NB657"
-            };
-
+            // ... (keep Announcement Logic)
             const app = window.firebaseApp || initializeApp(firebaseConfig);
             const db = getFirestore(app);
 
@@ -403,6 +475,15 @@
             const inputAnnounce = document.getElementById('announceInput');
 
             btnAnnounce.addEventListener('click', async () => {
+                // ... (Original announcement logic, but we need to ensure it uses the ACTIVE busNo)
+                // The original logic read value from busInput. 
+                // Since busInput is disabled during tracking, we can still read it.
+                // However, we need to make sure we use the formatted one (with EV-).
+                // But the 'startTracking' function takes busNo as arg, it doesn't update the input value.
+                // We should probably update the input value or store the activeBusNo globally.
+                // Let's assume the driver types "01" and sees "EV-01" in their head, but the input says "01".
+                // We should construct the busNo again.
+
                 const msg = inputAnnounce.value.trim();
                 if (!msg) return;
 
@@ -411,18 +492,21 @@
                 btnAnnounce.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
                 btnAnnounce.disabled = true;
 
-                const busSelect = document.getElementById('busInput');
-                const busNo = busSelect.value || "General";
+                // Construct Bus No logic
+                let busNo = busInput.value.trim().toUpperCase();
+                if (currentMode === 'EV' && !busNo.startsWith('EV-')) {
+                    busNo = 'EV-' + busNo;
+                }
+                if (!busNo) busNo = "General"; // Fallback
 
                 try {
-                    // 1. Ensure Bus Document exists
+                    // ... (rest of logic same)
                     const busDocRef = doc(db, "announcements", busNo);
                     await setDoc(busDocRef, {
                         bus_no: busNo,
                         last_updated: serverTimestamp()
                     }, { merge: true });
 
-                    // 2. Add Message to Subcollection
                     await addDoc(collection(busDocRef, "messages"), {
                         message: msg,
                         timestamp: serverTimestamp(),
@@ -430,7 +514,6 @@
                         bus_no: busNo
                     });
                     inputAnnounce.value = "";
-                    // Success feedback
                     btnAnnounce.classList.replace('bg-amber-600', 'bg-green-600');
                     setTimeout(() => {
                         btnAnnounce.classList.replace('bg-green-600', 'bg-amber-600');
@@ -444,6 +527,7 @@
                     btnAnnounce.disabled = false;
                 }
             });
+
         </script>
 </body>
 
