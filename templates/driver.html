@@ -420,7 +420,7 @@
                         log("GPS Error: " + error.message);
                         if (error.code === 1) stopTracking();
                     },
-                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                    { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
                 );
             }
 
