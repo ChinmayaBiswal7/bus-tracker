@@ -77,6 +77,16 @@
 
         <p class="text-xs text-slate-400 mb-4">Welcome, <span class="text-blue-400 font-bold">{{ username }}</span></p>
 
+        <!-- Search -->
+        <div class="relative mb-6 shrink-0">
+            <input type="text" id="trackInput" placeholder="Find bus (e.g. 42)"
+                class="w-full bg-slate-700/50 border border-slate-600 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-blue-500 transition-colors uppercase placeholder-slate-500 h-11">
+            <button onclick="setFilter()"
+                class="absolute right-1.5 top-1.5 bottom-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 text-xs font-bold transition-colors">
+                GO
+            </button>
+        </div>
+
         <!-- Sidebar Menu Items -->
         <div class="space-y-2 mb-6">
             <button onclick="openAnnouncements()"
@@ -95,16 +105,6 @@
                 <!-- Unread Badge -->
                 <span id="badge-count"
                     class="hidden min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-red-500/20 ring-2 ring-slate-900 transform scale-100 transition-all">0</span>
-            </button>
-        </div>
-
-        <!-- Search -->
-        <div class="relative mb-4 shrink-0">
-            <input type="text" id="trackInput" placeholder="Find bus (e.g. 42)"
-                class="w-full bg-slate-700/50 border border-slate-600 rounded-xl py-2 pl-4 pr-12 text-sm focus:outline-none focus:border-blue-500 transition-colors uppercase placeholder-slate-500">
-            <button onclick="setFilter()"
-                class="absolute right-1 top-1 bottom-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-3 text-xs font-bold transition-colors">
-                GO
             </button>
         </div>
 
