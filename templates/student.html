@@ -375,7 +375,15 @@
         }
 
         async function updateRoute() {
-            if (!targetBusId || !userLat || !markers[targetBusId]) return;
+            if (!targetBusId || !markers[targetBusId]) return;
+
+            // If we don't have user location yet
+            if (!userLat) {
+                tripEta.textContent = "--";
+                tripDist.textContent = "Locating you...";
+                tripCard.classList.remove('hidden');
+                return;
+            }
 
             const now = Date.now();
             if (now - lastRouteUpdate < 2000) return; // Throttling
@@ -388,10 +396,15 @@
             const url = `https://router.project-osrm.org/route/v1/driving/${userLng},${userLat};${busLatLng.lng},${busLatLng.lat}?overview=full&geometries=geojson`;
 
             try {
+                tripDist.textContent = "Calculating...";
+                tripCard.classList.remove('hidden');
                 const response = await fetch(url);
                 const data = await response.json();
 
-                if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) return;
+                if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+                    tripDist.textContent = "No route";
+                    return;
+                }
 
                 const route = data.routes[0];
                 const geometry = route.geometry;
@@ -416,6 +429,7 @@
 
             } catch (err) {
                 console.error("Routing Error:", err);
+                tripDist.textContent = "Route error";
             }
         }
 
