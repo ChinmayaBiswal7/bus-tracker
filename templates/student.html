@@ -531,6 +531,17 @@
             }
 
             const busMarker = markers[targetBusId];
+
+            // UI Update for Offline Status
+            if (busMarker.isOffline) {
+                tripCard.classList.add('grayscale');
+                tripEta.style.color = '#94a3b8'; // Slate-400
+                tripDist.innerText += " (Offline)";
+            } else {
+                tripCard.classList.remove('grayscale');
+                tripEta.style.color = 'white';
+            }
+
             const busLatLng = busMarker.getLatLng();
             const waypoints = [
                 L.latLng(userLat, userLng),
