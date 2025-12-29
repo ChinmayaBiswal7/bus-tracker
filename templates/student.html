@@ -53,7 +53,7 @@
             measurementId: "G-PKF72NB657"
         };
 
-        const guardApp = initializeApp(guardConfig);
+        const guardApp = initializeApp(guardConfig, "AuthGuardApp");
         const auth = getAuth(guardApp);
 
         onAuthStateChanged(auth, (user) => {

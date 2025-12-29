@@ -86,11 +86,11 @@ def student():
 
 @socketio.on('search_bus')
 def handle_search(bus_no):
-    # Track user activity
-    if 'user_id' in session:
-        act = UserActivity(user_id=session['user_id'], action="search", bus_no=bus_no)
-        db.session.add(act)
-        db.session.commit()
+    # Track user activity (Disabled: Auth is now client-side only)
+    # if 'user_id' in session:
+    #     act = UserActivity(user_id=session['user_id'], action="search", bus_no=bus_no)
+    #     db.session.add(act)
+    #     db.session.commit()
     
     # Check bus status
     bus = Bus.query.filter_by(bus_no=bus_no).first()
