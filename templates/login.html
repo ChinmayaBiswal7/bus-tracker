@@ -66,7 +66,7 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -99,6 +99,9 @@
             submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
 
             try {
+                // 0. Enforce Persistence (Keep user logged in)
+                await setPersistence(auth, browserLocalPersistence);
+
                 // 1. Authenticate
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
