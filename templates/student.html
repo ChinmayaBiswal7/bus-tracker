@@ -482,7 +482,9 @@
 
         // Initialize Geolocation
         if (navigator.geolocation) {
-            startLocationTracking(true);
+            // Start with Low Accuracy (Wifi/IP) for instant results
+            // High Accuracy is often blocked/slow indoors
+            startLocationTracking(false);
         } else {
             console.error("Browser does not support Geolocation");
         }
