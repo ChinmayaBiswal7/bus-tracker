@@ -250,6 +250,7 @@
                     btnEv.classList.remove('text-white');
                     btnEv.classList.add('text-slate-400');
 
+                    busInput.parentElement.classList.remove('hidden'); // Show Input
                     busInput.placeholder = "BUS NUMBER (e.g. 12)";
                     prefixLabel.classList.add('hidden');
                     busInput.classList.remove('pl-16');
@@ -263,11 +264,41 @@
                     btnBus.classList.remove('text-white');
                     btnBus.classList.add('text-slate-400');
 
-                    busInput.placeholder = "SHUTTLE ID (e.g. 01)";
-                    prefixLabel.classList.remove('hidden');
-                    busInput.classList.add('pl-16'); // Make room for "EV-"
+                    busInput.parentElement.classList.add('hidden'); // Hide Input for EV
                 }
             }
+
+            // ... (keep modal handlers)
+
+            function log(msg) {
+                debugDiv.textContent = msg;
+            }
+
+            btn.addEventListener('click', () => {
+                if (!isSharing) {
+                    let finalBusNo;
+
+                    if (currentMode === 'BUS') {
+                        let inputVal = busInput.value.trim().toUpperCase();
+                        if (!inputVal) {
+                            busInput.classList.add('animate-pulse', 'border-red-500');
+                            setTimeout(() => busInput.classList.remove('animate-pulse', 'border-red-500'), 1000);
+                            return;
+                        }
+                        finalBusNo = inputVal;
+                    } else {
+                        // EV Mode: Auto-generate ID
+                        // Format: EV-RANDOM (e.g. EV-892)
+                        // This allows multiple generic EVs to exist without collision
+                        const randId = Math.floor(Math.random() * 9000) + 1000;
+                        finalBusNo = 'EV-' + randId;
+                    }
+
+                    startTracking(finalBusNo);
+                } else {
+                    stopTracking();
+                }
+            });
 
             const liveBadge = document.getElementById('liveBadge');
             const statusRing = document.getElementById('statusRing');

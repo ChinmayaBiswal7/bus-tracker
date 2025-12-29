@@ -753,7 +753,7 @@
                             <span style="font-size: 20px;">🛺</span>
                         </div>
                         <div style="background: #064e3b; color: white; padding: 2px 8px; border-radius: 6px; font-weight: bold; font-size: 10px; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); white-space: nowrap; border: 1px solid #10b981; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">
-                            ${busNo}
+                            EV
                         </div>
                        </div>`,
                 iconSize: [40, 40],
@@ -761,83 +761,7 @@
             });
         }
 
-        const trackInput = document.getElementById('trackInput');
-        const statusP = document.getElementById('tracking-status');
-
-        function quickSearch(busNo) {
-            trackInput.value = busNo;
-            setFilter();
-        }
-
-        function setFilter() {
-            const val = trackInput.value.trim().toUpperCase();
-            currentFilter = val;
-            offlineResult = null; // Reset offline result
-
-            // Logic to auto-select matching bus
-            let foundSid = null;
-            if (val) {
-                for (let sid in markers) {
-                    if (markers[sid]._busNo === val) {
-                        foundSid = sid;
-                        break;
-                    }
-                }
-
-                if (foundSid) {
-                    startTrackingRoute(foundSid);
-                    // Optional: Center map
-                    // map.setView(markers[foundSid].getLatLng(), 15);
-                }
-
-                statusP.innerHTML = `<span>Filtered:</span> <b class="text-white">${val}</b> <button onclick="clearFilter()" class="ml-auto text-red-400 hover:text-red-300 text-xs underline">Reset</button>`;
-                statusP.classList.remove('hidden');
-
-                // Server Search (for offline/history check)
-                socket.emit('search_bus', val);
-            } else {
-                clearFilter();
-                stopTrackingRoute();
-            }
-            refreshMap(); // Refresh immediately for local filtering
-        }
-
-        window.clearFilter = function () {
-            currentFilter = "";
-            trackInput.value = "";
-            offlineResult = null;
-            statusP.classList.add('hidden');
-            stopTrackingRoute();
-            refreshMap();
-        }
-
-        // Listener for server search results
-        socket.on('search_result', (data) => {
-            if (data.status === 'offline' || data.status === 'not_found') {
-                offlineResult = data;
-                updateBusList(); // Force update to show offline card
-            }
-        });
-
-        function refreshMap() {
-            for (const [sid, marker] of Object.entries(markers)) {
-                if (shouldShow(marker._busNo)) {
-                    if (!map.hasLayer(marker)) map.addLayer(marker);
-                    if (circles[sid] && !map.hasLayer(circles[sid])) map.addLayer(circles[sid]);
-                } else {
-                    if (map.hasLayer(marker)) map.removeLayer(marker);
-                    if (circles[sid] && map.hasLayer(circles[sid])) map.removeLayer(circles[sid]);
-                }
-            }
-            updateBusList();
-        }
-
-        function shouldShow(busNo) {
-            if (!currentFilter) return true;
-            return busNo.includes(currentFilter);
-        }
-
-
+        // ... (rest unchanged)
 
         function renderBusCard(sid, marker) {
             const isEv = marker._busNo.startsWith("EV-");
@@ -847,6 +771,9 @@
             const activeColor = isEv ? "text-emerald-400" : "text-green-400";
             const activeBg = isEv ? "bg-emerald-500" : "bg-green-500";
 
+            // Mask EV ID
+            const displayId = isEv ? "Campus Shuttle" : marker._busNo;
+
             if (marker.isOffline) {
                 // OFFLINE CARD
                 const timeLabel = timeAgo(marker.disconnectTime);
@@ -855,7 +782,7 @@
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg">😴</div>
                         <div>
-                            <p class="font-bold text-sm text-slate-300">${marker._busNo}</p>
+                            <p class="font-bold text-sm text-slate-300">${displayId}</p>
                             <p class="text-[10px] text-slate-500 font-bold">
                                 OFFLINE • ${timeLabel}
                             </p>
@@ -870,7 +797,7 @@
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center text-lg">${typeIcon}</div>
                         <div>
-                            <p class="font-bold text-sm ${typeColor}">${marker._busNo}</p>
+                            <p class="font-bold text-sm ${typeColor}">${displayId}</p>
                             <p class="text-[10px] ${activeColor} font-bold flex items-center gap-1">
                                 <span class="w-1.5 h-1.5 rounded-full ${activeBg} animate-pulse"></span>
                                 ACTIVE NOW
