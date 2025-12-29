@@ -139,6 +139,14 @@
                 window.location.href = '/login?role=student';
             }
         });
+
+        window.logout = function () {
+            auth.signOut().then(() => {
+                window.location.href = '/';
+            }).catch((error) => {
+                console.error("Logout failed:", error);
+            });
+        }
     </script>
 
     <div id="map" class="h-full w-full z-0"></div>
@@ -166,12 +174,13 @@
         <!-- Header & Nav -->
         <div class="flex items-center justify-between mb-4 shrink-0">
             <div class="flex items-center gap-2">
-                <a href="/logout" class="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors" title="Logout">
+                <button onclick="logout()" class="p-2 -ml-2 hover:bg-white/10 rounded-full transition-colors"
+                    title="Logout">
                     <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
                         </path>
                     </svg>
-                </a>
+                </button>
                 <h1 class="font-bold text-xl tracking-tight">Campus Ride</h1>
             </div>
             <button onclick="toggleSidebar()" class="p-2 hover:bg-white/10 rounded-full transition-colors">

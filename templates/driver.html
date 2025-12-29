@@ -90,6 +90,14 @@
                 window.location.href = '/login?role=driver';
             }
         });
+
+        window.logout = function () {
+            auth.signOut().then(() => {
+                window.location.href = '/';
+            }).catch((error) => {
+                console.error("Logout failed:", error);
+            });
+        }
     </script>
 
     <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
@@ -98,15 +106,16 @@
         class="glass-panel relative w-full max-w-sm rounded-[2.5rem] p-8 flex flex-col items-center shadow-2xl z-10 border-t border-slate-700/50">
 
         <!-- Back Button -->
-        <a href="/"
+        <!-- Back Button (Acts as Logout) -->
+        <button onclick="logout()"
             class="absolute top-6 left-6 p-2 bg-slate-800/50 rounded-full hover:bg-slate-700 border border-slate-600 transition-colors z-20 group"
-            title="Back to Home">
+            title="Logout & Home">
             <svg class="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" fill="none"
                 stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18">
                 </path>
             </svg>
-        </a>
+        </button>
 
         <!-- Status Indicator -->
         <div class="relative mb-8">
