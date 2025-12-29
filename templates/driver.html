@@ -225,6 +225,7 @@
             let isSharing = false;
             let allowLowAccuracy = false;
             let currentMode = 'BUS';
+            let activeBusNo = null;
 
             const btn = document.getElementById('toggleBtn');
             const btnText = document.getElementById('btnText');
@@ -329,39 +330,10 @@
                 debugDiv.textContent = msg;
             }
 
-            btn.addEventListener('click', () => {
-                if (!isSharing) {
-                    let inputVal = busInput.value.trim().toUpperCase();
 
-                    // Validation
-                    if (!inputVal) {
-                        busInput.classList.add('animate-pulse', 'border-red-500');
-                        setTimeout(() => busInput.classList.remove('animate-pulse', 'border-red-500'), 1000);
-                        return;
-                    }
-
-                    // Format Bus Number based on Mode
-                    let finalBusNo = inputVal;
-                    if (currentMode === 'EV') {
-                        // Ensure it doesn't already have EV-
-                        if (!finalBusNo.startsWith('EV-')) {
-                            finalBusNo = 'EV-' + finalBusNo;
-                        }
-                    } else {
-                        // Standard Bus: Keep as is (or maybe prefix BUS- if you want, but sticking to legacy behavior: user types what they want)
-                        // Actually, legacy behavior was just passing input. Let's keep it flexible but maybe add BUS- if it's just a number?
-                        // User request: "bus 1, bus 2". If they type "12", let's keep it "12" or "BUS-12"? 
-                        // The user said "up to 10 buses", currently they type "BUS-01". 
-                        // Let's trust the user input for BUS, but enforce EV- for EV.
-                    }
-
-                    startTracking(finalBusNo);
-                } else {
-                    stopTracking();
-                }
-            });
 
             function startTracking(busNo) {
+                activeBusNo = busNo;
                 if (!navigator.geolocation) {
                     alert("Geolocation not supported");
                     return;
@@ -453,6 +425,7 @@
             }
 
             function stopTracking() {
+                activeBusNo = null;
                 if (watchId) {
                     navigator.geolocation.clearWatch(watchId);
                     watchId = null;
@@ -524,11 +497,19 @@
                 btnAnnounce.disabled = true;
 
                 // Construct Bus No logic
-                let busNo = busInput.value.trim().toUpperCase();
-                if (currentMode === 'EV' && !busNo.startsWith('EV-')) {
-                    busNo = 'EV-' + busNo;
+                // Use activeBusNo if sharing, otherwise try input (for BUS mode only)
+                let busNo = activeBusNo;
+                if (!busNo) {
+                    if (currentMode === 'BUS') {
+                        busNo = busInput.value.trim().toUpperCase();
+                    }
                 }
-                if (!busNo) busNo = "General"; // Fallback
+
+                if (!busNo) {
+                    if (currentMode === 'EV') alert("Please START SHARING to broadcast as EV.");
+                    else alert("Please enter a Bus Number.");
+                    return;
+                }
 
                 try {
                     // ... (rest of logic same)
