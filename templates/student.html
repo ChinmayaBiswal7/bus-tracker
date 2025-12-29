@@ -170,8 +170,9 @@
         }
 
         // Listener for server search results
+        // Listener for server search results
         socket.on('search_result', (data) => {
-            if (data.status === 'offline') {
+            if (data.status === 'offline' || data.status === 'not_found') {
                 offlineResult = data;
                 updateBusList(); // Force update to show offline card
             }
@@ -225,16 +226,21 @@
             }
 
             // 2. Show Offline Result (if searched and not found in active list)
-            if (currentFilter && offlineResult && offlineResult.bus_no === currentFilter && visibleCount === 0) {
+            // 2. Show Offline Result (if searched and not found in active list)
+            if (currentFilter && visibleCount === 0) {
+                // If we have distinct offline data or just not found
+                const busName = offlineResult ? offlineResult.bus_no : currentFilter;
+                const lastSeen = (offlineResult && offlineResult.last_seen) ? offlineResult.last_seen : 'Never / Unknown';
+
                 visibleCount++;
                 html += `
                     <div class="group flex items-center justify-between p-3 bg-slate-800/20 rounded-xl border border-dashed border-slate-600 grayscale opacity-80">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg">😴</div>
                             <div>
-                                <p class="font-bold text-sm text-slate-300">${offlineResult.bus_no}</p>
+                                <p class="font-bold text-sm text-slate-300">${busName}</p>
                                 <p class="text-[10px] text-slate-500 font-bold">
-                                    OFFLINE • Last seen: ${offlineResult.last_seen}
+                                    OFFLINE • Last seen: ${lastSeen}
                                 </p>
                             </div>
                         </div>
@@ -291,6 +297,18 @@
         function updateMarker(sid, data) {
             if (!data) return;
             const { lat, lng, bus_no, accuracy } = data;
+
+            // FIX: Remove 'Ghost Markers' (Duplicate bus_no with different SID)
+            for (const [existingSid, marker] of Object.entries(markers)) {
+                if (marker._busNo === bus_no && existingSid !== sid) {
+                    map.removeLayer(markers[existingSid]);
+                    delete markers[existingSid];
+                    if (circles[existingSid]) {
+                        map.removeLayer(circles[existingSid]);
+                        delete circles[existingSid];
+                    }
+                }
+            }
 
             if (markers[sid]) {
                 markers[sid].setLatLng([lat, lng]);
