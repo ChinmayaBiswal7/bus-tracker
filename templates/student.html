@@ -761,7 +761,137 @@
             });
         }
 
-        // ... (rest unchanged)
+        const trackInput = document.getElementById('trackInput');
+        const statusP = document.getElementById('tracking-status');
+
+        function quickSearch(busNo) {
+            trackInput.value = busNo;
+            setFilter();
+        }
+
+        function setFilter() {
+            const val = trackInput.value.trim().toUpperCase();
+            currentFilter = val;
+            offlineResult = null; // Reset offline result
+
+            // Logic to auto-select matching bus
+            let foundSid = null;
+            if (val) {
+                for (let sid in markers) {
+                    if (markers[sid]._busNo === val) {
+                        foundSid = sid;
+                        break;
+                    }
+                }
+
+                if (foundSid) {
+                    startTrackingRoute(foundSid);
+                    // Optional: Center map
+                    // map.setView(markers[foundSid].getLatLng(), 15);
+                }
+
+                statusP.innerHTML = `<span>Filtered:</span> <b class="text-white">${val}</b> <button onclick="clearFilter()" class="ml-auto text-red-400 hover:text-red-300 text-xs underline">Reset</button>`;
+                statusP.classList.remove('hidden');
+
+                // Server Search (for offline/history check)
+                socket.emit('search_bus', val);
+            } else {
+                clearFilter();
+                stopTrackingRoute();
+            }
+            refreshMap(); // Refresh immediately for local filtering
+        }
+
+        window.clearFilter = function () {
+            currentFilter = "";
+            trackInput.value = "";
+            offlineResult = null;
+            statusP.classList.add('hidden');
+            stopTrackingRoute();
+            refreshMap();
+        }
+
+        // Listener for server search results
+        socket.on('search_result', (data) => {
+            if (data.status === 'offline' || data.status === 'not_found') {
+                offlineResult = data;
+                updateBusList(); // Force update to show offline card
+            }
+        });
+
+        function refreshMap() {
+            for (const [sid, marker] of Object.entries(markers)) {
+                if (shouldShow(marker._busNo)) {
+                    if (!map.hasLayer(marker)) map.addLayer(marker);
+                    if (circles[sid] && !map.hasLayer(circles[sid])) map.addLayer(circles[sid]);
+                } else {
+                    if (map.hasLayer(marker)) map.removeLayer(marker);
+                    if (circles[sid] && map.hasLayer(circles[sid])) map.removeLayer(circles[sid]);
+                }
+            }
+            updateBusList();
+        }
+
+        function shouldShow(busNo) {
+            if (!currentFilter) return true;
+            return busNo.includes(currentFilter);
+        }
+
+        function updateMarker(sid, data) {
+            const busNo = data.bus_no;
+            const lat = data.lat;
+            const lng = data.lng;
+            const accuracy = data.accuracy;
+
+            if (markers[sid]) {
+                const marker = markers[sid];
+                marker.setLatLng([lat, lng]);
+                marker._busNo = busNo; // Update just in case
+                marker.isOffline = false; // It's active
+
+                // Update Icon if needed (e.g. came back online)
+                if (busNo.startsWith('EV-')) {
+                    marker.setIcon(createEvIcon(busNo));
+                } else {
+                    marker.setIcon(createBusIcon(busNo));
+                }
+
+                // Update Circle
+                if (circles[sid]) {
+                    circles[sid].setLatLng([lat, lng]);
+                    circles[sid].setRadius(accuracy);
+                }
+            } else {
+                // New Marker
+                let icon;
+                if (busNo.startsWith('EV-')) {
+                    icon = createEvIcon(busNo);
+                } else {
+                    icon = createBusIcon(busNo);
+                }
+
+                const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
+                marker._busNo = busNo;
+                marker.isOffline = false;
+                marker.on('click', () => zoomToBus(sid)); // Enable click
+                markers[sid] = marker;
+
+                // Accuracy Circle
+                const circle = L.circle([lat, lng], {
+                    radius: accuracy,
+                    color: '#3b82f6',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.1,
+                    weight: 1
+                }).addTo(map);
+                circles[sid] = circle;
+            }
+
+            // Update user tracking if targeting this bus
+            if (targetBusId === sid) {
+                updateRoute();
+            }
+        }
 
         function renderBusCard(sid, marker) {
             const isEv = marker._busNo.startsWith("EV-");
