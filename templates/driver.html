@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Console</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .pulse-ring {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            border-radius: 9999px;
+            box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+            animation: pulse-green 2s infinite;
+            z-index: -1;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                transform: translate(-50%, -50%) scale(0.95);
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+            }
+
+            70% {
+                transform: translate(-50%, -50%) scale(1.3);
+                box-shadow: 0 0 0 20px rgba(74, 222, 128, 0);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(0.95);
+                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0);
+            }
+        }
+    </style>
+</head>
+
+<body
+    class="h-screen w-full flex flex-col items-center justify-center p-6 bg-[url('https://images.unsplash.com/photo-1494515855673-102c2f58aa64?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
+    <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+
+    <div
+        class="glass-panel relative w-full max-w-sm rounded-[2.5rem] p-8 flex flex-col items-center shadow-2xl z-10 border-t border-slate-700/50">
+
+        <!-- Back Button -->
+        <a href="/student"
+            class="absolute top-6 left-6 p-2 bg-slate-800/50 rounded-full hover:bg-slate-700 border border-slate-600 transition-colors z-20 group"
+            title="Back to Dashboard">
+            <svg class="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18">
+                </path>
+            </svg>
+        </a>
+
+        <!-- Status Indicator -->
+        <div class="relative mb-8">
+            <div id="statusRing" class="hidden pulse-ring"></div>
+            <div
+                class="w-24 h-24 rounded-full bg-slate-800 flex items-center justify-center shadow-inner border border-slate-700">
+                <span class="text-6xl filter drop-shadow no-select">🚌</span>
+            </div>
+            <div id="liveBadge"
+                class="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300">
+                Offline
+            </div>
+        </div>
+
+        <h2 class="text-white text-2xl font-bold mb-1">Driver Console</h2>
+        <p class="text-slate-400 text-sm mb-8">Manage your route visibility</p>
+
+        <!-- Input -->
+        <div class="w-full relative group mb-6">
+            <input type="text" id="busInput" placeholder="BUS-XX"
+                class="w-full bg-transparent border-b-2 border-slate-600 text-center text-3xl font-bold text-white py-2 focus:outline-none focus:border-blue-500 transition-colors placeholder-slate-700 uppercase tracking-widest mono">
+        </div>
+
+        <!-- Action Button -->
+        <button id="toggleBtn"
+            class="w-full py-4 rounded-2xl font-bold text-lg shadow-xl transform transition-all duration-200 active:scale-95 bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 group">
+            <span id="btnIcon" class="text-xl">▶</span>
+            <span id="btnText">START SHARING</span>
+        </button>
+
+        <!-- Stats Panel -->
+        <div id="statsPanel"
+            class="w-full mt-8 pt-6 border-t border-slate-700/50 opacity-50 transition-opacity duration-300">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-slate-800/50 p-3 rounded-xl text-center">
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wider">Speed</p>
+                    <p class="text-xl font-bold text-white mono"><span id="speedVal">0</span> <span
+                            class="text-xs font-normal text-slate-500">km/h</span></p>
+                </div>
+                <div class="bg-slate-800/50 p-3 rounded-xl text-center">
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wider">Signal</p>
+                    <p class="text-xl font-bold text-white mono"><span id="accVal">--</span> <span
+                            class="text-xs font-normal text-slate-500"></span></p>
+                </div>
+            </div>
+            <!-- Log -->
+            <div id="debug"
+                class="mt-4 text-[10px] text-slate-500 font-mono h-12 overflow-hidden text-center leading-relaxed">
+                Ready to connect...
+            </div>
+        </div>
+        <!-- Weak Signal Modal -->
+        <div id="warningModal"
+            class="hidden absolute inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md">
+            <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                <span class="text-3xl text-slate-900">⚠️</span>
+            </div>
+            <h3 class="text-white text-2xl font-bold mb-2">Weak Signal Detected</h3>
+            <p class="text-slate-400 mb-8 max-w-xs">NO GPS LOCK found. Accuracy is low (>30m). Location may be
+                inaccurate.</p>
+
+            <div class="flex flex-col gap-3 w-full max-w-xs">
+                <button id="btnProceed"
+                    class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors">
+                    PROCEED ANYWAY
+                </button>
+                <button id="btnExit"
+                    class="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors">
+                    EXIT
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 mt-4">Select "Proceed" for laptops/testing.</p>
+        </div>
+
+        <script>
+            const socket = io();
+            let watchId = null;
+            let isSharing = false;
+            let allowLowAccuracy = false; // By default, STRICT mode
+
+            const btn = document.getElementById('toggleBtn');
+            const btnText = document.getElementById('btnText');
+            const btnIcon = document.getElementById('btnIcon');
+
+            const liveBadge = document.getElementById('liveBadge');
+            const statusRing = document.getElementById('statusRing');
+            const debugDiv = document.getElementById('debug');
+            const busInput = document.getElementById('busInput');
+            const statsPanel = document.getElementById('statsPanel');
+            const speedVal = document.getElementById('speedVal');
+            const accVal = document.getElementById('accVal');
+
+            // Modal Elements
+            const warningModal = document.getElementById('warningModal');
+            const btnProceed = document.getElementById('btnProceed');
+            const btnExit = document.getElementById('btnExit');
+
+            // Modal Handlers
+            btnProceed.addEventListener('click', () => {
+                allowLowAccuracy = true;
+                warningModal.classList.add('hidden');
+                log("User override: Low accuracy allowed.");
+            });
+
+            btnExit.addEventListener('click', () => {
+                warningModal.classList.add('hidden');
+                stopTracking();
+            });
+
+            // const MIN_ACCURACY = 30; // meters - Strict filter // This is now handled by the modal logic
+
+            function log(msg) {
+                debugDiv.textContent = msg;
+            }
+
+            btn.addEventListener('click', () => {
+                if (!isSharing) {
+                    const busNo = busInput.value.trim().toUpperCase();
+                    if (!busNo) {
+                        busInput.classList.add('animate-pulse', 'border-red-500');
+                        setTimeout(() => busInput.classList.remove('animate-pulse', 'border-red-500'), 1000);
+                        return;
+                    }
+                    startTracking(busNo);
+                } else {
+                    stopTracking();
+                }
+            });
+
+            function startTracking(busNo) {
+                if (!navigator.geolocation) {
+                    alert("Geolocation not supported");
+                    return;
+                }
+
+                // UI State: Active
+                btnText.textContent = "STOP SHARING";
+                btnIcon.textContent = "■";
+                btn.classList.replace('bg-blue-600', 'bg-red-500');
+                btn.classList.replace('hover:bg-blue-500', 'hover:bg-red-600');
+
+                liveBadge.textContent = "INIT GPS";
+                liveBadge.classList.replace('bg-red-500', 'bg-blue-500');
+                statusRing.classList.remove('hidden');
+
+                busInput.disabled = true;
+                busInput.classList.add('opacity-50');
+                statsPanel.classList.remove('opacity-50');
+
+                isSharing = true;
+                allowLowAccuracy = false; // Reset permission
+                log(`Initializing GPS...`);
+
+                // Warm up GPS
+                navigator.geolocation.getCurrentPosition(() => { }, () => { }, { enableHighAccuracy: true, timeout: 1000, maximumAge: 0 });
+
+                watchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        if (!isSharing) return;
+                        const { latitude, longitude, accuracy, speed, heading } = position.coords;
+
+                        // Update stats
+                        const speedKmh = speed ? (speed * 3.6).toFixed(1) : 0;
+                        speedVal.textContent = speedKmh;
+
+                        const signalEl = document.getElementById('accVal');
+
+                        // CHECK ACCURACY
+                        if (accuracy > 30 && !allowLowAccuracy) {
+                            // BAD SIGNAL & NO PERMISSION
+                            signalEl.textContent = "WEAK";
+                            signalEl.className = "text-yellow-500 font-bold mono animate-pulse";
+
+                            // Show Warning Modal if not already shown
+                            if (warningModal.classList.contains('hidden')) {
+                                warningModal.classList.remove('hidden');
+                            }
+
+                            log(`Signal Weak (${Math.round(accuracy)}m). Waiting for approval...`);
+                            return; // Block data
+                        }
+
+                        // GOOD SIGNAL (OR ALLOWED BAD SIGNAL)
+                        warningModal.classList.add('hidden'); // Hide modal if it suddenly gets good
+
+                        if (accuracy <= 30) {
+                            signalEl.textContent = "GPS LOCKED";
+                            signalEl.className = "text-green-400 font-bold mono";
+                            liveBadge.textContent = "GPS LIVE";
+                            liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
+                        } else {
+                            // Approved weak signal
+                            signalEl.textContent = "WEAK (OK)";
+                            signalEl.className = "text-yellow-500 font-bold mono";
+                            liveBadge.textContent = "LIVE (WEAK)";
+                            liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-yellow-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
+                        }
+
+                        const data = {
+                            lat: latitude,
+                            lng: longitude,
+                            accuracy: accuracy,
+                            speed: speed,
+                            heading: heading,
+                            bus_no: busNo
+                        };
+                        socket.emit('driver_update', data);
+                        log(`Sent: ${new Date().toLocaleTimeString()} (Acc: ${Math.round(accuracy)}m)`);
+                    },
+                    (error) => {
+                        log("GPS Error: " + error.message);
+                        if (error.code === 1) stopTracking();
+                    },
+                    { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                );
+            }
+
+            function stopTracking() {
+                if (watchId) {
+                    navigator.geolocation.clearWatch(watchId);
+                    watchId = null;
+                }
+                isSharing = false;
+                allowLowAccuracy = false;
+                warningModal.classList.add('hidden');
+
+                // UI State: Inactive
+                btnText.textContent = "START SHARING";
+                btnIcon.textContent = "▶";
+                btn.classList.replace('bg-red-500', 'bg-blue-600');
+                btn.classList.replace('hover:bg-red-600', 'hover:bg-blue-500');
+
+                liveBadge.textContent = "Offline";
+                liveBadge.classList.replace('bg-green-500', 'bg-red-500');
+                liveBadge.classList.replace('bg-blue-500', 'bg-red-500');
+                liveBadge.classList.replace('bg-yellow-600', 'bg-red-500');
+                statusRing.classList.add('hidden');
+
+                signalEl = document.getElementById('accVal');
+                signalEl.textContent = "--";
+                signalEl.className = "text-white font-bold mono";
+
+                busInput.disabled = false;
+                busInput.classList.remove('opacity-50');
+                statsPanel.classList.add('opacity-50');
+
+                log("Session ended.");
+                socket.emit('driver_update', null);
+            }
+        </script>
+</body>
+
+</html>
