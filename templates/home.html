@@ -4,86 +4,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bus Tracker | Welcome</title>
+    <title>Bus Tracker | Select Role</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Outfit', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #172554 100%);
         }
 
-        .glass {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
         }
 
-        .glass:hover {
-            border-color: rgba(255, 255, 255, 0.3);
-            background: rgba(255, 255, 255, 0.1);
+        .glass-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            z-index: -1;
         }
     </style>
 </head>
 
-<body class="h-screen flex items-center justify-center p-4 overflow-hidden relative">
+<body class="h-screen w-full flex flex-col items-center justify-center p-6 relative overflow-hidden">
 
-    <!-- Ambient Orbs -->
-    <div
-        class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob">
-    </div>
-    <div
-        class="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000">
-    </div>
+    <!-- Background Orbs -->
+    <div class="orb w-96 h-96 bg-purple-600 -top-20 -left-20 animate-pulse"></div>
+    <div class="orb w-80 h-80 bg-blue-600 -bottom-20 -right-20 animate-pulse" style="animation-duration: 4s;"></div>
 
-    <div
-        class="glass p-10 rounded-3xl shadow-2xl text-center max-w-md w-full relative z-10 transform transition-all duration-500 hover:scale-[1.02]">
-        <div class="mb-8 relative inline-block">
-            <span class="text-7xl drop-shadow-lg filter grayscale-0">🚍</span>
-            <div
-                class="absolute -bottom-2 -right-2 bg-green-500 w-6 h-6 rounded-full border-4 border-[#1e1b4b] animate-pulse">
-            </div>
+    <div class="z-10 text-center mb-10">
+        <div class="inline-block relative mb-4">
+            <span class="text-6xl filter drop-shadow no-select">🚌</span>
         </div>
-
         <h1
-            class="text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400 tracking-tight">
+            class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-200 to-purple-200 tracking-tight">
             CAMPUS RIDE
         </h1>
-        <p class="text-gray-400 mb-10 font-light text-lg">Real-time Shuttle Tracking System</p>
+        <p class="text-slate-400 mt-2 font-light">Select your role to continue</p>
+    </div>
 
-        <div class="space-y-4">
-            <a href="/login"
-                class="group relative block w-full py-4 px-6 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white rounded-xl font-bold text-lg shadow-lg transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
-                <div
-                    class="absolute inset-0 w-full h-full bg-white/20 group-hover:translate-x-full transition-transform duration-700 -skew-x-12 -translate-x-full">
-                </div>
-                <div class="flex items-center justify-center space-x-3">
-                    <span>LOGIN</span>
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1">
-                        </path>
-                    </svg>
-                </div>
-            </a>
+    <!-- Role Selection Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl z-10">
 
-            <a href="/signup"
-                class="group block w-full py-4 px-6 glass text-indigo-100 hover:text-white rounded-xl font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 border border-transparent hover:border-indigo-400/50">
-                <div class="flex items-center justify-center space-x-3">
-                    <span>CREATE ACCOUNT</span>
-                    <svg class="w-5 h-5 opacity-70 group-hover:translate-x-1 transition-transform" fill="none"
-                        stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z">
-                        </path>
-                    </svg>
-                </div>
-            </a>
-        </div>
+        <!-- Student Option -->
+        <a href="/login?role=student"
+            class="glass-card rounded-[2rem] p-8 flex flex-col items-center justify-center group cursor-pointer relative overflow-hidden">
+            <div
+                class="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            </div>
 
-        <div class="mt-8 text-xs text-gray-500 font-mono tracking-widest uppercase">
-            System Operational
-        </div>
+            <div
+                class="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center mb-6 group-hover:bg-blue-500/30 transition-colors">
+                <span class="text-4xl">🎓</span>
+            </div>
+
+            <h3 class="text-2xl font-bold text-white mb-2">Student</h3>
+            <p class="text-slate-400 text-sm text-center">Track buses and check schedules</p>
+
+            <div
+                class="mt-6 px-6 py-2 rounded-full border border-blue-500/30 text-blue-300 text-xs font-bold uppercase tracking-wider group-hover:bg-blue-500 group-hover:text-white transition-all">
+                Login as Student
+            </div>
+        </a>
+
+        <!-- Driver Option -->
+        <a href="/login?role=driver"
+            class="glass-card rounded-[2rem] p-8 flex flex-col items-center justify-center group cursor-pointer relative overflow-hidden">
+            <div
+                class="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            </div>
+
+            <div
+                class="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center mb-6 group-hover:bg-emerald-500/30 transition-colors">
+                <span class="text-4xl">👮‍♂️</span>
+            </div>
+
+            <h3 class="text-2xl font-bold text-white mb-2">Driver</h3>
+            <p class="text-slate-400 text-sm text-center">Share location and manage route</p>
+
+            <div
+                class="mt-6 px-6 py-2 rounded-full border border-emerald-500/30 text-emerald-300 text-xs font-bold uppercase tracking-wider group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                Login as Driver
+            </div>
+        </a>
+
+    </div>
+
+    <div class="mt-12">
+        <a href="/signup"
+            class="text-slate-500 text-sm hover:text-white transition-colors border-b border-transparent hover:border-slate-500 pb-0.5">
+            New here? Create an account
+        </a>
     </div>
 
 </body>

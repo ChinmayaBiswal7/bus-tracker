@@ -90,20 +90,39 @@ def signup():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # If already logged in, redirect based on stored role or default to student
+    if 'user_id' in session:
+        role = session.get('role', 'student')
+        if role == 'driver':
+            return redirect(url_for('driver'))
+        return redirect(url_for('student'))
+
+    # Capture role from query param logic
+    role_arg = request.args.get('role')
+    if role_arg:
+        session['role'] = role_arg
+
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
             session['user_id'] = user.id
+            
+            # Redirect based on intent
+            desired_role = session.get('role', 'student')
+            if desired_role == 'driver':
+                return redirect(url_for('driver'))
             return redirect(url_for('student'))
+            
         return render_template('login.html', error="Invalid credentials")
     return render_template('login.html')
 
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)
-    return redirect(url_for('login'))
+    session.pop('role', None)
+    return redirect(url_for('index'))
 
 @app.route('/driver')
 def driver():
