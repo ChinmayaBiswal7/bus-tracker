@@ -129,6 +129,12 @@ def driver():
     # Drivers theoretically should login too, but for simplicity let's keep it open or require same login
     if 'user_id' not in session:
         return redirect(url_for('login'))
+        
+    # Verify user exists (DB might have reset)
+    if not User.query.get(session['user_id']):
+        session.clear()
+        return redirect(url_for('login'))
+        
     return render_template('driver.html')
 
 @app.route('/student')
@@ -137,8 +143,16 @@ def student():
         return redirect(url_for('login'))
     
     # AI Recommendations
+    # AI Recommendations
     recs = get_recommendations(session['user_id'])
-    return render_template('student.html', recommendations=recs, username=User.query.get(session['user_id']).username)
+    
+    current_user = User.query.get(session['user_id'])
+    if not current_user:
+        # Session is stale (DB reset), force logout
+        session.clear()
+        return redirect(url_for('login'))
+        
+    return render_template('student.html', recommendations=recs, username=current_user.username)
 
 # --- Socket Events ---
 
