@@ -77,7 +77,8 @@
             measurementId: "G-PKF72NB657"
         };
 
-        const guardApp = initializeApp(guardConfig, "AuthGuardApp");
+        const guardApp = initializeApp(guardConfig);
+        window.firebaseApp = guardApp;
         const auth = getAuth(guardApp);
 
         onAuthStateChanged(auth, (user) => {
@@ -388,7 +389,7 @@
                 measurementId: "G-PKF72NB657"
             };
 
-            const app = initializeApp(firebaseConfig);
+            const app = window.firebaseApp || initializeApp(firebaseConfig);
             const db = getFirestore(app);
 
             const btnAnnounce = document.getElementById('btnAnnounce');
