@@ -65,6 +65,31 @@
                 box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
             }
         }
+
+        /* Ensure User Marker is visible */
+        .custom-user-icon {
+            z-index: 1000 !important;
+        }
+
+        /* GPS Status Indicator */
+        #gps-status {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            pointer-events: none;
+        }
     </style>
 </head>
 
@@ -126,6 +151,12 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
         </svg>
     </button>
+
+    <!-- GPS Status -->
+    <div id="gps-status">
+        <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+        <span>Locating...</span>
+    </div>
 
     <!-- Sidebar (Off-Canvas) -->
     <div id="sidebar" class="fixed inset-y-0 left-0 w-80 z-[2000] transform -translate-x-full transition-transform duration-300 ease-in-out
@@ -499,6 +530,24 @@
 
         // Robust Geolocation Handling
         let watchId = null;
+        const gpsStatusEl = document.getElementById('gps-status');
+
+        function updateGpsStatus(state, msg) {
+            if (!gpsStatusEl) return;
+            const dot = gpsStatusEl.querySelector('span');
+            const text = gpsStatusEl.querySelector('span:last-child');
+
+            text.textContent = msg;
+            dot.className = "w-2 h-2 rounded-full";
+
+            if (state === 'searching') {
+                dot.classList.add('bg-yellow-500', 'animate-pulse');
+            } else if (state === 'active') {
+                dot.classList.add('bg-green-500');
+            } else if (state === 'error') {
+                dot.classList.add('bg-red-500');
+            }
+        }
 
         function startLocationTracking(highAccuracy = true) {
             if (watchId) navigator.geolocation.clearWatch(watchId);
@@ -515,6 +564,7 @@
             };
 
             console.log(`Starting GPS (High Acc: ${highAccuracy}, Timeout: ${gpsTimeout}ms)...`);
+            updateGpsStatus('searching', `Locating (${highAccuracy ? 'High' : 'Low'})...`);
 
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
@@ -522,6 +572,8 @@
                     userLat = pos.coords.latitude;
                     userLng = pos.coords.longitude;
                     updateUserMarker(userLat, userLng);
+                    updateGpsStatus('active', 'GPS Active');
+
                     if (targetBusId) updateRoute();
 
                     // Hide error card if visible
@@ -541,6 +593,7 @@
                     }
 
                     // Show Error to User
+                    updateGpsStatus('error', 'GPS Failed');
 
                     const tripCard = document.getElementById('trip-info-card');
                     const tripDist = document.getElementById('trip-dist');
