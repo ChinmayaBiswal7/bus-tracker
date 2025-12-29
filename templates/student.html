@@ -428,13 +428,16 @@
         function startLocationTracking(highAccuracy = true) {
             if (watchId) navigator.geolocation.clearWatch(watchId);
 
+            // Fail fast on High Accuracy (Indoor fix), give more time for Low Accuracy
+            const gpsTimeout = highAccuracy ? 5000 : 20000;
+
             const options = {
                 enableHighAccuracy: highAccuracy,
-                timeout: 30000,
-                maximumAge: 10000
+                timeout: gpsTimeout,
+                maximumAge: 30000 // Accept slightly older cached positions for speed
             };
 
-            console.log(`Starting GPS (High Accuracy: ${highAccuracy ? 'ON' : 'OFF'})...`);
+            console.log(`Starting GPS (High Acc: ${highAccuracy}, Timeout: ${gpsTimeout}ms)...`);
 
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
