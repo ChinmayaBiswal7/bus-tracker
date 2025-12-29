@@ -374,6 +374,13 @@
                 log("Session ended.");
                 socket.emit('driver_update', null);
             }
+
+            // Ensure we stop tracking if the user closes the tab/browser
+            window.addEventListener('beforeunload', () => {
+                if (isSharing) {
+                    socket.emit('driver_update', null);
+                }
+            });
         </script>
         <script type="module">
             import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
