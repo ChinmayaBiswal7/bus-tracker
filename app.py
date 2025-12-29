@@ -73,7 +73,6 @@ def index():
     return render_template('home.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
-@app.route('/signup', methods=['GET', 'POST'])
 def signup():
     # Capture role from query param logic
     role_arg = request.args.get('role')
@@ -123,7 +122,7 @@ def login():
             session['user_id'] = user.id
             
             # Redirect based on intent
-            if desired_role == 'driver':
+            if session.get('role') == 'driver':
                 return redirect(url_for('driver'))
             return redirect(url_for('student'))
             
