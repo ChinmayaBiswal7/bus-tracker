@@ -42,10 +42,19 @@
     <div id="map" class="h-full w-full z-0"></div>
 
     <!-- Overlay UI -->
-    <div class="absolute top-4 left-4 right-4 md:right-auto md:w-80 z-[1000] 
-                glass-panel rounded-2xl p-5 text-white transition-all duration-300 transform 
-                max-h-[85vh] flex flex-col shadow-2xl">
+    <!-- Hamburger Menu Button -->
+    <button onclick="toggleSidebar()"
+        class="absolute top-4 left-4 z-[1000] p-3 bg-slate-800/90 text-white rounded-xl shadow-lg border border-slate-700 hover:bg-slate-700 transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
 
+    <!-- Sidebar (Off-Canvas) -->
+    <div id="sidebar" class="fixed inset-y-0 left-0 w-80 z-[2000] transform -translate-x-full transition-transform duration-300 ease-in-out
+                bg-slate-900/95 backdrop-blur-xl border-r border-slate-700 p-5 text-white flex flex-col shadow-2xl">
+
+        <!-- Header & Nav -->
         <!-- Header & Nav -->
         <div class="flex items-center justify-between mb-4 shrink-0">
             <div class="flex items-center gap-2">
@@ -57,8 +66,13 @@
                 </a>
                 <h1 class="font-bold text-xl tracking-tight">Campus Ride</h1>
             </div>
-            <span
-                class="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-green-100 bg-green-600 rounded-full animate-pulse">LIVE</span>
+            <button onclick="toggleSidebar()" class="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <svg class="w-5 h-5 text-slate-400 hover:text-white" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
         </div>
 
         <p class="text-xs text-slate-400 mb-4">Welcome, <span class="text-blue-400 font-bold">{{ username }}</span></p>
@@ -170,6 +184,12 @@
                 container.classList.add('hidden');
             }
         });
+
+        // Sidebar Toggle Logic
+        window.toggleSidebar = function () {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
     </script>
 
     <script>
