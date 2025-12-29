@@ -833,6 +833,9 @@
         }
 
         function shouldShow(busNo) {
+            // EVs are "Base Service" - Always show them regardless of filter
+            if (busNo.startsWith("EV-")) return true;
+
             if (!currentFilter) return true;
             return busNo.includes(currentFilter);
         }
