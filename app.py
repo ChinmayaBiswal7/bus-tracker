@@ -73,20 +73,33 @@ def index():
     return render_template('home.html')
 
 @app.route('/signup', methods=['GET', 'POST'])
+@app.route('/signup', methods=['GET', 'POST'])
 def signup():
+    # Capture role from query param logic
+    role_arg = request.args.get('role')
+    if role_arg:
+        session['role'] = role_arg
+    
+    current_role = session.get('role', 'student')
+
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         if User.query.filter_by(username=username).first():
-            return render_template('signup.html', error="Username already taken")
+            return render_template('signup.html', error="Username already taken", role=current_role)
         
         hashed_pw = generate_password_hash(password)
         new_user = User(username=username, password_hash=hashed_pw)
         db.session.add(new_user)
         db.session.commit()
         session['user_id'] = new_user.id
+        
+        # Redirect based on role
+        if current_role == 'driver':
+            return redirect(url_for('driver'))
         return redirect(url_for('student'))
-    return render_template('signup.html')
+        
+    return render_template('signup.html', role=current_role)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -110,13 +123,12 @@ def login():
             session['user_id'] = user.id
             
             # Redirect based on intent
-            desired_role = session.get('role', 'student')
             if desired_role == 'driver':
                 return redirect(url_for('driver'))
             return redirect(url_for('student'))
             
-        return render_template('login.html', error="Invalid credentials")
-    return render_template('login.html')
+        return render_template('login.html', error="Invalid credentials", role=session.get('role', 'student'))
+    return render_template('login.html', role=session.get('role', 'student'))
 
 @app.route('/logout')
 def logout():
