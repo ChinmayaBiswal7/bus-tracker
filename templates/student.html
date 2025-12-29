@@ -92,6 +92,24 @@
             <span id="fw-bold" class="font-bold text-white">All</span>
         </p>
 
+        <!-- Announcements Section (Firebase) -->
+        <div id="announcement-container" class="mb-4 shrink-0 hidden group">
+            <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-3">
+                <div class="p-1.5 bg-amber-500/20 rounded-lg text-amber-400 shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z">
+                        </path>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-[10px] text-amber-500 font-bold uppercase tracking-wider mb-0.5"
+                        id="announcement-meta">ANNOUNCEMENT</p>
+                    <p class="text-sm text-amber-100 leading-tight" id="announcement-text">Loading...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Bus List -->
         <div class="space-y-2 overflow-y-auto pr-1 flex-1 min-h-0 custom-scrollbar">
             <div id="bus-list" class="space-y-2">
@@ -103,6 +121,55 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+
+    <!-- Firebase SDK & Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAW7XS_Q_Kdh2eiYEaKBEHvZDpOk7-ynDg",
+            authDomain: "bustracker-c0af6.firebaseapp.com",
+            projectId: "bustracker-c0af6",
+            storageBucket: "bustracker-c0af6.firebasestorage.app",
+            messagingSenderId: "103145940746",
+            appId: "1:103145940746:web:80a8444bff23e75b94fcf3",
+            measurementId: "G-PKF72NB657"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const container = document.getElementById('announcement-container');
+        const textEl = document.getElementById('announcement-text');
+        const metaEl = document.getElementById('announcement-meta');
+
+        // Real-time listener for latest announcement
+        const q = query(collection(db, "announcements"), orderBy("timestamp", "desc"), limit(1));
+        onSnapshot(q, (snapshot) => {
+            if (!snapshot.empty) {
+                const data = snapshot.docs[0].data();
+                textEl.textContent = data.message;
+
+                // Format timestamp
+                let timeStr = "RECENT";
+                if (data.timestamp) {
+                    const date = data.timestamp.toDate();
+                    timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    // If older than 24h, show date
+                    if (Date.now() - date.getTime() > 86400000) {
+                        timeStr = date.toLocaleDateString();
+                    }
+                }
+
+                metaEl.textContent = `ANNOUNCEMENT • ${timeStr}`;
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        });
+    </script
 
     <script>
         // Initialize Map

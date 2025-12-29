@@ -121,6 +121,24 @@
                             class="text-xs font-normal text-slate-500"></span></p>
                 </div>
             </div>
+
+            <!-- Announcement Input -->
+            <div class="mt-4 pt-4 border-t border-slate-700/50">
+                <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-2">Broadcast Message</p>
+                <div class="flex gap-2">
+                    <input type="text" id="announceInput" placeholder="Traffic delay, etc..."
+                        class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors">
+                    <button id="btnAnnounce"
+                        class="bg-amber-600 hover:bg-amber-500 text-white rounded-lg px-3 py-1 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z">
+                            </path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
             <!-- Log -->
             <div id="debug"
                 class="mt-4 text-[10px] text-slate-500 font-mono h-12 overflow-hidden text-center leading-relaxed">
@@ -325,6 +343,57 @@
                 log("Session ended.");
                 socket.emit('driver_update', null);
             }
+        </script>
+        <script type="module">
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+            import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+            const firebaseConfig = {
+                apiKey: "AIzaSyAW7XS_Q_Kdh2eiYEaKBEHvZDpOk7-ynDg",
+                authDomain: "bustracker-c0af6.firebaseapp.com",
+                projectId: "bustracker-c0af6",
+                storageBucket: "bustracker-c0af6.firebasestorage.app",
+                messagingSenderId: "103145940746",
+                appId: "1:103145940746:web:80a8444bff23e75b94fcf3",
+                measurementId: "G-PKF72NB657"
+            };
+
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+
+            const btnAnnounce = document.getElementById('btnAnnounce');
+            const inputAnnounce = document.getElementById('announceInput');
+
+            btnAnnounce.addEventListener('click', async () => {
+                const msg = inputAnnounce.value.trim();
+                if (!msg) return;
+
+                // Visual feedback
+                const originalIcon = btnAnnounce.innerHTML;
+                btnAnnounce.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+                btnAnnounce.disabled = true;
+
+                try {
+                    await addDoc(collection(db, "announcements"), {
+                        message: msg,
+                        timestamp: serverTimestamp(),
+                        author: "Driver"
+                    });
+                    inputAnnounce.value = "";
+                    // Success feedback
+                    btnAnnounce.classList.replace('bg-amber-600', 'bg-green-600');
+                    setTimeout(() => {
+                        btnAnnounce.classList.replace('bg-green-600', 'bg-amber-600');
+                        btnAnnounce.innerHTML = originalIcon;
+                        btnAnnounce.disabled = false;
+                    }, 1000);
+                } catch (e) {
+                    console.error("Error adding document: ", e);
+                    alert("Failed to broadcast. Check console.");
+                    btnAnnounce.innerHTML = originalIcon;
+                    btnAnnounce.disabled = false;
+                }
+            });
         </script>
 </body>
 
