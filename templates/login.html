@@ -31,24 +31,22 @@
             {% if role == 'driver' %}Manage your route and share location{% else %}Login to track your ride{% endif %}
         </p>
 
-        {% if error %}
-        <div class="bg-red-500/20 text-red-200 p-3 rounded-lg mb-4 text-center text-sm border border-red-500/50">
-            {{ error }}
+        <div id="error-box"
+            class="hidden bg-red-500/20 text-red-200 p-3 rounded-lg mb-4 text-center text-sm border border-red-500/50">
         </div>
-        {% endif %}
 
-        <form method="POST" action="/login?role={{ role }}" class="space-y-4">
+        <form id="login-form" class="space-y-4">
             <div>
-                <label class="text-slate-300 text-sm ml-1">Username</label>
-                <input type="text" name="username" required
+                <label class="text-slate-300 text-sm ml-1">Email</label>
+                <input type="email" id="email" required
                     class="w-full mt-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none {% if role == 'driver' %}focus:border-emerald-500{% else %}focus:border-blue-500{% endif %} transition-colors">
             </div>
             <div>
                 <label class="text-slate-300 text-sm ml-1">Password</label>
-                <input type="password" name="password" required
+                <input type="password" id="password" required
                     class="w-full mt-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none {% if role == 'driver' %}focus:border-emerald-500{% else %}focus:border-blue-500{% endif %} transition-colors">
             </div>
-            <button type="submit"
+            <button type="submit" id="submit-btn"
                 class="w-full py-4 {% if role == 'driver' %}bg-emerald-600 hover:bg-emerald-500{% else %}bg-blue-600 hover:bg-blue-500{% endif %} text-white font-bold rounded-xl transition-all transform active:scale-95 shadow-lg mt-4">
                 LOGIN
             </button>
@@ -64,6 +62,75 @@
             <a href="/" class="text-slate-600 text-xs hover:text-slate-400">← Back to Role Selection</a>
         </div>
     </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAW7XS_Q_Kdh2eiYEaKBEHvZDpOk7-ynDg",
+            authDomain: "bustracker-c0af6.firebaseapp.com",
+            projectId: "bustracker-c0af6",
+            storageBucket: "bustracker-c0af6.firebasestorage.app",
+            messagingSenderId: "103145940746",
+            appId: "1:103145940746:web:80a8444bff23e75b94fcf3",
+            measurementId: "G-PKF72NB657"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const form = document.getElementById('login-form');
+        const errorBox = document.getElementById('error-box');
+        const submitBtn = document.getElementById('submit-btn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            errorBox.classList.add('hidden');
+            submitBtn.textContent = 'Verifying...';
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                // 1. Authenticate
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // 2. Fetch User Role
+                const docRef = doc(db, "users", user.uid);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const userData = docSnap.data();
+                    const userRole = userData.role || 'student';
+
+                    console.log("Login success!", userRole);
+                    if (userRole === 'driver') {
+                        window.location.href = '/driver';
+                    } else {
+                        window.location.href = '/student';
+                    }
+                } else {
+                    throw new Error("User profile not found. Please contact support.");
+                }
+
+            } catch (error) {
+                console.error(error);
+                errorBox.textContent = error.message.replace('Firebase:', '').trim();
+                errorBox.classList.remove('hidden');
+                submitBtn.textContent = 'LOGIN';
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        });
+    </script>
 </body>
 
 </html>

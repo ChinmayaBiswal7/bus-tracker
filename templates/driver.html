@@ -59,8 +59,38 @@
     </style>
 </head>
 
-<body
+<body id="main-body" style="display: none;"
     class="h-screen w-full flex flex-col items-center justify-center p-6 bg-[url('https://images.unsplash.com/photo-1494515855673-102c2f58aa64?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center">
+
+    <!-- Auth Guard -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const guardConfig = {
+            apiKey: "AIzaSyAW7XS_Q_Kdh2eiYEaKBEHvZDpOk7-ynDg",
+            authDomain: "bustracker-c0af6.firebaseapp.com",
+            projectId: "bustracker-c0af6",
+            storageBucket: "bustracker-c0af6.firebasestorage.app",
+            messagingSenderId: "103145940746",
+            appId: "1:103145940746:web:80a8444bff23e75b94fcf3",
+            measurementId: "G-PKF72NB657"
+        };
+
+        const guardApp = initializeApp(guardConfig);
+        const auth = getAuth(guardApp);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("Auth Guard: Driver logged in", user.email);
+                document.getElementById('main-body').style.display = 'flex';
+            } else {
+                console.log("Auth Guard: No user, redirecting...");
+                window.location.href = '/login?role=driver';
+            }
+        });
+    </script>
+
     <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
 
     <div

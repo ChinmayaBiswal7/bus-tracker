@@ -37,7 +37,40 @@
     </style>
 </head>
 
-<body class="h-screen w-screen overflow-hidden relative bg-slate-900">
+<body class="h-screen w-screen overflow-hidden relative bg-slate-900" style="display: none;" id="main-body">
+    <!-- Auth Guard -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+        const guardConfig = {
+            apiKey: "AIzaSyAW7XS_Q_Kdh2eiYEaKBEHvZDpOk7-ynDg",
+            authDomain: "bustracker-c0af6.firebaseapp.com",
+            projectId: "bustracker-c0af6",
+            storageBucket: "bustracker-c0af6.firebasestorage.app",
+            messagingSenderId: "103145940746",
+            appId: "1:103145940746:web:80a8444bff23e75b94fcf3",
+            measurementId: "G-PKF72NB657"
+        };
+
+        const guardApp = initializeApp(guardConfig);
+        const auth = getAuth(guardApp);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in
+                console.log("Auth Guard: User is logged in", user.email);
+                document.getElementById('main-body').style.display = 'block';
+                // Update username
+                const nameEl = document.getElementById('user-display-name');
+                if (nameEl) nameEl.textContent = user.displayName || user.email.split('@')[0];
+            } else {
+                // No user is signed in
+                console.log("Auth Guard: No user, redirecting...");
+                window.location.href = '/login?role=student';
+            }
+        });
+    </script>
 
     <div id="map" class="h-full w-full z-0"></div>
 
@@ -75,7 +108,8 @@
             </button>
         </div>
 
-        <p class="text-xs text-slate-400 mb-4">Welcome, <span class="text-blue-400 font-bold">{{ username }}</span></p>
+        <p class="text-xs text-slate-400 mb-4">Welcome, <span id="user-display-name"
+                class="text-blue-400 font-bold">Student</span></p>
 
         <!-- Search -->
         <div class="relative mb-6 shrink-0">

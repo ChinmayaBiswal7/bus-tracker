@@ -17,14 +17,12 @@ db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # --- Database Models ---
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(120), nullable=False)
+# --- Database Models ---
+# User model removed - Auth handled by Firebase
 
 class UserActivity(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    user_id = db.Column(db.String(100)) # Changed to String for Firebase UID
     action = db.Column(db.String(50)) # 'search', 'track'
     bus_no = db.Column(db.String(20))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
@@ -53,117 +51,36 @@ with app.app_context():
 
 # --- Helper Functions ---
 def get_recommendations(user_id):
-    # Simple AI: Recommend buses used around this time of day
-    current_hour = datetime.utcnow().hour
-    # Find activities from this user, grouped by bus_no, ordered by count
-    # Simplified: just return top 3 most accessed buses by this user ever
-    # (For a real AI we'd filter by time, but this suffices for a demo)
-    recent = db.session.query(UserActivity.bus_no, func.count(UserActivity.bus_no))\
-        .filter_by(user_id=user_id)\
-        .group_by(UserActivity.bus_no)\
-        .order_by(func.count(UserActivity.bus_no).desc())\
-        .limit(3).all()
-    return [r[0] for r in recent]
+    # Placeholder - Recommendations temporarily disabled during migration
+    return []
 
 # --- Routes ---
 @app.route('/')
 def index():
-    if 'user_id' in session:
-        return redirect(url_for('student'))
     return render_template('home.html')
 
-@app.route('/signup', methods=['GET', 'POST'])
+@app.route('/signup')
 def signup():
-    # Capture role from query param logic
-    role_arg = request.args.get('role')
-    if role_arg:
-        session['role'] = role_arg
-    
-    current_role = session.get('role', 'student')
+    role = request.args.get('role', 'student')
+    return render_template('signup.html', role=role)
 
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        if User.query.filter_by(username=username).first():
-            return render_template('signup.html', error="Username already taken", role=current_role)
-        
-        hashed_pw = generate_password_hash(password)
-        new_user = User(username=username, password_hash=hashed_pw)
-        db.session.add(new_user)
-        db.session.commit()
-        session['user_id'] = new_user.id
-        
-        # Redirect based on role
-        if current_role == 'driver':
-            return redirect(url_for('driver'))
-        return redirect(url_for('student'))
-        
-    return render_template('signup.html', role=current_role)
-
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login')
 def login():
-    # If already logged in, redirect based on stored role or default to student
-    if 'user_id' in session:
-        role = session.get('role', 'student')
-        if role == 'driver':
-            return redirect(url_for('driver'))
-        return redirect(url_for('student'))
-
-    # Capture role from query param logic
-    role_arg = request.args.get('role')
-    if role_arg:
-        session['role'] = role_arg
-
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        user = User.query.filter_by(username=username).first()
-        if user and check_password_hash(user.password_hash, password):
-            session['user_id'] = user.id
-            
-            # Redirect based on intent
-            if session.get('role') == 'driver':
-                return redirect(url_for('driver'))
-            return redirect(url_for('student'))
-            
-        return render_template('login.html', error="Invalid credentials", role=session.get('role', 'student'))
-    return render_template('login.html', role=session.get('role', 'student'))
+    role = request.args.get('role', 'student')
+    return render_template('login.html', role=role)
 
 @app.route('/logout')
 def logout():
-    session.pop('user_id', None)
-    session.pop('role', None)
+    session.clear()
     return redirect(url_for('index'))
 
 @app.route('/driver')
 def driver():
-    # Drivers theoretically should login too, but for simplicity let's keep it open or require same login
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-        
-    # Verify user exists (DB might have reset)
-    if not User.query.get(session['user_id']):
-        session.clear()
-        return redirect(url_for('login'))
-        
     return render_template('driver.html')
 
 @app.route('/student')
 def student():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    
-    # AI Recommendations
-    # AI Recommendations
-    recs = get_recommendations(session['user_id'])
-    
-    current_user = User.query.get(session['user_id'])
-    if not current_user:
-        # Session is stale (DB reset), force logout
-        session.clear()
-        return redirect(url_for('login'))
-        
-    return render_template('student.html', recommendations=recs, username=current_user.username)
+    return render_template('student.html', recommendations=[])
 
 # --- Socket Events ---
 
