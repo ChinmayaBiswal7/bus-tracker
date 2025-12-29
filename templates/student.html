@@ -422,34 +422,66 @@
             iconAnchor: [8, 8]
         });
 
-        // Initialize Geolocation
-        if (navigator.geolocation) {
-            navigator.geolocation.watchPosition(
+        // Robust Geolocation Handling
+        let watchId = null;
+
+        function startLocationTracking(highAccuracy = true) {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+
+            const options = {
+                enableHighAccuracy: highAccuracy,
+                timeout: 30000,
+                maximumAge: 10000
+            };
+
+            console.log(`Starting GPS (High Accuracy: ${highAccuracy ? 'ON' : 'OFF'})...`);
+
+            watchId = navigator.geolocation.watchPosition(
                 (pos) => {
+                    // Success
                     userLat = pos.coords.latitude;
                     userLng = pos.coords.longitude;
                     updateUserMarker(userLat, userLng);
                     if (targetBusId) updateRoute();
-                    if (targetBusId) updateRoute();
+
+                    // Hide error card if visible
+                    const tripDist = document.getElementById('trip-dist');
+                    if (tripDist.textContent.includes("GPS")) {
+                        document.getElementById('trip-info-card').classList.add('hidden');
+                    }
                 },
                 (err) => {
-                    console.error("GPS Error:", err);
+                    console.warn(`GPS Error (${highAccuracy ? 'High' : 'Low'} Acc):`, err);
+
+                    // If High Accuracy fails (Timeout/Error), try Low Accuracy automatically
+                    if (highAccuracy && (err.code === 3 || err.code === 2)) {
+                        console.log("High accuracy failed, switching to low accuracy...");
+                        startLocationTracking(false);
+                        return;
+                    }
+
+                    // Show Error to User
                     const tripCard = document.getElementById('trip-info-card');
                     const tripDist = document.getElementById('trip-dist');
                     const tripEta = document.getElementById('trip-eta');
 
                     tripCard.classList.remove('hidden');
                     tripEta.textContent = "⚠️";
-                    if (err.code === 1) {
-                        tripDist.textContent = "GPS Access Denied";
-                    } else if (err.code === 2) {
-                        tripDist.textContent = "Location Unavailable";
-                    } else {
-                        tripDist.textContent = "GPS Timeout";
-                    }
+
+                    if (err.code === 1) tripDist.textContent = "GPS Access Denied";
+                    else if (err.code === 2) tripDist.textContent = "Location Unavailable";
+                    else if (err.code === 3) tripDist.textContent = "GPS Signal Weak";
+                    else tripDist.textContent = "GPS Error";
                 },
-                { enableHighAccuracy: true, timeout: 10000 }
+                options
             );
+        }
+
+        // Initialize Geolocation
+        if (navigator.geolocation) {
+            startLocationTracking(true);
+        } else {
+            console.error("Browser does not support Geolocation");
         }
 
         function updateUserMarker(lat, lng) {
