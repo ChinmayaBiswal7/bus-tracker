@@ -562,11 +562,8 @@
                     const now = new Date();
                     const msgTime = data.last_updated ? data.last_updated.toDate() : new Date(); // Fallback to now if missing
 
-                    // Relaxed check: 60 seconds to account for network/clock skew
-                    if ((now - msgTime) < 60000) {
-                        console.log("Triggering Notification for:", data.bus_no);
-                        sendNotification(`📢 Bus ${data.bus_no}`, data.latest_message || "New announcement");
-                    }
+                    // Notification Logic moved to onMessage/SW to prevent duplicates.
+                    // This block now only ensures data is fresh for the UI.
                 }
             });
 
