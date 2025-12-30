@@ -20,9 +20,32 @@ from firebase_admin import credentials, firestore, messaging
 from firebase_admin import _apps 
 
 # Prevent re-initialization error on reload
+import os
+import json
+
+# Prevent re-initialization error on reload
 if not firebase_admin._apps:
-    cred = credentials.Certificate("serviceAccountKey.json")
-    firebase_admin.initialize_app(cred)
+    if os.path.exists("serviceAccountKey.json"):
+        cred = credentials.Certificate("serviceAccountKey.json")
+        firebase_admin.initialize_app(cred)
+    else:
+        # Fallback for Render: Use Environment Variable or Dummy
+        print("[WARN] serviceAccountKey.json not found.")
+        firebase_creds = os.environ.get('FIREBASE_CREDENTIALS')
+        if firebase_creds:
+            print("[INFO] Loading credentials from Environment Variable...")
+            cred_dict = json.loads(firebase_creds)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+        else:
+            print("[ERROR] No Firebase Credentials found! Push Notifications will NOT work.")
+            # We do NOT crash, but f_db will fail if used.
+            # Initialize with default (might fail depending on GCP env) or just pass.
+            # Better to not initialize and let f_db usage fail gracefully?
+            # Actually, f_db usage is global. Let's initialize a blank app to prevent ImportErrors, 
+            # though functionality will break.
+            # firebase_admin.initialize_app() 
+            pass
 
 f_db = firestore.client()
 

@@ -5,3 +5,4 @@ sqlalchemy
 eventlet
 gunicorn
 werkzeug
+firebase-admin
