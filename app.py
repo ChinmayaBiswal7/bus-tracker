@@ -72,6 +72,15 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
+# --- PWA Static Routes (Critical for Service Worker Scope) ---
+@app.route('/manifest.json')
+def serve_manifest():
+    return app.send_static_file('manifest.json')
+
+@app.route('/sw.js')
+def serve_sw():
+    return app.send_static_file('sw.js')
+
 @app.route('/driver')
 def driver():
     return render_template('driver.html')
