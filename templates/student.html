@@ -516,6 +516,11 @@
                 activeBuses.push({ id: doc.id, ...data });
             });
             updateBadge();
+
+            // FIX: Refresh list if currently viewing
+            if (!overlayEl.classList.contains('hidden')) {
+                renderBusList();
+            }
         });
 
         function updateBadge() {
