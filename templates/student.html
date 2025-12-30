@@ -330,10 +330,6 @@
                 <span id="notify-badge"
                     class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
             </button>
-            <button onclick="testNotification()"
-                class="p-2 ml-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-[10px] font-bold text-blue-400 uppercase tracking-widest border border-slate-700 transition-all">
-                Test
-            </button>
             <h2 class="text-lg font-bold text-white tracking-tight ml-auto">Announcements</h2>
         </div>
 
@@ -403,17 +399,7 @@
             }
         }
 
-        window.testNotification = function () {
-            if (Notification.permission === 'granted') {
-                new Notification("🚍 Campus Ride Test", {
-                    body: "This is how bus alerts will appear on your phone!",
-                    icon: "https://cdn-icons-png.flaticon.com/512/3448/3448339.png",
-                    vibrate: [200, 100, 200]
-                });
-            } else {
-                requestNotificationPermission();
-            }
-        };
+
 
         // --- Refactored Announcement Logic (Hierarchical) ---
         // ... (badgeEl, overlayEl, listEl definitions same) ...
