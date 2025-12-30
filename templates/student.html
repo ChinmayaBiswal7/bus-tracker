@@ -590,7 +590,33 @@
         }
 
         function renderBusList() {
-            // ... (Same) ...
+            // Save state of currently open sections
+            const expandedBusIds = new Set();
+            activeBuses.forEach(bus => {
+                const content = document.getElementById(`content-${bus.id}`);
+                if (content && !content.classList.contains('hidden')) {
+                    expandedBusIds.add(bus.id);
+                }
+            });
+
+            // Clean up old listeners for buses that might be removed or re-rendered
+            // (Optional optimization: only re-render changed items, but full re-render is safer for sorting)
+            // For now, we just clear the list and re-build from `activeBuses`. 
+            // The existing listeners in `unsubscribeMessages` will be kept effectively 
+            // but we need to re-attach them to the NEW DOM elements if we re-create them.
+            // Actually, if we destroy the DOM, we should probably unsubscribe to avoid leaks/errors
+            // trying to update non-existent DOM.
+            // However, `loadMessagesForBus` checks `if (unsubscribeMessages[busId]) return;`
+            // So if we don't unsubscribe, it won't re-attach. 
+            // BUT the old listener is trying to update the OLD DOM element which is gone.
+            // So we MUST unsubscribe.
+
+            // Unsubscribe ALL current listeners because we are destroying their DOM targets
+            Object.keys(unsubscribeMessages).forEach(busId => {
+                unsubscribeMessages[busId](); // Stop listening
+                delete unsubscribeMessages[busId];
+            });
+
             listEl.innerHTML = '';
 
             if (activeBuses.length === 0) {
@@ -615,9 +641,12 @@
                         <div class="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center text-xs">🚌</div>
                         <span class="font-bold text-slate-200 text-sm">${busStr}</span>
                     </div>
-                    <svg id="arrow-${bus.id}" class="w-5 h-5 text-slate-500 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
+                     <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-slate-500 italic">${bus.latest_message ? 'Active' : ''}</span>
+                        <svg id="arrow-${bus.id}" class="w-5 h-5 text-slate-500 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </div>
                 `;
 
                 // Content Area (Hidden by default)
@@ -629,6 +658,14 @@
                 container.appendChild(header);
                 container.appendChild(content);
                 listEl.appendChild(container);
+
+                // RESTORE STATE
+                if (expandedBusIds.has(bus.id)) {
+                    content.classList.remove('hidden');
+                    const arrow = header.querySelector(`#arrow-${bus.id}`);
+                    if (arrow) arrow.classList.add('rotate-180');
+                    loadMessagesForBus(bus.id); // Re-attach listener to NEW DOM
+                }
             });
         }
 
