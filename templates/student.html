@@ -357,12 +357,43 @@
     <!-- Firebase SDK & Logic -->
     <script type="module">
         import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
         // Use the app instance from the Auth Guard
         const app = window.firebaseApp;
         const db = getFirestore(app);
+        const messaging = getMessaging(app);
 
-        // --- Notification Logic ---
+        // --- FCM Logic (Push Notifications) ---
+        const VAPID_KEY = "BJoiF9u6UpFvBbNQcjByY3IfcxS9yivCpdcMS5b1jpg4rFoTnM35kZzmgEuVCWgJiBrcofsPLrjh4CoO5i1DZBE";
+
+        async function initFCM() {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+                    if (token) {
+                        console.log("🔥 FCM Token:", token);
+                        // TODO: Save this token to Firestore -> users/{uid}/fcmToken
+                    } else {
+                        console.log("No registration token available. Request permission to generate one.");
+                    }
+                }
+            } catch (err) {
+                console.log('An error occurred while retrieving token. ', err);
+            }
+        }
+
+        // Handle foreground messages
+        onMessage(messaging, (payload) => {
+            console.log('Message received. ', payload);
+            sendNotification(payload.notification.title, payload.notification.body);
+        });
+
+        // Initialize FCM
+        initFCM();
+
+        // --- Notification Logic (Local) ---
         const notifyBtn = document.getElementById('btn-notify');
         const notifyBadge = document.getElementById('notify-badge');
 

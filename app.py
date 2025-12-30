@@ -81,6 +81,10 @@ def serve_manifest():
 def serve_sw():
     return app.send_static_file('sw.js')
 
+@app.route('/firebase-messaging-sw.js')
+def serve_fcm_sw():
+    return app.send_static_file('firebase-messaging-sw.js')
+
 @app.route('/driver')
 def driver():
     return render_template('driver.html')
