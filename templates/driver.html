@@ -411,10 +411,10 @@
                 log(`Initializing ${typeLabel} (${busNo})...`);
 
                 // Config
-                // High Accuracy: 5s timeout to fail fast. Low Accuracy: 20s to find anything.
+                // FIX: Increased timeout to 20s (was 5s) to prevent premature fallback
                 const options = {
                     enableHighAccuracy: useHighAccuracy,
-                    timeout: useHighAccuracy ? 5000 : 20000,
+                    timeout: useHighAccuracy ? 20000 : 20000,
                     maximumAge: 0
                 };
 
