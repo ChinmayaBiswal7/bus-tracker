@@ -180,6 +180,30 @@
         </div>
     </div>
 
+    <!-- Trip Info Card -->
+    <div id="trip-info-card"
+        class="fixed bottom-24 left-4 right-4 bg-slate-900/90 backdrop-blur-xl p-5 rounded-2xl border border-blue-500/30 shadow-2xl z-[900] hidden transition-all duration-300 transform translate-y-0">
+        <div class="flex items-center justify-between mb-2">
+            <div>
+                <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Estimated Arrival</p>
+                <div class="flex items-baseline gap-2">
+                    <h2 id="trip-eta" class="text-3xl font-bold text-white">-- min</h2>
+                    <span id="trip-dist" class="text-xs text-slate-400 font-mono">(-- km)</span>
+                </div>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center animate-pulse">
+                <span class="text-xl">🚍</span>
+            </div>
+        </div>
+        <div class="w-full bg-slate-800 rounded-full h-1 mt-2 overflow-hidden">
+            <div class="bg-blue-500 h-full w-2/3 animate-pulse"></div>
+        </div>
+        <button onclick="stopTrackingRoute()"
+            class="absolute -top-3 -right-3 w-8 h-8 bg-slate-800 rounded-full border border-slate-600 text-slate-400 hover:text-white flex items-center justify-center shadow-lg">
+            ✕
+        </button>
+    </div>
+
     <!-- Sidebar (Off-Canvas) -->
     <div id="sidebar" class="fixed inset-y-0 left-0 w-80 z-[2000] transform -translate-x-full transition-transform duration-300 ease-in-out
                 bg-slate-900/95 backdrop-blur-xl border-r border-slate-700 p-5 text-white flex flex-col shadow-2xl">
