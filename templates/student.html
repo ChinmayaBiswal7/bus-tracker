@@ -429,7 +429,17 @@
                     const debugEl = document.getElementById('debug-status');
                     if (debugEl) debugEl.innerHTML = "🔔 Perm: GRANTED";
 
-                    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+                    // Wait for Service Worker to be ready (ensure we use sw.js)
+                    let registration;
+                    if ('serviceWorker' in navigator) {
+                        registration = await navigator.serviceWorker.ready;
+                    }
+
+                    const token = await getToken(messaging, {
+                        vapidKey: VAPID_KEY,
+                        serviceWorkerRegistration: registration
+                    });
+
                     if (token) {
                         console.log("🔥 FCM Token:", token);
                         if (debugEl) debugEl.innerHTML = "🔥 Token: OK";
@@ -663,7 +673,7 @@
                 // RE-INSERT to ensure sort order (appendChild moves existing node)
                 listEl.appendChild(container);
             });
-            
+
         }
 
         window.toggleBusSection = function (busId) {
