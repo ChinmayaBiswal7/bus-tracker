@@ -20,6 +20,27 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#0f172a">
     <script>
+        // Emergency Service Worker Reset (Fix for v4/v5 conflict)
+        const SW_RESET_KEY = 'sw_reset_perf_v1';
+        if (!localStorage.getItem(SW_RESET_KEY)) {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (let registration of registrations) {
+                        console.log("Unregistering old SW:", registration);
+                        registration.unregister();
+                    }
+                    // Clear Caches
+                    caches.keys().then(names => {
+                        for (let name of names) caches.delete(name);
+                    });
+
+                    localStorage.setItem(SW_RESET_KEY, 'true');
+                    console.log("Service Workers & Cache Reset. Reloading...");
+                    window.location.reload();
+                });
+            }
+        }
+
         // PWA Install Logic
         let deferredPrompt;
         window.addEventListener('load', () => {
