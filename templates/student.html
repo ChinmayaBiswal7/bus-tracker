@@ -836,6 +836,14 @@
                 L.latLng(userLat, userLng)
             ];
 
+            // Perform Instant Estimate (Haversine) so user doesn't wait
+            const dist = map.distance([userLat, userLng], busLatLng);
+            const distKm = (dist / 1000).toFixed(1);
+            const timeMins = Math.ceil((distKm / 30) * 60); // 30km/h avg
+
+            tripDist.textContent = `(${distKm} km)`;
+            tripEta.textContent = `${timeMins} min`;
+
             // If control exists, just update waypoints
             if (routingControl) {
                 if (window.routingTimer) clearTimeout(window.routingTimer);
@@ -843,9 +851,9 @@
                 routingControl.setWaypoints(waypoints);
             } else {
                 // Initialize new control
-                tripDist.textContent = "Calculating route...";
                 tripCard.classList.remove('hidden');
 
+                if (window.routingTimer) clearTimeout(window.routingTimer);
                 startRoutingTimer(busLatLng);
 
                 try {
