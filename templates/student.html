@@ -1035,61 +1035,7 @@
             return busNo.includes(currentFilter);
         }
 
-        function updateMarker(sid, data) {
-            const busNo = data.bus_no;
-            const lat = data.lat;
-            const lng = data.lng;
-            const accuracy = data.accuracy;
 
-            if (markers[sid]) {
-                const marker = markers[sid];
-                marker.setLatLng([lat, lng]);
-                marker._busNo = busNo; // Update just in case
-                marker.isOffline = false; // It's active
-
-                // Update Icon if needed (e.g. came back online)
-                if (busNo.startsWith('EV-')) {
-                    marker.setIcon(createEvIcon(busNo));
-                } else {
-                    marker.setIcon(createBusIcon(busNo));
-                }
-
-                // Update Circle
-                if (circles[sid]) {
-                    circles[sid].setLatLng([lat, lng]);
-                    circles[sid].setRadius(accuracy);
-                }
-            } else {
-                // New Marker
-                let icon;
-                if (busNo.startsWith('EV-')) {
-                    icon = createEvIcon(busNo);
-                } else {
-                    icon = createBusIcon(busNo);
-                }
-
-                const marker = L.marker([lat, lng], { icon: icon }).addTo(map);
-                marker._busNo = busNo;
-                marker.isOffline = false;
-                marker.on('click', () => zoomToBus(sid)); // Enable click
-                markers[sid] = marker;
-
-                // Accuracy Circle
-                const circle = L.circle([lat, lng], {
-                    radius: accuracy,
-                    color: '#3b82f6',
-                    fillColor: '#3b82f6',
-                    fillOpacity: 0.1,
-                    weight: 1
-                }).addTo(map);
-                circles[sid] = circle;
-            }
-
-            // Update user tracking if targeting this bus
-            if (targetBusId === sid) {
-                updateRoute();
-            }
-        }
 
         function renderBusCard(sid, marker) {
             const isEv = marker._busNo.startsWith("EV-");
