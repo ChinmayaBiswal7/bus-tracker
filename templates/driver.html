@@ -553,6 +553,7 @@
                     const busDocRef = doc(db, "announcements", busNo);
                     await setDoc(busDocRef, {
                         bus_no: busNo,
+                        latest_message: msg,
                         last_updated: serverTimestamp()
                     }, { merge: true });
 
