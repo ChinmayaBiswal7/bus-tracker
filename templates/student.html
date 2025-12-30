@@ -429,16 +429,7 @@
                     const debugEl = document.getElementById('debug-status');
                     if (debugEl) debugEl.innerHTML = "🔔 Perm: GRANTED";
 
-                    // Wait for Service Worker to be ready (ensure we use sw.js)
-                    let registration;
-                    if ('serviceWorker' in navigator) {
-                        registration = await navigator.serviceWorker.ready;
-                    }
-
-                    const token = await getToken(messaging, {
-                        vapidKey: VAPID_KEY,
-                        serviceWorkerRegistration: registration
-                    });
+                    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
 
                     if (token) {
                         console.log("🔥 FCM Token:", token);
