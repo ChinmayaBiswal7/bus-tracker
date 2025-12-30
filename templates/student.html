@@ -180,27 +180,23 @@
         </div>
     </div>
 
-    <!-- Trip Info Card -->
+    <!-- Trip Info Card (Compact Pill) -->
     <div id="trip-info-card"
-        class="fixed bottom-24 left-4 right-4 bg-slate-900/90 backdrop-blur-xl p-5 rounded-2xl border border-blue-500/30 shadow-2xl z-[900] hidden transition-all duration-300 transform translate-y-0">
-        <div class="flex items-center justify-between mb-2">
-            <div>
-                <p class="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Estimated Arrival</p>
-                <div class="flex items-baseline gap-2">
-                    <h2 id="trip-eta" class="text-3xl font-bold text-white">-- min</h2>
-                    <span id="trip-dist" class="text-xs text-slate-400 font-mono">(-- km)</span>
-                </div>
-            </div>
-            <div class="w-10 h-10 rounded-full bg-blue-600/20 flex items-center justify-center animate-pulse">
-                <span class="text-xl">🚍</span>
-            </div>
+        class="fixed bottom-24 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full shadow-[0_0_20px_rgba(37,99,235,0.5)] z-[900] hidden flex items-center gap-4 transition-all duration-300 transform scale-100 border border-blue-400/50 backdrop-blur-md">
+        <div class="flex flex-col items-start leading-tight">
+            <span class="text-[10px] font-bold opacity-90 uppercase tracking-widest">Arrival</span>
+            <span id="trip-eta" class="text-lg font-bold font-mono">-- min</span>
         </div>
-        <div class="w-full bg-slate-800 rounded-full h-1 mt-2 overflow-hidden">
-            <div class="bg-blue-500 h-full w-2/3 animate-pulse"></div>
+        <div class="h-8 w-px bg-white/20"></div>
+        <div class="flex flex-col items-start leading-tight">
+            <span class="text-[10px] font-bold opacity-90 uppercase tracking-widest">Dist</span>
+            <span id="trip-dist" class="text-sm font-mono opacity-90">-- km</span>
         </div>
         <button onclick="stopTrackingRoute()"
-            class="absolute -top-3 -right-3 w-8 h-8 bg-slate-800 rounded-full border border-slate-600 text-slate-400 hover:text-white flex items-center justify-center shadow-lg">
-            ✕
+            class="bg-white/10 hover:bg-white/20 rounded-full p-1.5 ml-1 transition-colors">
+            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
         </button>
     </div>
 
@@ -769,9 +765,12 @@
             }
 
             const busLatLng = busMarker.getLatLng();
+
+            // Swap: From Bus (Source) -> To User (Destination)
+            // This ensures traffic rules/turns are calculated for the bus arriving TO you.
             const waypoints = [
-                L.latLng(userLat, userLng),
-                L.latLng(busLatLng.lat, busLatLng.lng)
+                L.latLng(busLatLng.lat, busLatLng.lng),
+                L.latLng(userLat, userLng)
             ];
 
             // If control exists, just update waypoints
