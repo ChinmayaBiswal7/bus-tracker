@@ -407,7 +407,7 @@
                 // FIX: Increased timeout to 20s (was 5s) to prevent premature fallback
                 const options = {
                     enableHighAccuracy: useHighAccuracy,
-                    timeout: useHighAccuracy ? 20000 : 20000,
+                    timeout: useHighAccuracy ? 5000 : 20000, // FIX: 5s timeout for GPS to ensure quick fallback
                     maximumAge: 0
                 };
 
@@ -461,8 +461,10 @@
                         } else {
                             if (error.code === 1) stopTracking();
                             else {
-                                liveBadge.textContent = "NO SIGNAL";
-                                liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
+                                // Don't give up! Just show we are searching via Network
+                                liveBadge.textContent = "SEARCHING...";
+                                liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-amber-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300 animate-pulse";
+                                log("Network weak, retrying...");
                             }
                         }
                     },
