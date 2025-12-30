@@ -180,15 +180,16 @@ def chat_with_ai():
                     "content": user_msg
                 }
             ],
-            model="llama3-8b-8192",
+            model="llama-3.1-8b-instant",
             temperature=0.5,
             max_tokens=150,
         )
         ai_response = chat_completion.choices[0].message.content
         return {"response": ai_response}
     except Exception as e:
-        print(f"[ERROR] Groq API Error: {e}")
-        return {"response": "I'm having trouble connecting to my brain right now. Please try again later."}
+        error_msg = str(e)
+        print(f"[ERROR] Groq API Error: {error_msg}")
+        return {"response": f"I'm having trouble connecting to my brain. Details: {error_msg}"}
 
 @app.route('/subscribe', methods=['POST'])
 def subscribe_to_topic():
