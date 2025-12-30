@@ -1,7 +1,8 @@
+serviceAccountKey.json
 __pycache__/
 *.pyc
+.env
+.DS_Store
 instance/
 .pytest_cache/
-.env
 buses.db
-*.bat

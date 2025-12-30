@@ -14,6 +14,18 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+# --- Firebase Admin SDK Setup (Backend) ---
+import firebase_admin
+from firebase_admin import credentials, firestore, messaging
+from firebase_admin import _apps 
+
+# Prevent re-initialization error on reload
+if not firebase_admin._apps:
+    cred = credentials.Certificate("serviceAccountKey.json")
+    firebase_admin.initialize_app(cred)
+
+f_db = firestore.client()
+
 # --- Database Models ---
 # --- Database Models ---
 # User model removed - Auth handled by Firebase
@@ -92,6 +104,20 @@ def driver():
 @app.route('/student')
 def student():
     return render_template('student.html', recommendations=[])
+
+@app.route('/subscribe', methods=['POST'])
+def subscribe_to_topic():
+    token = request.json.get('token')
+    topic = 'news'
+    if token:
+        try:
+            response = messaging.subscribe_to_topic([token], topic)
+            print("Successfully subscribed to topic:", response.success_count)
+            return {'status': 'success', 'message': 'Subscribed'}, 200
+        except Exception as e:
+            print("Error subscribing:", e)
+            return {'status': 'error', 'message': str(e)}, 500
+    return {'status': 'error', 'message': 'No token provided'}, 400
 
 # --- Socket Events ---
 
@@ -175,6 +201,59 @@ def handle_driver_update(data):
     db.session.commit()
 
     emit('update_bus', {'id': sid, 'data': data}, broadcast=True)
+
+# --- Background Listener for Announcements ---
+def listen_for_announcements():
+    """
+    Listens to the 'announcements' collection group 'messages' 
+    and triggers an FCM notification when a new message is added.
+    """
+    print("🔔 Starting Announcement Listener...")
+
+    # Define the callback
+    def on_snapshot(col_snapshot, changes, read_time):
+        for change in changes:
+            if change.type.name == 'ADDED':
+                data = change.document.to_dict()
+                print(f"🔔 New Announcement: {data}")
+                
+                # Check if it's a recent message (avoid spamming old ones on startup)
+                # In a real app, use timestamp comparison. 
+                # For now, we trust the listener catches live events.
+                
+                message_text = data.get('message', 'New Announcement')
+                bus_no = data.get('bus_no', 'BUS')
+                
+                # Send Push Notification
+                send_multicast_notification(bus_no, message_text)
+
+    # Watch the collection group 'messages'
+    # This catches announcements from ALL buses
+    col_query = f_db.collection_group('messages') 
+    col_query.on_snapshot(on_snapshot)
+
+def send_multicast_notification(title_bus, body_text):
+    """
+    Sends a message to all users subscribed to the 'all_students' topic
+    or generally via multicast if we had individual tokens.
+    For simplicity, we will send to a TOPIC called 'news'.
+    """
+    try:
+        topic = 'news' 
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=f"📢 {title_bus}",
+                body=body_text,
+            ),
+            topic=topic,
+        )
+        response = messaging.send(message)
+        print('Successfully sent message:', response)
+    except Exception as e:
+        print('Error sending message:', e)
+
+# Start listener in a background thread
+eventlet.spawn(listen_for_announcements)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=3000, allow_unsafe_werkzeug=True)

@@ -422,7 +422,14 @@
                     const token = await getToken(messaging, { vapidKey: VAPID_KEY });
                     if (token) {
                         console.log("🔥 FCM Token:", token);
-                        // TODO: Save this token to Firestore -> users/{uid}/fcmToken
+                        // Send token to server to subscribe to 'news' topic
+                        fetch('/subscribe', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ token: token }),
+                        });
                     } else {
                         console.log("No registration token available. Request permission to generate one.");
                     }
