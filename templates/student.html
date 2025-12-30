@@ -306,25 +306,13 @@
             display: none !important;
         }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 
     <!-- Firebase SDK & Logic -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // ... (Config & Init same) ...
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyAW7XS_Q_Kdh2eiYEaKBEHvZDpOk7-ynDg",
-            authDomain: "bustracker-c0af6.firebaseapp.com",
-            projectId: "bustracker-c0af6",
-            storageBucket: "bustracker-c0af6.firebasestorage.app",
-            messagingSenderId: "103145940746",
-            appId: "1:103145940746:web:80a8444bff23e75b94fcf3",
-            measurementId: "G-PKF72NB657"
-        };
-        const app = window.firebaseApp || initializeApp(firebaseConfig);
+        // Use the app instance from the Auth Guard
+        const app = window.firebaseApp;
         const db = getFirestore(app);
 
         // --- Notification Logic ---
