@@ -787,13 +787,19 @@
                         waypoints: waypoints,
                         router: L.Routing.osrmv1({
                             serviceUrl: 'https://router.project-osrm.org/route/v1',
-                            profile: 'driving',
-                            timeout: 10000 // 10s timeout
+                            profile: 'driving', // Public server only supports 'driving' (Car), 'bike', 'foot'. 
+                            // No Truck/Bus profile available on free tier.
+                            timeout: 10000,
+                            routingOptions: {
+                                alternatives: false, // Force single best route
+                                steps: false,
+                                overview: 'full' // detailed geometry
+                            }
                         }),
                         lineOptions: {
                             styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }]
                         },
-                        createMarker: function () { return null; }, // No extra markers
+                        createMarker: function () { return null; },
                         addWaypoints: false,
                         draggableWaypoints: false,
                         fitSelectedRoutes: false,
