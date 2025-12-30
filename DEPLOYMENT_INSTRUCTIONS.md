@@ -36,7 +36,15 @@ git push -u origin main
     *   **Instance Type**: Free
 6.  Click **Create Web Service**.
 
-## Step 4: Test in the Bus!
+## Step 4: Add Environment Variables (IMPORTANT)
+1.  On your Render Dashboard for the new service, finding the **Environment** tab on the left.
+2.  Click **Add Environment Variable**.
+3.  Add the AI Key:
+    *   **Key**: `GROQ_API_KEY`
+    *   **Value**: (Paste your `gsk_...` key here)
+4.  Click **Save Changes**.
+
+## Step 5: Test in the Bus!
 *   Wait about 3-5 minutes for the build to finish.
 *   You will see a link like `https://my-bus-tracker.onrender.com`.
 *   **Open this link on the Driver's phone** (and your phone).

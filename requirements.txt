@@ -6,3 +6,4 @@ eventlet
 gunicorn
 werkzeug
 firebase-admin
+groq

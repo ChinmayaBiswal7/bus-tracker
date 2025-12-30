@@ -18,6 +18,15 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 import firebase_admin
 from firebase_admin import credentials, firestore, messaging
 from firebase_admin import _apps 
+from groq import Groq
+import os
+
+# Initialize Groq Client (Llama 3)
+groq_client = None
+if os.environ.get("GROQ_API_KEY"):
+    groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+else:
+    print("[WARN] GROQ_API_KEY not found. AI Chatbot will be limited.") 
 
 # Prevent re-initialization error on reload
 import os
@@ -135,6 +144,51 @@ def driver():
 @app.route('/student')
 def student():
     return render_template('student.html', recommendations=[])
+
+@app.route('/api/chat', methods=['POST'])
+def chat_with_ai():
+    data = request.json
+    user_msg = data.get('message', '')
+    
+    # 1. Fallback if no Key
+    if not groq_client:
+        return {
+            "response": "I see you want to chat! To enable my full Llama 3 brain, please set the 'GROQ_API_KEY' environment variable. For now, I'm just a simple bot: " + user_msg
+        }
+
+    # 2. System Prompt
+    system_prompt = """
+    You are the Campus Ride Assistant, an intelligent AI for a college bus tracking app.
+    Your capabilities:
+    - Tracking: Tell users to use the search bar or tap bus cards.
+    - Status: Explain that Green dot = High GPS accuracy, Red dot = Server offline/Disconnected.
+    - Offline: Means driver app is closed/no data. We show last known location.
+    - EVs: Electric Shuttles have green icons.
+    
+    Style: Friendly, concise, helpful. Keep answers under 2 sentences unless complex.
+    """
+
+    try:
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {
+                    "role": "system",
+                    "content": system_prompt
+                },
+                {
+                    "role": "user",
+                    "content": user_msg
+                }
+            ],
+            model="llama3-8b-8192",
+            temperature=0.5,
+            max_tokens=150,
+        )
+        ai_response = chat_completion.choices[0].message.content
+        return {"response": ai_response}
+    except Exception as e:
+        print(f"[ERROR] Groq API Error: {e}")
+        return {"response": "I'm having trouble connecting to my brain right now. Please try again later."}
 
 @app.route('/subscribe', methods=['POST'])
 def subscribe_to_topic():

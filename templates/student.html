@@ -1507,7 +1507,7 @@
             }
         }
 
-        function handleChat(e) {
+        async function handleChat(e) {
             e.preventDefault();
             const input = document.getElementById('chat-input');
             const msg = input.value.trim();
@@ -1517,13 +1517,23 @@
             addMessage(msg, 'user');
             input.value = '';
 
-            // Bot Response (Simulated AI)
+            // Bot Response (Real Llama 3)
             showTypingIndicator();
-            setTimeout(() => {
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                });
+                const data = await response.json();
                 removeTypingIndicator();
-                const response = getBotResponse(msg.toLowerCase());
-                addMessage(response, 'bot');
-            }, 800);
+                addMessage(data.response, 'bot');
+            } catch (err) {
+                console.error(err);
+                removeTypingIndicator();
+                addMessage("I'm having a little trouble connecting to the server. Please try again.", 'bot');
+            }
         }
 
         function addMessage(text, sender) {
@@ -1565,17 +1575,7 @@
             if (el) el.remove();
         }
 
-        function getBotResponse(input) {
-            // Simple Keyword Matching Knowledge Base
-            if (input.includes('hi') || input.includes('hello')) return "Hello! How can I help you today?";
-            if (input.includes('track') || input.includes('find')) return "To track a bus, simply tap on the search bar or scroll the list. Tapping a bus card will zoom the map to it!";
-            if (input.includes('offline') || input.includes('connect')) return "Status 'Offline' means the driver's device isn't sending GPS data. We show their last known location in grey.";
-            if (input.includes('red') || input.includes('green')) return "Green dot means GPS is high accuracy. Red means the server is offline or disconnected.";
-            if (input.includes('ev') || input.includes('electric')) return "EV Shuttles (Electric Vehicles) are shown with a ⚡ icon and green accents.";
-            if (input.includes('late') || input.includes('time')) return "Bus times depend on traffic. Detailed ETAs are coming soon!";
 
-            return "I'm still learning! You can ask me about tracking, status icons, or offline buses.";
-        }
     </script>
 
 </html>
