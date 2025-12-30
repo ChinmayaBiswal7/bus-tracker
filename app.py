@@ -208,14 +208,14 @@ def listen_for_announcements():
     Listens to the 'announcements' collection group 'messages' 
     and triggers an FCM notification when a new message is added.
     """
-    print("🔔 Starting Announcement Listener...")
+    print("[INFO] Starting Announcement Listener...")
 
     # Define the callback
     def on_snapshot(col_snapshot, changes, read_time):
         for change in changes:
             if change.type.name == 'ADDED':
                 data = change.document.to_dict()
-                print(f"🔔 New Announcement: {data}")
+                print(f"[INFO] New Announcement: {data}")
                 
                 # Check if it's a recent message (avoid spamming old ones on startup)
                 # In a real app, use timestamp comparison. 
