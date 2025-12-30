@@ -162,9 +162,17 @@
     </button>
 
     <!-- GPS Status -->
-    <div id="gps-status">
-        <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-        <span>Locating...</span>
+    <div id="gps-status" class="flex flex-col gap-1 items-end pointer-events-none">
+        <div
+            class="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700">
+            <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" id="gps-dot"></span>
+            <span class="text-xs font-bold text-white" id="gps-text">Locating...</span>
+        </div>
+        <div
+            class="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700">
+            <span class="w-2 h-2 rounded-full bg-red-500" id="server-dot"></span>
+            <span class="text-xs font-bold text-white" id="server-text">Offline</span>
+        </div>
     </div>
 
     <!-- Sidebar (Off-Canvas) -->
@@ -567,22 +575,38 @@
 
         // Robust Geolocation Handling
         let watchId = null;
-        const gpsStatusEl = document.getElementById('gps-status');
+
+        // UI Helpers
+        const gpsDot = document.getElementById('gps-dot');
+        const gpsText = document.getElementById('gps-text');
+        const serverDot = document.getElementById('server-dot');
+        const serverText = document.getElementById('server-text');
+
+        // Socket Connection Status
+        socket.on('connect', () => {
+            if (serverDot && serverText) {
+                serverDot.className = "w-2 h-2 rounded-full bg-green-500";
+                serverText.textContent = "Live";
+            }
+        });
+
+        socket.on('disconnect', () => {
+            if (serverDot && serverText) {
+                serverDot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
+                serverText.textContent = "Disconnected";
+            }
+        });
 
         function updateGpsStatus(state, msg) {
-            if (!gpsStatusEl) return;
-            const dot = gpsStatusEl.querySelector('span');
-            const text = gpsStatusEl.querySelector('span:last-child');
-
-            text.textContent = msg;
-            dot.className = "w-2 h-2 rounded-full";
+            if (!gpsText || !gpsDot) return;
+            gpsText.textContent = msg;
 
             if (state === 'searching') {
-                dot.classList.add('bg-yellow-500', 'animate-pulse');
+                gpsDot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
             } else if (state === 'active') {
-                dot.classList.add('bg-green-500');
+                gpsDot.className = "w-2 h-2 rounded-full bg-green-500";
             } else if (state === 'error') {
-                dot.classList.add('bg-red-500');
+                gpsDot.className = "w-2 h-2 rounded-full bg-red-500";
             }
         }
 
