@@ -208,40 +208,47 @@
         }
     </script>
 
-    <div id="map" class="h-full w-full z-0"></div>
+    <!-- Top Navigation Bar (Task Bar) -->
+    <header
+        class="fixed top-0 left-0 w-full h-16 z-[2000] bg-slate-900/95 backdrop-blur-xl border-b border-slate-700 flex items-center justify-between px-4 shadow-lg text-white">
 
-    <!-- Overlay UI -->
-    <!-- Hamburger Menu Button -->
-    <button onclick="toggleSidebar()"
-        class="absolute top-4 left-4 z-[1000] p-3 bg-slate-800/90 text-white rounded-xl shadow-lg border border-slate-700 hover:bg-slate-700 transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
-    </button>
-
-    <!-- Top Right Status Stack -->
-    <div class="absolute top-4 right-4 z-[1000] flex flex-col items-end gap-2 pointer-events-none">
-
-        <!-- Debug Notification Status (Interactive so needs pointer-events-auto) -->
-        <div id="debug-status"
-            class="pointer-events-auto px-3 py-1 bg-slate-900/90 text-white text-xs font-bold rounded-full border border-slate-700 shadow-lg font-mono">
-            Checking...
+        <!-- Left: Menu & Brand -->
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSidebar()"
+                class="p-2 -ml-2 text-slate-300 hover:text-white hover:bg-white/10 rounded-full transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+            <h1 class="text-lg font-bold text-white tracking-tight hidden sm:block">Campus Ride</h1>
         </div>
 
-        <!-- GPS Status Group -->
-        <div id="gps-status" class="flex flex-col gap-1 items-end">
-            <div
-                class="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700 shadow-lg">
-                <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" id="gps-dot"></span>
-                <span class="text-xs font-bold text-white" id="gps-text">Locating...</span>
+        <!-- Right: Status Indicators -->
+        <div class="flex items-center gap-3">
+            <!-- Debug (Collapsible/Icon on mobile?) -->
+            <div id="debug-status"
+                class="hidden md:block px-3 py-1 bg-slate-800 text-slate-300 text-[10px] font-mono rounded-full border border-slate-700">
+                Checking...
             </div>
-            <div
-                class="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700 shadow-lg">
-                <span class="w-2 h-2 rounded-full bg-red-500" id="server-dot"></span>
-                <span class="text-xs font-bold text-white" id="server-text">Offline</span>
+
+            <!-- Status Badges -->
+            <div class="flex items-center gap-2">
+                <div class="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
+                    <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" id="gps-dot"></span>
+                    <span class="text-[10px] font-bold text-slate-200" id="gps-text">Locating</span>
+                </div>
+                <div class="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
+                    <span class="w-1.5 h-1.5 rounded-full bg-red-500" id="server-dot"></span>
+                    <span class="text-[10px] font-bold text-slate-200" id="server-text">Offline</span>
+                </div>
             </div>
         </div>
-    </div>
+    </header>
+
+    <!-- Main Content Area (Map) -->
+    <!-- Adjusted height to account for 4rem (h-16) header -->
+    <div id="map" class="absolute top-16 left-0 right-0 bottom-0 z-0 h-[calc(100%-4rem)]"></div>
 
     <!-- Trip Info Card (Compact Pill) -->
     <div id="trip-info-card"
