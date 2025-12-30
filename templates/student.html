@@ -213,6 +213,12 @@
         </svg>
     </button>
 
+    <!-- Debug Notification Status -->
+    <div id="debug-status"
+        class="absolute top-4 right-4 z-[1000] px-3 py-1 bg-slate-900/90 text-white text-xs font-bold rounded-full border border-slate-700 shadow-lg font-mono">
+        Checking...
+    </div>
+
     <!-- GPS Status -->
     <div id="gps-status" class="flex flex-col gap-1 items-end pointer-events-none">
         <div
@@ -419,9 +425,15 @@
             try {
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
+                    // Visual Debug: Success
+                    const debugEl = document.getElementById('debug-status');
+                    if (debugEl) debugEl.innerHTML = "🔔 Perm: GRANTED";
+
                     const token = await getToken(messaging, { vapidKey: VAPID_KEY });
                     if (token) {
                         console.log("🔥 FCM Token:", token);
+                        if (debugEl) debugEl.innerHTML = "🔥 Token: OK";
+
                         // Send token to server to subscribe to 'news' topic
                         fetch('/subscribe', {
                             method: 'POST',
@@ -431,8 +443,13 @@
                             body: JSON.stringify({ token: token }),
                         });
                     } else {
-                        console.log("No registration token available. Request permission to generate one.");
+                        console.log("No registration token available.");
+                        if (debugEl) debugEl.innerHTML = "⚠️ Token: MISSING";
                     }
+                } else {
+                    alert("Notifications Denied! Please reset permissions.");
+                    const debugEl = document.getElementById('debug-status');
+                    if (debugEl) debugEl.innerHTML = "❌ Perm: DENIED";
                 }
             } catch (err) {
                 console.log('An error occurred while retrieving token. ', err);

@@ -42,12 +42,20 @@ if not firebase_admin._apps:
             # We do NOT crash, but f_db will fail if used.
             # Initialize with default (might fail depending on GCP env) or just pass.
             # Better to not initialize and let f_db usage fail gracefully?
-            # Actually, f_db usage is global. Let's initialize a blank app to prevent ImportErrors, 
-            # though functionality will break.
-            # firebase_admin.initialize_app() 
-            pass
+            # Try initializing with default (no explicit creds) - might work if Env Vars are set automatically
+            try:
+                firebase_admin.initialize_app()
+                print("[INFO] Initialized Firebase with default/no credentials.")
+            except Exception as e:
+                print(f"[ERROR] Failed to init Firebase Default: {e}")
 
-f_db = firestore.client()
+# Initialize Firestore (Global)
+f_db = None
+try:
+    f_db = firestore.client()
+except Exception as e:
+    print(f"[ERROR] Firestore Client Init Failed: {e}")
+    print("[WARN] Running without Firestore backend.")
 
 # --- Database Models ---
 # --- Database Models ---
@@ -232,6 +240,10 @@ def listen_for_announcements():
     and triggers an FCM notification when a new message is added.
     """
     print("[INFO] Starting Announcement Listener...")
+
+    if not f_db:
+        print("[WARN] Firestore not initialized. Announcement listener DISABLED.")
+        return
 
     # Define the callback
     def on_snapshot(col_snapshot, changes, read_time):
