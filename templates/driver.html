@@ -316,11 +316,11 @@
             const warningModal = document.getElementById('warningModal');
             const btnProceed = document.getElementById('btnProceed');
             const btnExit = document.getElementById('btnExit');
-            const liveBadge = document.getElementById('liveBadge');
-            const statusRing = document.getElementById('statusRing');
-            const statsPanel = document.getElementById('statsPanel');
-            const speedVal = document.getElementById('speedVal');
-            const accVal = document.getElementById('accVal');
+            // const liveBadge = document.getElementById('liveBadge'); // Moved up
+            // const statusRing = document.getElementById('statusRing'); // Moved up
+            // const statsPanel = document.getElementById('statsPanel'); // Moved up
+            // const speedVal = document.getElementById('speedVal'); // Moved up
+            // const accVal = document.getElementById('accVal'); // Moved up
 
             function log(msg) {
                 debugDiv.textContent = msg;
@@ -362,7 +362,7 @@
                 stopTracking();
             });
 
-            function startTracking(busNo, useHighAccuracy = true) {
+            window.startTracking = function (busNo, useHighAccuracy = true) {
                 activeBusNo = busNo;
                 if (!navigator.geolocation) {
                     alert("Geolocation not supported");
@@ -470,7 +470,7 @@
                 );
             }
 
-            function stopTracking() {
+            window.stopTracking = function () {
                 activeBusNo = null;
                 if (watchId) {
                     navigator.geolocation.clearWatch(watchId);
@@ -517,6 +517,8 @@
             });
 
             // --- ANNOUNCEMENT LOGIC ---
+            import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
             const app = window.firebaseApp;
             const db = getFirestore(app);
 
