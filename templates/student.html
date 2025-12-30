@@ -718,6 +718,7 @@
         let routingControl = null;
 
         function startTrackingRoute(busId) {
+            // Allow re-clicking to refresh UI even if already selected
             targetBusId = busId;
             tripCard.classList.remove('hidden');
             updateRoute();
@@ -814,12 +815,18 @@
                     });
 
                     routingControl.on('routingerror', function (e) {
-                        console.error("OSRM Routing Error:", e);
+                        console.warn("OSRM Routing Error (Silent Fallback):", e);
                         // Fallback: Haversine distance
+                        // Use silent fallback so user doesn't see "Error"
                         const dist = map.distance([userLat, userLng], busLatLng);
                         const distKm = (dist / 1000).toFixed(1);
+
+                        // Estimate time based on 30km/h avg speed in city
+                        // Time = Dist / Speed * 60
+                        const timeMins = Math.ceil((distKm / 30) * 60);
+
                         tripDist.textContent = `(${distKm} km)`;
-                        tripEta.textContent = "Line Error";
+                        tripEta.textContent = `${timeMins} min`;
                     });
 
                 } catch (err) {
