@@ -228,7 +228,9 @@
             <p class="text-xs text-slate-500 mt-4">Select "Proceed" for laptops/testing.</p>
         </div>
 
-        <script>
+        <script type="module">
+            import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
             const socket = io();
             let watchId = null;
             let isSharing = false;
@@ -483,7 +485,8 @@
             });
 
             // ... (keep Announcement Logic)
-            const app = window.firebaseApp || initializeApp(firebaseConfig);
+            // ... (keep Announcement Logic)
+            const app = window.firebaseApp;
             const db = getFirestore(app);
 
             const btnAnnounce = document.getElementById('btnAnnounce');
