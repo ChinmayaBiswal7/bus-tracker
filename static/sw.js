@@ -20,9 +20,25 @@ self.addEventListener('notificationclick', function (event) {
     );
 });
 
-// ... (Rest of cache logic)
+const urlsToCache = [
+    '/',
+    '/student',
+    '/static/manifest.json',
+    '/static/firebase-messaging-sw.js',
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+];
 
-// ... (urlsToCache remains same)
+self.addEventListener('install', (event) => {
+    // Perform install steps
+    event.waitUntil(
+        caches.open(CACHE_NAME)
+            .then((cache) => {
+                console.log('Opened cache');
+                return cache.addAll(urlsToCache);
+            })
+    );
+});
 
 self.addEventListener('fetch', (event) => {
     event.respondWith(
