@@ -800,6 +800,11 @@
                 map.removeLayer(routeLine);
                 routeLine = null;
             }
+            // Remove dashed fallback line
+            if (window.fallbackLine) {
+                map.removeLayer(window.fallbackLine);
+                window.fallbackLine = null;
+            }
         }
 
         function updateRoute() {
@@ -836,18 +841,13 @@
                 L.latLng(userLat, userLng)
             ];
 
-            // Perform Instant Estimate (Haversine) so user doesn't wait
-            const dist = map.distance([userLat, userLng], busLatLng);
-            const distKm = (dist / 1000).toFixed(1);
-            const timeMins = Math.ceil((distKm / 30) * 60); // 30km/h avg
+            // Perform Instant Estimate (Haversine) & Draw Visual Fallback
+            runFallbackRouting(busLatLng); // Uses simple line + math immediately
 
-            tripDist.textContent = `(${distKm} km)`;
-            tripEta.textContent = `${timeMins} min`;
-
-            // If control exists, just update waypoints
+            // If control exists, update waypoints (attempting road match)
             if (routingControl) {
                 if (window.routingTimer) clearTimeout(window.routingTimer);
-                startRoutingTimer(busLatLng); // Reset timer
+                startRoutingTimer(busLatLng);
                 routingControl.setWaypoints(waypoints);
             } else {
                 // Initialize new control
@@ -881,6 +881,11 @@
 
                     // Listeners
                     routingControl.on('routesfound', function (e) {
+                        // Success! Remove dashed fallback line
+                        if (window.fallbackLine) {
+                            map.removeLayer(window.fallbackLine);
+                            window.fallbackLine = null;
+                        }
                         if (window.routingTimer) clearTimeout(window.routingTimer);
 
                         const routes = e.routes;
@@ -896,34 +901,48 @@
 
                     routingControl.on('routingerror', function (e) {
                         if (window.routingTimer) clearTimeout(window.routingTimer);
-                        runFallbackRouting(busLatLng);
+                        // Do nothing visually, fallback line is already there from start
+                        console.warn("Routing failed, keeping fallback line.");
                     });
 
                 } catch (err) {
                     console.error("Routing Init Error:", err);
-                    runFallbackRouting(busLatLng);
+                    // Fallback line already drawn
                 }
             }
         }
 
         // --- Routing Timeouts Helpers ---
         function startRoutingTimer(busLatLng) {
-            // Force Fallback after 5 seconds if OSRM is slow
             window.routingTimer = setTimeout(() => {
-                console.warn("OSRM Timeout (5s) - Switching to Direct Distance");
-                runFallbackRouting(busLatLng);
+                console.warn("OSRM Timeout (5s) - Keeping Direct Line");
+                // Stop the routing spinner effect if any (not implemented, but good practice)
+                // We just let the dashed line stay.
             }, 5000);
         }
 
         function runFallbackRouting(busLatLng) {
             const dist = map.distance([userLat, userLng], busLatLng);
             const distKm = (dist / 1000).toFixed(1);
-
-            // Estimate time based on 30km/h avg speed in city
             const timeMins = Math.ceil((distKm / 30) * 60);
 
             tripDist.textContent = `(${distKm} km)`;
             tripEta.textContent = `${timeMins} min`;
+
+            // Draw Dashed Line (Visual Fallback)
+            const waypoints = [
+                [userLat, userLng],
+                [busLatLng.lat, busLatLng.lng]
+            ];
+
+            if (window.fallbackLine) map.removeLayer(window.fallbackLine);
+
+            window.fallbackLine = L.polyline(waypoints, {
+                color: '#64748b', // Slate-500
+                weight: 4,
+                dashArray: '10, 10', // Dashed
+                opacity: 0.7
+            }).addTo(map);
         }
 
 
