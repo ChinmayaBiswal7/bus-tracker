@@ -145,24 +145,9 @@
             z-index: 1000 !important;
         }
 
-        /* GPS Status Indicator */
+        /* GPS Status Indicator (Processed by Tailwind Classes now) */
         #gps-status {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            z-index: 1000;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(4px);
-            padding: 0.5rem 1rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            pointer-events: none;
+            /* Styles moved to internal div classes */
         }
     </style>
 </head>
@@ -234,23 +219,27 @@
         </svg>
     </button>
 
-    <!-- Debug Notification Status -->
-    <div id="debug-status"
-        class="absolute top-4 right-4 z-[1000] px-3 py-1 bg-slate-900/90 text-white text-xs font-bold rounded-full border border-slate-700 shadow-lg font-mono">
-        Checking...
-    </div>
+    <!-- Top Right Status Stack -->
+    <div class="absolute top-4 right-4 z-[1000] flex flex-col items-end gap-2 pointer-events-none">
 
-    <!-- GPS Status -->
-    <div id="gps-status" class="flex flex-col gap-1 items-end pointer-events-none">
-        <div
-            class="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700">
-            <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" id="gps-dot"></span>
-            <span class="text-xs font-bold text-white" id="gps-text">Locating...</span>
+        <!-- Debug Notification Status (Interactive so needs pointer-events-auto) -->
+        <div id="debug-status"
+            class="pointer-events-auto px-3 py-1 bg-slate-900/90 text-white text-xs font-bold rounded-full border border-slate-700 shadow-lg font-mono">
+            Checking...
         </div>
-        <div
-            class="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700">
-            <span class="w-2 h-2 rounded-full bg-red-500" id="server-dot"></span>
-            <span class="text-xs font-bold text-white" id="server-text">Offline</span>
+
+        <!-- GPS Status Group -->
+        <div id="gps-status" class="flex flex-col gap-1 items-end">
+            <div
+                class="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700 shadow-lg">
+                <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" id="gps-dot"></span>
+                <span class="text-xs font-bold text-white" id="gps-text">Locating...</span>
+            </div>
+            <div
+                class="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-slate-700 shadow-lg">
+                <span class="w-2 h-2 rounded-full bg-red-500" id="server-dot"></span>
+                <span class="text-xs font-bold text-white" id="server-text">Offline</span>
+            </div>
         </div>
     </div>
 
