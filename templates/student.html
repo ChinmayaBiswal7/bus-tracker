@@ -415,6 +415,19 @@
 
         onSnapshot(qBuses, (snapshot) => {
             activeBuses = [];
+
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === "added" || change.type === "modified") {
+                    const data = change.doc.data();
+                    // Only notify if it's a recent update (prevent spam on reload)
+                    const now = new Date();
+                    const msgTime = data.last_updated ? data.last_updated.toDate() : new Date(0);
+                    if ((now - msgTime) < 10000) { // If message is less than 10 seconds old
+                        sendNotification(`📢 Bus ${data.bus_no}`, data.latest_message || "New announcement");
+                    }
+                }
+            });
+
             snapshot.forEach(doc => {
                 const data = doc.data();
                 activeBuses.push({ id: doc.id, ...data });
