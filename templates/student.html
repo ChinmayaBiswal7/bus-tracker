@@ -721,6 +721,9 @@
                 tripEta.textContent = "--";
                 tripDist.textContent = "Locating you...";
                 tripCard.classList.remove('hidden');
+
+                // Force GPS update check if stuck
+                if (!watchId) startLocationTracking(false);
                 return;
             }
 
@@ -742,46 +745,59 @@
                 L.latLng(busLatLng.lat, busLatLng.lng)
             ];
 
+            // If control exists, just update waypoints
             if (routingControl) {
-                // Update existing route
                 routingControl.setWaypoints(waypoints);
             } else {
-                // Create new route control
-                tripDist.textContent = "Calculating...";
+                // Initialize new control
+                tripDist.textContent = "Calculating route...";
                 tripCard.classList.remove('hidden');
 
-                routingControl = L.Routing.control({
-                    waypoints: waypoints,
-                    router: L.Routing.osrmv1({
-                        serviceUrl: 'https://router.project-osrm.org/route/v1'
-                    }),
-                    lineOptions: {
-                        styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }]
-                    },
-                    createMarker: function () { return null; }, // Don't create default markers
-                    addWaypoints: false,
-                    draggableWaypoints: false,
-                    fitSelectedRoutes: false,
-                    show: false // Hide instructions
-                }).addTo(map);
+                try {
+                    routingControl = L.Routing.control({
+                        waypoints: waypoints,
+                        router: L.Routing.osrmv1({
+                            serviceUrl: 'https://router.project-osrm.org/route/v1',
+                            profile: 'driving',
+                            timeout: 10000 // 10s timeout
+                        }),
+                        lineOptions: {
+                            styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }]
+                        },
+                        createMarker: function () { return null; }, // No extra markers
+                        addWaypoints: false,
+                        draggableWaypoints: false,
+                        fitSelectedRoutes: false,
+                        show: false
+                    }).addTo(map);
 
-                // Listen for results
-                routingControl.on('routesfound', function (e) {
-                    const routes = e.routes;
-                    const summary = routes[0].summary;
-                    // summary.totalDistance (meters), summary.totalTime (seconds)
+                    // Listeners
+                    routingControl.on('routesfound', function (e) {
+                        const routes = e.routes;
+                        if (!routes || routes.length === 0) return;
 
-                    const durationMins = Math.ceil(summary.totalTime / 60);
-                    const distanceKm = (summary.totalDistance / 1000).toFixed(1);
+                        const summary = routes[0].summary;
+                        // summary.totalDistance (meters), summary.totalTime (seconds)
+                        const durationMins = Math.ceil(summary.totalTime / 60);
+                        const distanceKm = (summary.totalDistance / 1000).toFixed(1);
 
-                    tripEta.textContent = `${durationMins} min`;
-                    tripDist.textContent = `(${distanceKm} km)`;
-                });
+                        tripEta.textContent = `${durationMins} min`;
+                        tripDist.textContent = `(${distanceKm} km)`;
+                    });
 
-                routingControl.on('routingerror', function (e) {
-                    console.error("LRM Error:", e);
-                    tripDist.textContent = "Route error";
-                });
+                    routingControl.on('routingerror', function (e) {
+                        console.error("OSRM Routing Error:", e);
+                        // Fallback: Haversine distance
+                        const dist = map.distance([userLat, userLng], busLatLng);
+                        const distKm = (dist / 1000).toFixed(1);
+                        tripDist.textContent = `(${distKm} km)`;
+                        tripEta.textContent = "Line Error";
+                    });
+
+                } catch (err) {
+                    console.error("Routing Init Error:", err);
+                    tripDist.textContent = "Route Error";
+                }
             }
         }
 
