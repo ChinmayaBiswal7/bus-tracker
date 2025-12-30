@@ -1,4 +1,26 @@
-const CACHE_NAME = 'bus-tracker-v2'; // Bump version to force update
+const CACHE_NAME = 'bus-tracker-v3'; // Bump version
+
+// Handle Notification Click (Opens App)
+self.addEventListener('notificationclick', function (event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then(function (clientList) {
+            // Check if app is already open
+            for (var i = 0; i < clientList.length; i++) {
+                var client = clientList[i];
+                if (client.url.includes('/') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // If not open, open it
+            if (clients.openWindow) {
+                return clients.openWindow('/');
+            }
+        })
+    );
+});
+
+// ... (Rest of cache logic)
 
 // ... (urlsToCache remains same)
 
