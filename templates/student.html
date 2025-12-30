@@ -839,24 +839,30 @@
 
             // If control exists, just update waypoints
             if (routingControl) {
+                if (window.routingTimer) clearTimeout(window.routingTimer);
+
+                // Set fallback timer for existing control
+                startRoutingTimer(busLatLng);
                 routingControl.setWaypoints(waypoints);
             } else {
                 // Initialize new control
                 tripDist.textContent = "Calculating route...";
                 tripCard.classList.remove('hidden');
 
+                if (window.routingTimer) clearTimeout(window.routingTimer);
+                startRoutingTimer(busLatLng);
+
                 try {
                     routingControl = L.Routing.control({
                         waypoints: waypoints,
                         router: L.Routing.osrmv1({
                             serviceUrl: 'https://router.project-osrm.org/route/v1',
-                            profile: 'driving', // Public server only supports 'driving' (Car), 'bike', 'foot'. 
-                            // No Truck/Bus profile available on free tier.
-                            timeout: 10000,
+                            profile: 'driving',
+                            timeout: 5000, // Attempt to hint timeout to library
                             routingOptions: {
-                                alternatives: false, // Force single best route
+                                alternatives: false,
                                 steps: false,
-                                overview: 'full' // detailed geometry
+                                overview: 'full'
                             }
                         }),
                         lineOptions: {
@@ -871,11 +877,13 @@
 
                     // Listeners
                     routingControl.on('routesfound', function (e) {
+                        // Success! Clear fallback timer
+                        if (window.routingTimer) clearTimeout(window.routingTimer);
+
                         const routes = e.routes;
                         if (!routes || routes.length === 0) return;
 
                         const summary = routes[0].summary;
-                        // summary.totalDistance (meters), summary.totalTime (seconds)
                         const durationMins = Math.ceil(summary.totalTime / 60);
                         const distanceKm = (summary.totalDistance / 1000).toFixed(1);
 
@@ -884,25 +892,37 @@
                     });
 
                     routingControl.on('routingerror', function (e) {
-                        console.warn("OSRM Routing Error (Silent Fallback):", e);
-                        // Fallback: Haversine distance
-                        // Use silent fallback so user doesn't see "Error"
-                        const dist = map.distance([userLat, userLng], busLatLng);
-                        const distKm = (dist / 1000).toFixed(1);
-
-                        // Estimate time based on 30km/h avg speed in city
-                        // Time = Dist / Speed * 60
-                        const timeMins = Math.ceil((distKm / 30) * 60);
-
-                        tripDist.textContent = `(${distKm} km)`;
-                        tripEta.textContent = `${timeMins} min`;
+                        // Error! Clear timer and run fallback immediately
+                        if (window.routingTimer) clearTimeout(window.routingTimer);
+                        runFallbackRouting(busLatLng);
                     });
 
                 } catch (err) {
                     console.error("Routing Init Error:", err);
-                    tripDist.textContent = "Route Error";
+                    runFallbackRouting(busLatLng);
                 }
             }
+        }
+
+        // --- Routing Timeouts Helpers ---
+        function startRoutingTimer(busLatLng) {
+            // Force Fallback after 5 seconds if OSRM is slow
+            window.routingTimer = setTimeout(() => {
+                console.warn("OSRM Timeout (5s) - Switching to Direct Distance");
+                runFallbackRouting(busLatLng);
+            }, 5000);
+        }
+
+        function runFallbackRouting(busLatLng) {
+            const dist = map.distance([userLat, userLng], busLatLng);
+            const distKm = (dist / 1000).toFixed(1);
+
+            // Estimate time based on 30km/h avg speed in city
+            const timeMins = Math.ceil((distKm / 30) * 60);
+
+            tripDist.textContent = `(${distKm} km)`;
+            tripEta.textContent = `${timeMins} min`;
+        }
         }
 
         const markers = {};
