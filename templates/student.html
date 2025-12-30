@@ -230,11 +230,11 @@
             <div class="flex items-center gap-2">
                 <div class="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
                     <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse" id="gps-dot"></span>
-                    <span class="text-[10px] font-bold text-slate-200" id="gps-text">Locating</span>
+                    <span class="text-[10px] font-bold text-slate-200" id="gps-text">GPS: Locating</span>
                 </div>
                 <div class="flex items-center gap-1.5 bg-slate-800/80 px-2.5 py-1 rounded-full border border-slate-700">
                     <span class="w-1.5 h-1.5 rounded-full bg-red-500" id="server-dot"></span>
-                    <span class="text-[10px] font-bold text-slate-200" id="server-text">Offline</span>
+                    <span class="text-[10px] font-bold text-slate-200" id="server-text">Server: Offline</span>
                 </div>
             </div>
         </div>
@@ -811,14 +811,14 @@
         socket.on('connect', () => {
             if (serverDot && serverText) {
                 serverDot.className = "w-2 h-2 rounded-full bg-green-500";
-                serverText.textContent = "Live";
+                serverText.textContent = "Server: Live";
             }
         });
 
         socket.on('disconnect', () => {
             if (serverDot && serverText) {
                 serverDot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
-                serverText.textContent = "Disconnected";
+                serverText.textContent = "Server: Offline";
             }
         });
 
@@ -850,7 +850,7 @@
             };
 
             console.log(`Starting GPS (High Acc: ${highAccuracy}, Timeout: ${gpsTimeout}ms)...`);
-            updateGpsStatus('searching', `Locating (${highAccuracy ? 'High' : 'Low'})...`);
+            updateGpsStatus('searching', `GPS: Locating (${highAccuracy ? 'High' : 'Low'})...`);
 
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
@@ -858,7 +858,7 @@
                     userLat = pos.coords.latitude;
                     userLng = pos.coords.longitude;
                     updateUserMarker(userLat, userLng);
-                    updateGpsStatus('active', 'GPS Active');
+                    updateGpsStatus('active', 'GPS: Active');
 
                     if (targetBusId) updateRoute();
 
@@ -879,7 +879,7 @@
                     }
 
                     // Show Error to User
-                    updateGpsStatus('error', 'GPS Failed');
+                    updateGpsStatus('error', 'GPS: Failed');
 
                     const tripCard = document.getElementById('trip-info-card');
                     const tripDist = document.getElementById('trip-dist');
