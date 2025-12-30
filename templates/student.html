@@ -409,7 +409,8 @@
         const listEl = document.getElementById('full-announcement-list');
 
         // 1. Listen for Active Buses (Categories)
-        const qBuses = query(collection(db, "announcements"), orderBy("last_updated", "desc"));
+        // Optimize: Limit to last 50 messages to fix slow loading
+        const qBuses = query(collection(db, "announcements"), orderBy("last_updated", "desc"), limit(50));
         let activeBuses = [];
         let unsubscribeMessages = {}; // Store unsubscribe functions for message listeners
 
@@ -421,8 +422,11 @@
                     const data = change.doc.data();
                     // Only notify if it's a recent update (prevent spam on reload)
                     const now = new Date();
-                    const msgTime = data.last_updated ? data.last_updated.toDate() : new Date(0);
-                    if ((now - msgTime) < 10000) { // If message is less than 10 seconds old
+                    const msgTime = data.last_updated ? data.last_updated.toDate() : new Date(); // Fallback to now if missing
+
+                    // Relaxed check: 60 seconds to account for network/clock skew
+                    if ((now - msgTime) < 60000) {
+                        console.log("Triggering Notification for:", data.bus_no);
                         sendNotification(`📢 Bus ${data.bus_no}`, data.latest_message || "New announcement");
                     }
                 }
