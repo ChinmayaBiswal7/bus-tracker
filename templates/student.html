@@ -831,7 +831,6 @@
             const busLatLng = busMarker.getLatLng();
 
             // Swap: From Bus (Source) -> To User (Destination)
-            // This ensures traffic rules/turns are calculated for the bus arriving TO you.
             const waypoints = [
                 L.latLng(busLatLng.lat, busLatLng.lng),
                 L.latLng(userLat, userLng)
@@ -840,16 +839,13 @@
             // If control exists, just update waypoints
             if (routingControl) {
                 if (window.routingTimer) clearTimeout(window.routingTimer);
-
-                // Set fallback timer for existing control
-                startRoutingTimer(busLatLng);
+                startRoutingTimer(busLatLng); // Reset timer
                 routingControl.setWaypoints(waypoints);
             } else {
                 // Initialize new control
                 tripDist.textContent = "Calculating route...";
                 tripCard.classList.remove('hidden');
 
-                if (window.routingTimer) clearTimeout(window.routingTimer);
                 startRoutingTimer(busLatLng);
 
                 try {
@@ -858,7 +854,7 @@
                         router: L.Routing.osrmv1({
                             serviceUrl: 'https://router.project-osrm.org/route/v1',
                             profile: 'driving',
-                            timeout: 5000, // Attempt to hint timeout to library
+                            timeout: 5000,
                             routingOptions: {
                                 alternatives: false,
                                 steps: false,
@@ -877,7 +873,6 @@
 
                     // Listeners
                     routingControl.on('routesfound', function (e) {
-                        // Success! Clear fallback timer
                         if (window.routingTimer) clearTimeout(window.routingTimer);
 
                         const routes = e.routes;
@@ -892,7 +887,6 @@
                     });
 
                     routingControl.on('routingerror', function (e) {
-                        // Error! Clear timer and run fallback immediately
                         if (window.routingTimer) clearTimeout(window.routingTimer);
                         runFallbackRouting(busLatLng);
                     });
@@ -923,7 +917,7 @@
             tripDist.textContent = `(${distKm} km)`;
             tripEta.textContent = `${timeMins} min`;
         }
-        }
+
 
         const markers = {};
         const circles = {};
