@@ -12,6 +12,11 @@ export function togglePanel(id) {
     if (id === 'drive') resetScheduleForm();
 }
 
+export function closePanels() {
+    document.querySelectorAll('.pop-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-icon').forEach(i => i.classList.remove('active'));
+}
+
 function resetScheduleForm() {
     // Optional: Clear form if needed
 }

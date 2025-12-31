@@ -1,15 +1,17 @@
 import { auth } from '../firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { initMap, toggleSession, stopSession } from './tracking.js';
+import { initMap, toggleSession, stopSession, setMode } from './tracking.js';
 import { initAnnouncements } from './announcements.js';
 import { initSchedule, addTimeSlot, saveSchedule } from './schedule.js';
 import { initChat } from './chat.js';
-import { togglePanel } from './ui.js';
+import { togglePanel, closePanels } from './ui.js';
 
 // Global Exports for HTML onclick
 window.togglePanel = togglePanel;
+window.closePanels = closePanels;
 window.toggleSession = toggleSession;
 window.stopSession = stopSession;
+window.setMode = setMode;
 window.addTimeSlot = addTimeSlot;
 window.saveSchedule = saveSchedule;
 window.logout = function () {

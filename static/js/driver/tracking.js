@@ -15,6 +15,36 @@ export function initMap() {
     userMarker = L.marker([0, 0], { icon: icon }).addTo(map);
 }
 
+export let activeMode = 'BUS';
+
+export function setMode(mode) {
+    activeMode = mode;
+    console.log("Mode set to:", mode);
+
+    const btnBus = document.querySelector("button[onclick=\"setMode('BUS')\"]");
+    const btnEv = document.querySelector("button[onclick=\"setMode('EV')\"]");
+    const blob = document.getElementById('active-blob');
+    const busInput = document.getElementById('busInput');
+
+    if (mode === 'BUS') {
+        if (blob) blob.style.transform = 'translateX(0)';
+        if (btnBus) btnBus.classList.replace('text-slate-400', 'text-white');
+        if (btnEv) btnEv.classList.replace('text-white', 'text-slate-400');
+        if (busInput) {
+            busInput.placeholder = "ENTER NUMBER (e.g. 42)";
+            busInput.value = "";
+        }
+    } else {
+        if (blob) blob.style.transform = 'translateX(100%)';
+        if (btnEv) btnEv.classList.replace('text-slate-400', 'text-white');
+        if (btnBus) btnBus.classList.replace('text-white', 'text-slate-400');
+        if (busInput) {
+            busInput.placeholder = "SHUTTLE ID (e.g. EV-1)";
+            busInput.value = "EV-1";
+        }
+    }
+}
+
 export function toggleSession() {
     const btnMain = document.getElementById('btnMain');
     const busInput = document.getElementById('busInput');
