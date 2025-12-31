@@ -1,6 +1,17 @@
 import { db, collection, query, orderBy, onSnapshot, getDocs } from '../firebase-config.js';
 import { toggleSidebar } from './ui.js';
 
+export function initSchedule() {
+    const btn = document.getElementById('btn-open-sched');
+    if (btn) {
+        btn.addEventListener('click', openSchedule);
+        // Also support touch for better mobile response
+        btn.addEventListener('touchstart', (e) => { e.preventDefault(); openSchedule(); });
+    } else {
+        console.warn("Schedule button not found in DOM");
+    }
+}
+
 export function openSchedule() {
     console.log("Opening Schedule (Module)...");
     const overlay = document.getElementById('schedule-overlay');
