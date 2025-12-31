@@ -87,7 +87,8 @@ function attemptGPS(stage, busNo) {
         uiIcon = "📡"; uiMsg = "RETRYING HIGH ACCURACY..."; uiColor = "text-orange-400"; uiStatusShort = "GPS RETRY..."; uiPulse = "bg-orange-500";
     } else {
         // "Low Accuracy" in browser usually means Wifi/Cell triangulation
-        opts = { enableHighAccuracy: false, timeout: 20000, maximumAge: 0 };
+        // User requested "don't time out, stay a while". Increased to 5 minutes (300000ms).
+        opts = { enableHighAccuracy: false, timeout: 300000, maximumAge: 0 };
         nextStage = null;
         uiIcon = "📶"; uiMsg = "SEARCHING NETWORK/TOWER..."; uiColor = "text-blue-400"; uiStatusShort = "NET SCAN..."; uiPulse = "bg-blue-500";
     }
