@@ -1,6 +1,10 @@
 import { db, collection, query, orderBy, onSnapshot, getDocs } from '../firebase-config.js';
 import { toggleSidebar } from './ui.js';
 
+// DEBUG: Confirm file load
+console.log("Schedule Module v3 Loaded");
+// alert("Update: Schedule Module v3 Loaded! Try clicking now."); 
+
 let unsubscribeSchedules = null;
 let activeSchedules = [];
 

@@ -1,7 +1,7 @@
 import { auth } from '../firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { initMap, stopTrackingRoute } from './map.js';
-import { openSchedule, closeSchedule, initSchedule } from './schedule.js';
+import { openSchedule, closeSchedule, initSchedule } from './schedule.js?v=3';
 import { openAnnouncements, closeAnnouncements, initAnnouncements } from './announcements.js';
 import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-directory.js';
 import { toggleSidebar, requestNotificationPermission } from './ui.js';
