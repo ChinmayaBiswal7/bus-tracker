@@ -595,18 +595,14 @@
             }
         });
 
-        // HYBRID GPS STRATEGY (Instant Low -> Upgrade to High)
-        let watchIdLow = null;
-        let watchIdHigh = null;
-        let watchIdHighLocked = false;
-
+        // 3-STAGE GPS CASCADE STRATEGY
         function startSession(val) {
             if (!navigator.geolocation) return alert("GPS Not Supported");
 
             busInput.disabled = true;
             isSharing = true;
 
-            // Initial UI
+            // Initial UI for Searching
             togglePanel('speed');
 
             // Map Icon Update (Pre-emptive)
@@ -615,48 +611,64 @@
                 userMarker.setIcon(isEv ? createEvIcon() : createBusIcon());
             }
 
-            // 1. Start LOW ACCURACY Watch (Instant feedback)
-            console.log("[GPS] Starting Low Accuracy Watch...");
-            const optsLow = { enableHighAccuracy: false, timeout: 15000, maximumAge: 0 };
+            // Start Stage 1
+            attemptGPS('HIGH_PRECISION', val);
+        }
 
-            watchIdLow = navigator.geolocation.watchPosition(
-                (pos) => {
-                    // Only use Low data if High hasn't locked yet
-                    if (!watchIdHighLocked) handleGPS(pos, val, 'LOW');
-                },
-                (err) => console.warn("[GPS] Low Acc Error:", err),
-                optsLow
-            );
+        function attemptGPS(stage, busNo) {
+            // Define Stages
+            let opts, nextStage, uiIcon, uiMsg, uiColor, uiPulse, uiStatusShort;
 
-            // 2. Start HIGH ACCURACY Watch (The Goal)
-            console.log("[GPS] Starting High Accuracy Watch...");
-            const optsHigh = { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 };
+            if (stage === 'HIGH_PRECISION') {
+                // Stage 1: Fast Satellite Lock (5s)
+                opts = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
+                nextStage = 'GPS_WEAK';
+                uiIcon = "🛰️"; uiMsg = "SEARCHING SATELLITE..."; uiColor = "text-yellow-400"; uiStatusShort = "GPS SCAN..."; uiPulse = "bg-yellow-500";
 
-            watchIdHighLocked = false; // Flag to track if High has taken over
+            } else if (stage === 'GPS_WEAK') {
+                // Stage 2: Allow more time for weak signals (15s)
+                opts = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+                nextStage = 'NETWORK';
+                uiIcon = "📡"; uiMsg = "SEARCHING WEAK SIGNAL..."; uiColor = "text-orange-400"; uiStatusShort = "BOOSTING..."; uiPulse = "bg-orange-500";
 
-            watchIdHigh = navigator.geolocation.watchPosition(
-                (pos) => {
-                    watchIdHighLocked = true; // High took over
-                    handleGPS(pos, val, 'HIGH');
-                },
+            } else {
+                // Stage 3: Network / Tower Fallback (20s)
+                opts = { enableHighAccuracy: false, timeout: 20000, maximumAge: 0 };
+                nextStage = null;
+                uiIcon = "📶"; uiMsg = "SEARCHING NETWORK..."; uiColor = "text-blue-400"; uiStatusShort = "NET SCAN..."; uiPulse = "bg-blue-500";
+            }
+
+            // UI Update
+            btnMain.innerHTML = `<span class="animate-pulse">${uiIcon}</span> ${uiMsg}`;
+            btnMain.className = "w-full py-4 bg-slate-700 text-slate-300 rounded-2xl font-bold text-lg cursor-wait flex items-center justify-center gap-3";
+
+            serverStatus.textContent = uiStatusShort;
+            serverStatus.className = `text-[10px] font-bold ${uiColor} uppercase tracking-widest animate-pulse`;
+            statusDot.className = `w-2.5 h-2.5 rounded-full ${uiPulse} ring-2 ring-slate-800 transition-colors`;
+            statStatus.textContent = stage;
+
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+
+            console.log(`[GPS] Attempting ${stage}...`);
+
+            watchId = navigator.geolocation.watchPosition(
+                (pos) => handleGPS(pos, busNo, stage),
                 (err) => {
-                    console.warn("[GPS] High Acc Failed:", err);
-                    if (!watchIdHighLocked) {
-                        statStatus.textContent = "GPS ERR";
-                        statStatus.className = "block text-red-500 font-bold text-xs";
+                    console.warn(`[GPS] ${stage} Failed:`, err);
+                    if (nextStage) {
+                        console.log(`[GPS] Falling back to ${nextStage}...`);
+                        attemptGPS(nextStage, busNo);
+                    } else {
+                        handleGPSError(err);
                     }
                 },
-                optsHigh
+                opts
             );
         }
 
         function stopSession() {
-            if (watchIdLow) navigator.geolocation.clearWatch(watchIdLow);
-            if (watchIdHigh) navigator.geolocation.clearWatch(watchIdHigh);
-            watchIdLow = null; watchIdHigh = null;
-            watchIdHighLocked = false;
-
-            isSharing = false;
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            watchId = null; isSharing = false;
             const socket = io(); socket.emit('driver_update', null);
 
             // Reset UI
@@ -688,43 +700,33 @@
             stopSession();
         }
 
-        function handleGPS(pos, busNo, sourceMode) {
+        function handleGPS(pos, busNo, stage) {
+            // Once locked, update Main Button
+            if (btnMain.textContent.includes("SEARCHING")) {
+                btnMain.innerHTML = `<span class="animate-pulse">■</span> TERMINATE SESSION`;
+                btnMain.className = "w-full py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-red-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3";
+                serverStatus.textContent = "LIVE BROADCAST";
+                serverStatus.className = "text-[10px] font-bold text-green-400 uppercase tracking-widest animate-pulse";
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-green-900 transition-colors";
+            }
+
             const { latitude, longitude, speed, accuracy } = pos.coords;
             const kmh = speed ? Math.round(speed * 3.6) : 0;
 
-            // UI Updates
+            // Stats
             updateSpeed(kmh);
             statLat.textContent = latitude.toFixed(4);
             statLng.textContent = longitude.toFixed(4);
             statAcc.textContent = `${Math.round(accuracy)} m`;
+            statStatus.textContent = stage === 'NETWORK' ? "NET LOCK" : "GPS LOCK";
 
-            // Smart Status Display
-            if (sourceMode === 'HIGH') {
-                // High Accuracy Logic (Green/Yellow)
-                btnMain.innerHTML = `<span class="animate-pulse">■</span> TERMINATE SESSION`;
-                btnMain.className = "w-full py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-red-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3";
+            // Color Coding
+            let color = "text-red-400";
+            if (accuracy < 20) color = "text-green-400";
+            else if (accuracy < 100) color = "text-yellow-400";
 
-                serverStatus.textContent = "LIVE BROADCAST";
-                serverStatus.className = "text-[10px] font-bold text-green-400 uppercase tracking-widest animate-pulse";
-                statusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-green-900 transition-colors";
-
-                statStatus.textContent = "LOCKED (SATELLITE)";
-                statStatus.className = "block text-green-400 font-bold text-xs";
-                statAcc.className = "block text-green-400 font-bold text-xs";
-
-            } else {
-                // Low Accuracy Logic (Orange/Blue) - "Using Network"
-                btnMain.innerHTML = `<span class="animate-pulse">📡</span> IMPROVING...`;
-                btnMain.className = "w-full py-4 bg-slate-700 text-slate-300 rounded-2xl font-bold text-lg cursor-wait flex items-center justify-center gap-3";
-
-                serverStatus.textContent = "NETWORK LOCK";
-                serverStatus.className = "text-[10px] font-bold text-blue-400 uppercase tracking-widest animate-pulse";
-                statusDot.className = "w-2.5 h-2.5 rounded-full bg-blue-500 ring-2 ring-slate-800 transition-colors";
-
-                statStatus.textContent = "WEAK (NETWORK)";
-                statStatus.className = "block text-yellow-500 font-bold text-xs";
-                statAcc.className = "block text-yellow-500 font-bold text-xs";
-            }
+            statAcc.className = `block ${color} font-bold text-xs`;
+            statStatus.className = `block ${color} font-bold text-xs`;
 
             if (map) {
                 userMarker.setLatLng([latitude, longitude]).addTo(map);
@@ -735,7 +737,7 @@
             if (socket.connected) {
                 socket.emit('driver_update', { lat: latitude, lng: longitude, speed, bus_no: busNo });
             } else {
-                statStatus.textContent = "NET ERROR";
+                statStatus.textContent = "NET ERR";
                 statStatus.className = "block text-red-500 font-bold text-xs";
             }
         }
@@ -769,7 +771,7 @@
         btnSend.addEventListener('click', async () => {
             const msg = finalInput.value;
             if (!msg) return;
-            if (document.getElementById('serverStatus').textContent !== "LIVE BROADCAST") return alert("Wait for GPS Lock");
+            if (document.getElementById('serverStatus').textContent !== "LIVE BROADCAST") return alert("Go Live First");
 
             const busNo = document.getElementById('busInput').value || "EV";
             const app = window.firebaseApp;
