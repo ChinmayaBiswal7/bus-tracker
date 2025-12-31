@@ -347,6 +347,20 @@
                 <span id="badge-count"
                     class="hidden min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-red-500/20 ring-2 ring-slate-900 transform scale-100 transition-all">0</span>
             </button>
+            <button onclick="openDrivers()"
+                class="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700 hover:border-blue-500/50 transition-all group mt-2">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="p-2 bg-emerald-500/20 rounded-lg text-emerald-500 group-hover:text-emerald-400 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z">
+                            </path>
+                        </svg>
+                    </div>
+                    <span class="font-bold text-slate-200 text-sm">Driver Directory</span>
+                </div>
+            </button>
             <button onclick="logout()"
                 class="w-full flex items-center justify-between p-3 bg-red-900/20 hover:bg-red-900/40 rounded-xl border border-red-900/50 hover:border-red-500 transition-all group mt-2">
                 <div class="flex items-center gap-3">
@@ -391,9 +405,66 @@
             <h2 class="text-lg font-bold text-white tracking-tight ml-auto">Announcements</h2>
         </div>
 
-        <!-- List -->
-        <div id="full-announcement-list" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+    </div>
+    </div>
+
+    <!-- Drivers Directory Overlay -->
+    <div id="drivers-overlay"
+        class="fixed inset-0 z-[3000] bg-slate-900/95 backdrop-blur-xl hidden flex flex-col transition-all duration-300 transform scale-100 opacity-100">
+        <!-- Header -->
+        <div class="p-4 border-b border-slate-800 flex items-center gap-2 bg-slate-900 shadow-xl shrink-0">
+            <button onclick="closeDrivers()"
+                class="p-2 -ml-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors"
+                title="Back to Map">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+            </button>
+            <h2 class="text-lg font-bold text-white tracking-tight ml-auto">Drivers</h2>
+        </div>
+
+        <!-- Driver List -->
+        <div id="driver-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
             <!-- Items injected by JS -->
+            <p class="text-slate-500 text-center italic mt-10">Loading drivers...</p>
+        </div>
+    </div>
+
+    <!-- Driver Profile Card Modal -->
+    <div id="profile-modal"
+        class="fixed inset-0 z-[4000] bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div
+            class="bg-slate-800 border border-slate-700 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative transform transition-all scale-100">
+            <button onclick="closeProfile()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+
+            <div class="flex flex-col items-center">
+                <div
+                    class="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-3xl mb-4 shadow-lg">
+                    👮‍♂️
+                </div>
+                <h3 id="profile-name" class="text-xl font-bold text-white mb-1">Driver Name</h3>
+                <p class="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-6">Offical Driver</p>
+
+                <div class="w-full bg-slate-900/50 rounded-xl p-4 mb-6 border border-slate-700/50">
+                    <p class="text-slate-400 text-xs uppercase mb-1">Mobile Number</p>
+                    <p id="profile-mobile" class="text-white font-mono text-lg tracking-wider">--</p>
+                </div>
+
+                <a id="profile-call-btn" href="#"
+                    class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-emerald-900/20">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z">
+                        </path>
+                    </svg>
+                    Call Driver
+                </a>
+            </div>
         </div>
     </div>
 
@@ -758,6 +829,69 @@
         window.toggleSidebar = function () {
             const sidebar = document.getElementById('sidebar');
             sidebar.classList.toggle('-translate-x-full');
+        }
+
+        // --- Driver Directory Logic ---
+        const driversOverlay = document.getElementById('drivers-overlay');
+        const driverListEl = document.getElementById('driver-list');
+        const profileModal = document.getElementById('profile-modal');
+        let driversUnsub = null;
+
+        window.openDrivers = function () {
+            driversOverlay.classList.remove('hidden');
+            if (window.innerWidth < 768) toggleSidebar();
+            fetchDrivers();
+        }
+
+        window.closeDrivers = function () {
+            driversOverlay.classList.add('hidden');
+            if (driversUnsub) driversUnsub(); // Stop listening when closed
+        }
+
+        function fetchDrivers() {
+            const q = query(collection(db, "drivers"), orderBy("name"));
+
+            driversUnsub = onSnapshot(q, (snapshot) => {
+                if (snapshot.empty) {
+                    driverListEl.innerHTML = '<p class="text-slate-500 text-center italic mt-10">No registered drivers found.</p>';
+                    return;
+                }
+
+                driverListEl.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const card = document.createElement('div');
+                    card.className = "bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex items-center justify-between hover:bg-slate-800 hover:border-emerald-500/50 transition-all cursor-pointer group";
+                    card.onclick = () => showProfile(data);
+
+                    card.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                                👮‍♂️
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold text-sm">${data.name || 'Unknown Driver'}</h3>
+                                <p class="text-[10px] text-slate-400">Tap to view info</p>
+                            </div>
+                        </div>
+                        <div class="p-2 bg-emerald-500/10 rounded-full text-emerald-500">
+                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                    `;
+                    driverListEl.appendChild(card);
+                });
+            });
+        }
+
+        window.showProfile = function (data) {
+            document.getElementById('profile-name').textContent = data.name || "Driver";
+            document.getElementById('profile-mobile').textContent = data.mobile || "N/A";
+            document.getElementById('profile-call-btn').href = `tel:${data.mobile}`;
+            profileModal.classList.remove('hidden');
+        }
+
+        window.closeProfile = function () {
+            profileModal.classList.add('hidden');
         }
     </script>
 
