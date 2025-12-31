@@ -1740,30 +1740,37 @@
 
 
             // --- Schedule Logic ---
-            const schedOverlay = document.getElementById('schedule-overlay');
-            const schedListEl = document.getElementById('schedule-list');
-
             window.openSchedule = function () {
-                schedOverlay.classList.remove('hidden');
-                if (window.innerWidth < 768) toggleSidebar();
+                console.log("Opening Schedule...");
+                const overlay = document.getElementById('schedule-overlay');
+                if (!overlay) return console.error("Schedule overlay not found");
+
+                overlay.classList.remove('hidden');
+                if (window.innerWidth < 768 && typeof toggleSidebar === 'function') toggleSidebar();
+
                 fetchSchedules();
             }
 
             window.closeSchedule = function () {
-                schedOverlay.classList.add('hidden');
+                const overlay = document.getElementById('schedule-overlay');
+                if (overlay) overlay.classList.add('hidden');
             }
 
             function fetchSchedules() {
+                const listEl = document.getElementById('schedule-list');
+                if (!listEl) return;
+
+                listEl.innerHTML = '<p class="text-slate-500 text-center italic mt-10 animate-pulse">Loading schedules...</p>';
+
                 const q = query(collection(db, "schedules"), orderBy("last_update", "desc"));
 
-                // Re-use logic: List active schedule channels (Buses)
                 onSnapshot(q, (snapshot) => {
                     if (snapshot.empty) {
-                        schedListEl.innerHTML = '<p class="text-slate-500 text-center italic mt-10">No schedules published yet.</p>';
+                        listEl.innerHTML = '<p class="text-slate-500 text-center italic mt-10">No schedules published yet.</p>';
                         return;
                     }
 
-                    schedListEl.innerHTML = '';
+                    listEl.innerHTML = '';
                     snapshot.forEach(doc => {
                         const data = doc.data();
                         const busNo = data.bus_no || doc.id;
@@ -1785,12 +1792,16 @@
                             <p class="text-xs text-slate-500 animate-pulse">Loading dates...</p>
                         </div>
                     `;
-                        schedListEl.appendChild(div);
+                        listEl.appendChild(div);
                     });
+                }, (error) => {
+                    console.error("Error fetching schedules:", error);
+                    listEl.innerHTML = '<p class="text-red-400 text-center text-xs mt-10">Error loading schedules.</p>';
                 });
             }
 
             window.loadBusSchedule = function (busId) {
+                console.log("Loading schedule for:", busId);
                 const content = document.getElementById(`sched-content-${busId}`);
                 const arrow = document.getElementById(`arrow-sched-${busId}`);
 
@@ -1804,15 +1815,13 @@
                 content.classList.remove('hidden');
                 arrow.classList.add('rotate-180');
 
-                // Fetch Dates: schedules/{busId}/dates
-                // Filter: date >= today
+                // Fetch Dates
                 const today = new Date().toISOString().split('T')[0];
-                const q = query(collection(db, "schedules", busId, "dates"), orderBy("__name__")); // Date string ID sorts correctly
+                const q = query(collection(db, "schedules", busId, "dates"), orderBy("__name__"));
 
                 getDocs(q).then(snapshot => {
                     content.innerHTML = '';
 
-                    // Manual filter for >= today (since we store ID as YYYY-MM-DD)
                     const validDocs = snapshot.docs.filter(d => d.id >= today);
 
                     if (validDocs.length === 0) {
@@ -1823,8 +1832,6 @@
                     validDocs.forEach(d => {
                         const dateData = d.data();
                         const timings = dateData.timings || [];
-
-                        // Helper for nice date format
                         const niceDate = new Date(d.id).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 
                         const row = document.createElement('div');
@@ -1849,6 +1856,9 @@
                      `;
                         content.appendChild(row);
                     });
+                }).catch(err => {
+                    console.error("Error loading dates:", err);
+                    content.innerHTML = '<p class="text-xs text-red-400">Failed to load.</p>';
                 });
             }
         </script>
