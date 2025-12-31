@@ -10,6 +10,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
     <!-- Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
@@ -20,51 +24,77 @@
         body {
             font-family: 'Outfit', sans-serif;
             background: #0f172a;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background-image:
-                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 40%),
-                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.1) 0%, transparent 40%);
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
         }
 
         .mono {
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* Dashboard Container */
-        .dashboard-container {
-            flex: 1;
-            padding: 1.5rem;
-            max-width: 1200px;
-            margin: 0 auto;
+        /* Map Layer */
+        #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 0;
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
+        /* Bottom Sheet */
+        .bottom-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 2rem 2rem 0 0;
+            box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.6);
+            z-index: 50;
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Sheet States */
+        .sheet-minimized {
+            transform: translateY(calc(100% - 130px));
+        }
+
+        /* Show only top 130px */
+        .sheet-expanded {
+            transform: translateY(0);
+        }
+
+        /* Handle */
+        .sheet-handle-area {
             width: 100%;
+            height: 24px;
             display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            flex-shrink: 0;
         }
 
-        /* Cards */
-        .dash-card {
-            background: rgba(30, 41, 59, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            backdrop-filter: blur(10px);
-            transition: transform 0.2s, border-color 0.2s;
+        .sheet-handle {
+            width: 48px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 100px;
         }
 
-        .dash-card:hover {
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Speedometer CSS */
+        /* Gauge */
         .gauge-container {
             position: relative;
-            width: 140px;
-            height: 70px;
+            width: 100px;
+            height: 50px;
             margin: 0 auto;
         }
 
@@ -72,10 +102,10 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 140px;
-            height: 140px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            border: 12px solid rgba(255, 255, 255, 0.05);
+            border: 8px solid rgba(255, 255, 255, 0.1);
             border-bottom-color: transparent;
             border-left-color: transparent;
             transform: rotate(135deg);
@@ -85,17 +115,17 @@
             position: absolute;
             top: 0;
             left: 0;
-            width: 140px;
-            height: 140px;
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            border: 12px solid transparent;
+            border: 8px solid transparent;
             border-top-color: #3b82f6;
             border-right-color: #3b82f6;
             transform: rotate(45deg);
-            /* Empty */
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.5s;
         }
 
+        /* Animations */
         .pulse-ring {
             animation: pulse-blue 2s infinite;
         }
@@ -103,7 +133,7 @@
         @keyframes pulse-blue {
             0% {
                 transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
             }
 
             70% {
@@ -117,7 +147,6 @@
             }
         }
 
-        /* Loader */
         .loader {
             border: 2px solid transparent;
             border-top-color: white;
@@ -130,20 +159,10 @@
                 transform: rotate(360deg);
             }
         }
-
-        /* Status Banner */
-        .status-banner {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 1rem 2rem;
-            background: rgba(15, 23, 42, 0.8);
-            display: flex;
-            justify-content: space-between;
-            items-center;
-        }
     </style>
 </head>
 
-<body>
+<body id="main-body" style="display: none;">
 
     <!-- Auth Guard -->
     <script type="module">
@@ -151,29 +170,23 @@
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         const guardConfig = { apiKey: "AIzaSyAW7XS_Q_Kdh2eiYEaKBEHvZDpOk7-ynDg", authDomain: "bustracker-c0af6.firebaseapp.com", projectId: "bustracker-c0af6", storageBucket: "bustracker-c0af6.firebasestorage.app", messagingSenderId: "103145940746", appId: "1:103145940746:web:80a8444bff23e75b94fcf3", measurementId: "G-PKF72NB657" };
         const guardApp = initializeApp(guardConfig); window.firebaseApp = guardApp; const auth = getAuth(guardApp);
-        onAuthStateChanged(auth, (user) => { if (user) { document.body.style.display = 'flex'; } else { window.location.href = '/login?role=driver'; } });
+        onAuthStateChanged(auth, (user) => { if (user) { document.getElementById('main-body').style.display = 'block'; window.initMap(); } else { window.location.href = '/login?role=driver'; } });
         window.logout = function () { auth.signOut().then(() => window.location.href = '/'); }
     </script>
-    <script> document.body.style.display = 'none'; </script> <!-- Hide until auth -->
 
+    <!-- MAP -->
+    <div id="map"></div>
 
-    <!-- TOP BAR -->
-    <div class="status-banner">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
-                <img src="https://cdn-icons-png.flaticon.com/512/2641/2641333.png" class="w-7 h-7" alt="Driver">
-            </div>
-            <div>
-                <h1 class="text-white font-bold text-lg leading-tight">Driver Console</h1>
-                <div class="flex items-center gap-2">
-                    <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                    <span id="serverStatus"
-                        class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Offline</span>
-                </div>
-            </div>
+    <!-- TOP BAR (Float) -->
+    <div class="fixed top-0 left-0 right-0 p-4 z-40 flex justify-between items-start pointer-events-none">
+        <div
+            class="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 pointer-events-auto border border-white/10">
+            <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            <span id="serverStatus" class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">OFFLINE</span>
         </div>
-        <button onclick="logout()" class="text-slate-400 hover:text-white transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button onclick="logout()"
+            class="pointer-events-auto w-9 h-9 bg-slate-900/80 rounded-full flex items-center justify-center text-slate-400 hover:text-white border border-white/10">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
                 </path>
@@ -181,198 +194,183 @@
         </button>
     </div>
 
-    <!-- MAIN DASHBOARD -->
-    <div class="dashboard-container">
 
-        <!-- Welcome / Status Message -->
-        <div class="text-center py-4">
-            <p class="text-3xl font-bold text-slate-200 mb-1" id="main-status-text">Ready to Drive?</p>
-            <p class="text-slate-500 text-sm">Configure your route below and go live.</p>
+    <!-- BOTTOM SHEET -->
+    <div id="dashboard-sheet" class="bottom-sheet sheet-expanded">
+
+        <!-- Drag Handle -->
+        <div class="sheet-handle-area" onclick="toggleSheet()">
+            <div class="sheet-handle max-w-[40px]"></div>
         </div>
 
-        <!-- 3-Column Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- 1. HEADER / MINIMIZED VIEW (Always Visible) -->
+        <div class="px-6 pb-2 pt-1 flex justify-between items-center shrink-0 h-[80px]">
 
-            <!-- CARD 1: CONFIG & ACTION -->
-            <div class="dash-card justify-between order-2 md:order-1 relative overflow-hidden group">
-                <div class="absolute -right-4 -top-4 opacity-5 pointer-events-none">
-                    <svg class="w-32 h-32 text-blue-500" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                </div>
-
-                <div class="relative z-10">
-                    <h2
-                        class="text-slate-300 font-bold uppercase text-xs tracking-wider mb-4 border-b border-slate-700/50 pb-2">
-                        Route Settings</h2>
-
-                    <div class="space-y-4">
-                        <!-- Switch -->
-                        <div class="bg-slate-900/50 p-1.5 rounded-xl border border-slate-700 flex relative"
-                            id="mode-toggle">
-                            <div id="active-blob"
-                                class="absolute inset-y-1.5 left-1.5 w-[calc(50%-6px)] bg-blue-600 rounded-lg transition-all duration-300">
-                            </div>
-                            <button onclick="setMode('BUS')"
-                                class="flex-1 py-2 text-xs font-bold text-white relative z-10">BUS</button>
-                            <button onclick="setMode('EV')"
-                                class="flex-1 py-2 text-xs font-bold text-slate-400 relative z-10">EV</button>
-                        </div>
-
-                        <!-- Input -->
-                        <div>
-                            <label class="text-[10px] text-slate-500 uppercase font-bold ml-1 mb-1 block">Vehicle
-                                Number</label>
-                            <input type="text" id="busInput" placeholder="Ex: 12"
-                                class="w-full bg-slate-900/50 border border-slate-700 p-4 rounded-xl text-center text-2xl text-white font-bold focus:border-blue-500 focus:outline-none placeholder-slate-700 mono uppercase transition-colors">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-8 relative z-10">
-                    <button id="toggleBtn"
-                        class="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group">
-                        <span class="text-2xl group-hover:scale-110 transition-transform">▶</span>
-                        <span>GO ONLINE</span>
-                    </button>
-                </div>
+            <!-- Context: Active Route -->
+            <div>
+                <h1 class="text-white font-bold text-lg leading-tight" id="header-title">Setup Route</h1>
+                <p class="text-[10px] text-slate-400 font-mono" id="header-subtitle">Select Bus No.</p>
             </div>
 
-
-            <!-- CARD 2: SPEEDOMETER (Center Highlight) -->
-            <div class="dash-card items-center justify-center order-1 md:order-2 border-slate-700 bg-slate-800/20">
-                <div class="text-center mb-6">
-                    <div class="gauge-container mb-2">
-                        <div class="gauge-bg"></div>
-                        <div class="gauge-fill" id="speed-fill" style="transform: rotate(45deg);"></div>
-                        <!-- 45 to 225 deg range -->
-                        <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-full text-center">
-                            <span class="text-5xl font-bold text-white mono leading-none block" id="speedVal">0</span>
-                        </div>
-                    </div>
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-widest">km/h</span>
+            <!-- Mini Gauge (Only visible when driving?) No, always keep mini status -->
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <div class="text-2xl font-bold text-blue-500 mono leading-none"><span id="mini-speed">0</span></div>
+                    <div class="text-[8px] text-slate-500 uppercase">km/h</div>
                 </div>
 
-                <!-- Stats Grid -->
-                <div class="grid grid-cols-2 gap-4 w-full">
-                    <div class="bg-slate-900/40 p-3 rounded-lg text-center">
-                        <p class="text-[10px] text-slate-500 uppercase">GPS Accuracy</p>
-                        <p id="gps-quality" class="text-sm font-mono text-slate-300 font-bold">--</p>
-                    </div>
-                    <div class="bg-slate-900/40 p-3 rounded-lg text-center">
-                        <p class="text-[10px] text-slate-500 uppercase">Heading</p>
-                        <p id="headingVal" class="text-sm font-mono text-slate-300 font-bold">--</p>
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- CARD 3: ANNOUNCEMENTS -->
-            <div class="dash-card order-3 flex flex-col">
-                <div class="flex items-center justify-between mb-4 border-b border-slate-700/50 pb-2">
-                    <h2 class="text-slate-300 font-bold uppercase text-xs tracking-wider">Announcements</h2>
-                    <span id="ai-status" class="text-[10px] text-purple-400">AI Ready</span>
-                </div>
-
-                <div class="flex-1 relative mb-3">
-                    <textarea id="announceInput"
-                        class="w-full h-full min-h-[120px] bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-xs text-white leading-relaxed focus:border-purple-500 focus:outline-none resize-none"
-                        placeholder="Broadcast traffic updates, delays, or route changes to students..."></textarea>
-
-                    <button id="btnAiAssist"
-                        class="absolute bottom-3 right-3 p-2 bg-slate-800 hover:bg-purple-600 rounded-lg text-white transition-all shadow-lg"
-                        title="Magic Polish">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                        </svg>
-                    </button>
-                </div>
-
-                <button id="btnAnnounce"
-                    class="w-full py-3 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-xl transition-colors flex items-center justify-center gap-2">
-                    <span>📣</span> BROADCAST ALERT
+                <!-- Toggle Button (Changes based on state) -->
+                <button id="toggleBtn"
+                    class="bg-blue-600 hover:bg-blue-500 text-white w-12 h-12 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/30 transition-all active:scale-95">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                    </svg> <!-- GPS Start Icon -->
                 </button>
             </div>
+        </div>
 
+        <!-- 2. EXPANDED CONTENT (Scrollable) -->
+        <div class="flex-1 overflow-y-auto px-6 pb-6 pt-2 space-y-4">
+
+            <hr class="border-slate-800 mb-4">
+
+            <!-- Grid Layout -->
+            <div class="grid grid-cols-1 gap-4">
+
+                <!-- CONFIG CARD -->
+                <div class="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
+                    <h3 class="text-xs text-slate-400 font-bold uppercase mb-3">Vehicle Configuration</h3>
+                    <div class="flex gap-3">
+                        <div class="bg-slate-900 rounded-xl p-1 flex border border-slate-700 h-12 shrink-0 relative w-32"
+                            id="mode-toggle">
+                            <div id="active-blob"
+                                class="absolute inset-y-1 left-1 w-[calc(50%-4px)] bg-blue-600 rounded-lg transition-transform duration-300">
+                            </div>
+                            <button onclick="setMode('BUS')"
+                                class="flex-1 relative z-10 text-xs font-bold text-white">BUS</button>
+                            <button onclick="setMode('EV')"
+                                class="flex-1 relative z-10 text-xs font-bold text-slate-400">EV</button>
+                        </div>
+                        <input type="text" id="busInput" placeholder="NO."
+                            class="w-20 bg-slate-900 border border-slate-700 rounded-xl text-center text-white font-bold text-lg focus:border-blue-500 focus:outline-none uppercase">
+                    </div>
+                </div>
+
+                <!-- ANNOUNCEMENTS -->
+                <div class="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
+                    <div class="flex justify-between mb-2">
+                        <h3 class="text-xs text-slate-400 font-bold uppercase">Broadcast</h3>
+                        <span class="text-[10px] text-purple-400">AI Enabled</span>
+                    </div>
+                    <div class="relative mb-3">
+                        <textarea id="announceInput" rows="3"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"
+                            placeholder="Alert message..."></textarea>
+                        <button id="btnAiAssist"
+                            class="absolute bottom-2 right-2 p-1.5 bg-slate-800 hover:bg-purple-600 rounded text-white shadow"><span
+                                class="text-xs">✨</span></button>
+                    </div>
+                    <button id="btnAnnounce"
+                        class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-lg text-sm">Send
+                        Alert</button>
+                </div>
+
+                <!-- TELEMETRY DETAILS -->
+                <div class="bg-slate-800/50 rounded-2xl p-4 border border-slate-700 flex justify-between items-center">
+                    <div>
+                        <p class="text-[10px] text-slate-500 uppercase">GPS Quality</p>
+                        <p id="gps-quality" class="text-sm font-mono text-white font-bold">--</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-slate-500 uppercase">Last Update</p>
+                        <p id="last-updated" class="text-sm font-mono text-white text-right">Running...</p>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
 
-    <!-- JS LOGIC -->
+    <!-- APP LOGIC -->
     <script type="module">
         import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
+        // UI REFS
+        const sheet = document.getElementById('dashboard-sheet');
+        const btnMain = document.getElementById('toggleBtn');
+        const headerTitle = document.getElementById('header-title');
+        const headerSub = document.getElementById('header-subtitle');
+        const busInput = document.getElementById('busInput');
+        const miniSpeed = document.getElementById('mini-speed');
+
         // STATE
-        let watchId = null;
         let isSharing = false;
+        let map, userMarker, watchId;
         let currentMode = 'BUS';
         let activeBusNo = null;
 
-        // UI REFS
-        const btnMain = document.getElementById('toggleBtn');
-        const busInput = document.getElementById('busInput');
-        const speedVal = document.getElementById('speedVal');
-        const speedFill = document.getElementById('speed-fill');
-        const gpsLabel = document.getElementById('gps-quality');
-        const mainStatus = document.getElementById('main-status-text');
+        // SHEET LOGIC
+        window.toggleSheet = function () {
+            if (sheet.classList.contains('sheet-expanded')) {
+                sheet.classList.replace('sheet-expanded', 'sheet-minimized');
+            } else {
+                sheet.classList.replace('sheet-minimized', 'sheet-expanded');
+            }
+        }
+        // Auto-minimize on start
+        function minimize() { sheet.classList.replace('sheet-expanded', 'sheet-minimized'); }
+        function expand() { sheet.classList.replace('sheet-minimized', 'sheet-expanded'); }
 
-        // --- 1. CONFIGURATION ---
+        // MODE TOGGLE
         window.setMode = function (mode) {
             if (isSharing) return;
             currentMode = mode;
             const blob = document.getElementById('active-blob');
             const btns = document.getElementById('mode-toggle').querySelectorAll('button');
-
             if (mode === 'BUS') {
                 blob.style.transform = 'translateX(0)';
-                blob.classList.replace('bg-emerald-600', 'bg-blue-600');
-                btns[0].classList.replace('text-slate-400', 'text-white');
-                btns[1].classList.replace('text-white', 'text-slate-400');
-                busInput.value = "";
-                busInput.disabled = false;
+                btns[0].style.color = 'white'; btns[1].style.color = '#94a3b8';
+                busInput.value = ""; busInput.disabled = false;
             } else {
                 blob.style.transform = 'translateX(100%)';
-                blob.classList.replace('bg-blue-600', 'bg-emerald-600');
-                btns[1].classList.replace('text-slate-400', 'text-white');
-                btns[0].classList.replace('text-white', 'text-slate-400');
-                busInput.value = "EV-" + Math.floor(Math.random() * 9000 + 1000);
-                busInput.disabled = true;
+                btns[1].style.color = 'white'; btns[0].style.color = '#94a3b8';
+                busInput.value = "EV-" + Math.floor(Math.random() * 900 + 100); busInput.disabled = true;
             }
         }
 
-        // --- 2. MAIN ACTION ---
-        btnMain.addEventListener('click', () => {
+        // DRIVE ACTION
+        btnMain.addEventListener('click', (e) => {
+            e.stopPropagation(); // Don't toggle sheet
             if (!isSharing) {
-                const busNo = busInput.value.trim().toUpperCase();
-                if (!busNo) return alert("Please Enter Bus Number");
-                startSession(busNo);
+                const val = busInput.value.trim().toUpperCase();
+                if (!val) return alert("Enter Bus Number");
+                startSession(val);
             } else {
                 stopSession();
             }
         });
 
         function startSession(busNo) {
-            if (!navigator.geolocation) return alert("GPS Error: Not Supported");
-
+            if (!navigator.geolocation) return alert("No GPS");
             activeBusNo = busNo;
             isSharing = true;
 
-            // UI LOCK
-            busInput.disabled = true;
-            document.getElementById('mode-toggle').classList.add('opacity-50', 'pointer-events-none');
+            // UI UPDATES
+            btnMain.innerHTML = `<div class="w-4 h-4 bg-white rounded-sm"></div>`; // Stop Stop Square
+            btnMain.classList.replace('bg-blue-600', 'bg-red-500');
+            headerTitle.textContent = `Bus ${busNo}`;
+            headerTitle.classList.add('text-green-400');
+            headerSub.textContent = "● LIVE BROADCASTING";
 
-            // Visual Update
-            btnMain.innerHTML = `<span class="text-2xl animate-pulse">■</span> STOP SESSION`;
-            btnMain.className = "w-full py-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-2";
-            mainStatus.textContent = `🔴 LIVE: Bus ${busNo}`;
-            mainStatus.classList.add('text-red-400', 'animate-pulse');
+            // Minimize map for navigation
+            minimize();
 
+            // GPS
             const opts = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
             watchId = navigator.geolocation.watchPosition(
                 (pos) => handleGPS(pos, busNo),
-                (err) => { gpsLabel.textContent = "Err: " + err.code; },
-                opts
+                (err) => console.error(err), opts
             );
         }
 
@@ -381,94 +379,84 @@
             watchId = null;
             isSharing = false;
 
-            // Send Death Signal
             const socket = io();
             socket.emit('driver_update', null);
 
-            // UI RESET
-            busInput.disabled = (currentMode === 'EV');
-            document.getElementById('mode-toggle').classList.remove('opacity-50', 'pointer-events-none');
+            // RESET
+            btnMain.innerHTML = `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+            btnMain.classList.replace('bg-red-500', 'bg-blue-600');
+            headerTitle.textContent = "Setup Route";
+            headerTitle.classList.remove('text-green-400');
+            headerSub.textContent = "Select Bus No.";
+            miniSpeed.textContent = "0";
 
-            btnMain.innerHTML = `<span class="text-2xl">▶</span> GO ONLINE`;
-            btnMain.className = "w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-2 group";
-
-            mainStatus.textContent = "Ready to Drive?";
-            mainStatus.classList.remove('text-red-400', 'animate-pulse');
-
-            updateSpeed(0);
-            gpsLabel.textContent = "--";
+            expand(); // Show config again
+            if (map && userMarker) map.removeLayer(userMarker);
         }
 
         function handleGPS(pos, busNo) {
-            const { latitude, longitude, speed, accuracy, heading } = pos.coords;
-            const kmh = speed ? speed * 3.6 : 0;
+            const { latitude, longitude, speed, headings, accuracy } = pos.coords;
+            const kmh = speed ? Math.round(speed * 3.6) : 0;
 
-            updateSpeed(kmh);
-            gpsLabel.textContent = `±${Math.round(accuracy)}m`;
-            document.getElementById('headingVal').textContent = heading ? Math.round(heading) + "°" : "--";
+            miniSpeed.textContent = kmh;
+            document.getElementById('gps-quality').textContent = `±${Math.round(accuracy)}m`;
+            document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+
+            if (map) {
+                userMarker.setLatLng([latitude, longitude]).addTo(map);
+                map.setView([latitude, longitude], 17);
+            }
 
             const socket = io();
-            socket.emit('driver_update', { lat: latitude, lng: longitude, speed, heading, bus_no: busNo, accuracy });
+            socket.emit('driver_update', { lat: latitude, lng: longitude, speed, headings, bus_no: busNo, accuracy });
         }
 
-        function updateSpeed(kmh) {
-            speedVal.textContent = Math.round(kmh);
-            // 45deg (empty) to 315deg (full) => range 270deg
-            // logic: 45 + (percent * 180)? Gauge logic:
-            // CSS: rotate(45deg) is start. rotate(225deg) is end (half circle 180).
-            const maxKmh = 100;
-            const percent = Math.min(kmh / maxKmh, 1);
-            const rotation = 45 + (percent * 180);
-            speedFill.style.transform = `rotate(${rotation}deg)`;
+        // MAP INIT
+        window.initMap = function () {
+            if (map) return;
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20.2961, 85.8245], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
+
+            const icon = L.divIcon({ className: 'custom-icon', html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-lg pulse-ring"></div>`, iconSize: [24, 24], iconAnchor: [12, 12] });
+            userMarker = L.marker([0, 0], { icon: icon });
         }
 
-        // --- 3. ANNOUNCE & AI ---
+        // ANNOUNCEMENT (Same logic)
         const btnAi = document.getElementById('btnAiAssist');
         const inputAnnounce = document.getElementById('announceInput');
         const btnSend = document.getElementById('btnAnnounce');
 
         btnAi.addEventListener('click', async () => {
-            const text = inputAnnounce.value;
-            if (!text) return;
-
-            const oldInner = btnAi.innerHTML;
-            btnAi.innerHTML = '<div class="loader w-4 h-4 bg-transparent border-white"></div>';
-
+            // ... AI logic reuse ...
+            const text = inputAnnounce.value; if (!text) return;
+            btnAi.innerHTML = '...';
             try {
                 const res = await fetch('/api/driver/ai-assist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
                 const data = await res.json();
                 if (data.response) inputAnnounce.value = data.response;
-            } catch (e) { alert('AI Error'); }
-            finally { btnAi.innerHTML = oldInner; }
+            } catch (e) { } finally { btnAi.innerHTML = '✨'; }
         });
 
         btnSend.addEventListener('click', async () => {
             const msg = inputAnnounce.value;
-            if (!msg) return;
-            if (!isSharing) return alert("Go Online First!");
-
+            if (!msg || !isSharing) return alert("Go Online first");
             const app = window.firebaseApp;
             const db = getFirestore(app);
             try {
                 const ref = doc(db, 'announcements', activeBusNo);
                 await setDoc(ref, { bus_no: activeBusNo, latest_message: msg, last_updated: serverTimestamp() }, { merge: true });
                 await addDoc(collection(ref, 'messages'), { message: msg, timestamp: serverTimestamp(), bus_no: activeBusNo });
-                inputAnnounce.value = "";
-                alert("Announcement Sent! 📣");
-            } catch (e) { console.error(e); alert("Send failed"); }
+                inputAnnounce.value = ""; alert("Sent");
+            } catch (e) { }
         });
 
-        // --- 4. SOCKET STATUS ---
+        // SOCKET
         const socket = io();
         socket.on('connect', () => {
             document.getElementById('serverStatus').textContent = "ONLINE";
-            document.getElementById('serverStatus').classList.replace('text-slate-400', 'text-green-400');
+            document.getElementById('serverStatus').classList.replace('text-slate-300', 'text-green-400');
             document.getElementById('status-dot').classList.replace('bg-red-500', 'bg-green-500');
-        });
-        socket.on('disconnect', () => {
-            document.getElementById('serverStatus').textContent = "OFFLINE";
-            document.getElementById('serverStatus').classList.replace('text-green-400', 'text-slate-400');
-            document.getElementById('status-dot').classList.replace('bg-green-500', 'bg-red-500');
+            document.getElementById('status-dot').classList.remove('animate-pulse');
         });
 
     </script>
