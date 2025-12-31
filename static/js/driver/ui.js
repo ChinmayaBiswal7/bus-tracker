@@ -1,7 +1,20 @@
+export function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.classList.toggle('-translate-x-full');
+}
+
 export function togglePanel(id) {
     // Hide all panels
     document.querySelectorAll('.pop-panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-icon').forEach(i => i.classList.remove('active'));
+
+    // Auto-close sidebar on mobile
+    if (window.innerWidth < 768) {
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar && !sidebar.classList.contains('-translate-x-full')) {
+            sidebar.classList.add('-translate-x-full');
+        }
+    }
 
     // Show target
     const target = document.getElementById('panel-' + id);
