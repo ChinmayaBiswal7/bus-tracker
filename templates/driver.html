@@ -370,10 +370,12 @@
     </div>
 
 
-    <!-- PANEL 4: SPEEDOMETER -->
+    <!-- PANEL 4: SPEEDOMETER & TELEMETRY -->
     <div id="panel-speed" class="pop-panel glass-card p-5 flex flex-col items-center">
         <h3 class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-2">Live Telemetry</h3>
-        <div class="relative w-32 h-32 flex items-center justify-center">
+
+        <!-- Gauge -->
+        <div class="relative w-32 h-32 flex items-center justify-center mb-4">
             <svg class="w-full h-full transform -rotate-90">
                 <circle cx="64" cy="64" r="58" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="none" />
                 <circle id="speed-circle" cx="64" cy="64" r="58" stroke="#3b82f6" stroke-width="8" fill="none"
@@ -385,7 +387,26 @@
                 <span class="block text-[8px] text-slate-500 uppercase font-bold">KM/H</span>
             </div>
         </div>
-        <div id="gps-stats" class="text-[10px] text-slate-500 font-mono mt-2">Accuracy: --</div>
+
+        <!-- Diagnostic Grid -->
+        <div class="w-full grid grid-cols-2 gap-2 text-[10px] font-mono border-t border-white/5 pt-3">
+            <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-700/50">
+                <span class="block text-slate-500 mb-1">ACCURACY</span>
+                <span class="block text-white font-bold text-xs" id="stat-acc">-- m</span>
+            </div>
+            <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-700/50">
+                <span class="block text-slate-500 mb-1">LATITUDE</span>
+                <span class="block text-white font-bold text-xs" id="stat-lat">--</span>
+            </div>
+            <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-700/50">
+                <span class="block text-slate-500 mb-1">LONGITUDE</span>
+                <span class="block text-white font-bold text-xs" id="stat-lng">--</span>
+            </div>
+            <div class="bg-slate-900/50 p-2 rounded-lg border border-slate-700/50">
+                <span class="block text-slate-500 mb-1">STATUS</span>
+                <span class="block text-green-400 font-bold text-xs" id="stat-status">IDLE</span>
+            </div>
+        </div>
     </div>
 
 
@@ -441,19 +462,15 @@
             }
         });
 
+        // CASCADING GPS STRATEGY
         function startSession(val) {
             if (!navigator.geolocation) return alert("GPS Not Supported");
 
-            // Initial "Searching" State
-            btnMain.innerHTML = `<span class="animate-pulse">📡</span> SEARCHING GPS...`;
-            btnMain.className = "w-full py-4 bg-slate-700 text-slate-300 rounded-2xl font-bold text-lg cursor-wait flex items-center justify-center gap-3";
-
-            serverStatus.textContent = "SEARCHING...";
-            serverStatus.className = "text-[10px] font-bold text-yellow-400 uppercase tracking-widest animate-pulse";
-            statusDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-500 ring-2 ring-yellow-900 transition-colors";
-
             busInput.disabled = true;
             isSharing = true;
+
+            // Initial UI for Searching
+            togglePanel('speed');
 
             // Map Icon Update (Pre-emptive)
             if (userMarker) {
@@ -461,13 +478,48 @@
                 userMarker.setIcon(isEv ? createEvIcon() : createBusIcon());
             }
 
-            togglePanel('speed');
+            // Start with High Accuracy
+            attemptGPS('HIGH', val);
+        }
 
-            const opts = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+        function attemptGPS(mode, busNo) {
+            const isHigh = mode === 'HIGH';
+            const statusMsg = isHigh ? "SEARCHING (SATELLITE)..." : "SEARCHING (NETWORK)...";
+            const statusColor = isHigh ? "text-yellow-400" : "text-blue-400";
+            const btnIcon = isHigh ? "🛰️" : "📡";
+
+            // UI Update
+            btnMain.innerHTML = `<span class="animate-pulse">${btnIcon}</span> ${statusMsg}`;
+            btnMain.className = "w-full py-4 bg-slate-700 text-slate-300 rounded-2xl font-bold text-lg cursor-wait flex items-center justify-center gap-3";
+
+            serverStatus.textContent = isHigh ? "GPS SCAN..." : "NET SCAN...";
+            serverStatus.className = `text-[10px] font-bold ${statusColor} uppercase tracking-widest animate-pulse`;
+            statusDot.className = `w-2.5 h-2.5 rounded-full ${isHigh ? 'bg-yellow-500' : 'bg-blue-500'} ring-2 ring-slate-800 transition-colors`;
+            statStatus.textContent = isHigh ? "GPS LOCK..." : "NET LOCK...";
+
+            const opts = {
+                enableHighAccuracy: isHigh,
+                timeout: isHigh ? 5000 : 15000,
+                maximumAge: 0
+            };
+
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+
+            console.log(`[GPS] Attempting ${mode} Accuracy...`);
 
             watchId = navigator.geolocation.watchPosition(
-                (pos) => handleGPS(pos, val),
-                (err) => handleGPSError(err),
+                (pos) => handleGPS(pos, busNo),
+                (err) => {
+                    console.warn(`[GPS] ${mode} Failed:`, err);
+                    if (isHigh) {
+                        // Fallback to Low
+                        console.log("Switching to Low Accuracy...");
+                        attemptGPS('LOW', busNo);
+                    } else {
+                        // Final Failure
+                        handleGPSError(err);
+                    }
+                },
                 opts
             );
         }
@@ -481,7 +533,7 @@
             btnMain.innerHTML = `<svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>START SESSION</span>`;
             btnMain.className = "w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group";
 
-            serverStatus.textContent = "IDLE";
+            serverStatus.textContent = "Idle";
             serverStatus.className = "text-[10px] font-bold text-slate-400 uppercase tracking-widest";
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-slate-600 ring-2 ring-slate-800 transition-colors";
             busInput.disabled = false;
@@ -500,12 +552,14 @@
             serverStatus.textContent = "GPS ERROR";
             serverStatus.className = "text-[10px] font-bold text-red-500 uppercase tracking-widest animate-pulse";
             statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-900";
+            statStatus.textContent = "DENIED";
+            statStatus.className = "block text-red-500 font-bold text-xs";
             alert(`GPS Error: ${err.message}. Check permissions.`);
             stopSession();
         }
 
         function handleGPS(pos, busNo) {
-            // Once we get first lock, update Button to "Terminate"
+            // Once locked, update Main Button
             if (btnMain.textContent.includes("SEARCHING")) {
                 btnMain.innerHTML = `<span class="animate-pulse">■</span> TERMINATE SESSION`;
                 btnMain.className = "w-full py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-red-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3";
@@ -517,14 +571,14 @@
             const { latitude, longitude, speed, accuracy } = pos.coords;
             const kmh = speed ? Math.round(speed * 3.6) : 0;
 
-            // UI Updates
+            // Stats
             updateSpeed(kmh);
             statLat.textContent = latitude.toFixed(4);
             statLng.textContent = longitude.toFixed(4);
             statAcc.textContent = `${Math.round(accuracy)} m`;
             statStatus.textContent = "LOCKED";
 
-            // Color code accuracy
+            // Color Coding
             if (accuracy < 20) {
                 statAcc.className = "block text-green-400 font-bold text-xs";
                 statStatus.className = "block text-green-400 font-bold text-xs";
@@ -538,14 +592,14 @@
 
             if (map) {
                 userMarker.setLatLng([latitude, longitude]).addTo(map);
-                map.setView([latitude, longitude], 18); // Tighter zoom on driver
+                map.setView([latitude, longitude], 18);
             }
 
             const socket = io();
             if (socket.connected) {
                 socket.emit('driver_update', { lat: latitude, lng: longitude, speed, bus_no: busNo });
             } else {
-                statStatus.textContent = "NET ERROR";
+                statStatus.textContent = "NET ERR";
                 statStatus.className = "block text-red-500 font-bold text-xs";
             }
         }
