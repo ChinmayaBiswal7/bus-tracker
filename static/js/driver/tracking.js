@@ -1,4 +1,4 @@
-import { updateSpeed, createIdleIcon, updateStatsUI } from './ui.js';
+import { updateSpeed, createIdleIcon, createBusIcon, createEvIcon, updateStatsUI } from './ui.js';
 
 let map = null;
 let userMarker = null;
@@ -139,6 +139,10 @@ function handleGPS(pos, busNo, stage) {
             serverStatus.className = "text-[10px] font-bold text-green-400 uppercase tracking-widest animate-pulse";
         }
         if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-green-900 transition-colors";
+
+        // Update Marker Icon
+        const newIcon = (activeMode === 'EV') ? createEvIcon() : createBusIcon();
+        if (userMarker) userMarker.setIcon(newIcon);
     }
 
     const { latitude, longitude, speed, accuracy } = pos.coords;
