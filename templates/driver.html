@@ -19,7 +19,7 @@
     <style>
         :root {
             --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-bg: rgba(15, 23, 42, 0.85);
+            --glass-bg: rgba(15, 23, 42, 0.9);
         }
 
         body {
@@ -228,35 +228,69 @@
     </div>
 
 
-    <!-- PANEL 1: DRIVE CONFIG -->
-    <div id="panel-drive" class="pop-panel glass-card p-5 active">
-        <div class="flex justify-between items-start mb-4">
-            <div>
-                <h2 class="text-white font-bold text-lg leading-tight">Route Config</h2>
-                <div class="flex items-center gap-2 mt-1">
-                    <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                    <span id="serverStatus"
-                        class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OFFLINE</span>
+    <!-- PANEL 1: DRIVE CONFIG (Redesigned "Flash Card") -->
+    <div id="panel-drive" class="pop-panel glass-card p-0 active" style="width: 380px; max-width: 90vw;">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-white/5 bg-slate-800/50 flex justify-between items-center">
+            <h2 class="text-white font-bold text-lg tracking-tight">Mission Control</h2>
+            <div class="flex items-center gap-2">
+                <div id="status-dot"
+                    class="w-2.5 h-2.5 rounded-full bg-slate-600 ring-2 ring-slate-800 transition-colors"></div>
+                <span id="serverStatus"
+                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Idle</span>
+            </div>
+        </div>
+
+        <!-- Radar Visual -->
+        <div class="relative py-8 flex justify-center items-center overflow-hidden">
+            <!-- Pulsing Rings -->
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                <div
+                    class="radar-ring w-64 h-64 border border-blue-500 rounded-full absolute animate-[ping_3s_linear_infinite]">
+                </div>
+                <div
+                    class="radar-ring w-48 h-48 border border-blue-400 rounded-full absolute animate-[ping_3s_linear_infinite_1s]">
                 </div>
             </div>
-        </div>
 
-        <div class="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 mb-4 relative" id="mode-toggle">
-            <div id="active-blob"
-                class="absolute inset-y-1 left-1 w-[calc(50%-4px)] bg-blue-600 rounded-lg transition-transform duration-300">
+            <!-- Central Icon -->
+            <div
+                class="relative z-10 w-24 h-24 rounded-full bg-gradient-to-b from-slate-700 to-slate-800 border-4 border-slate-600 flex items-center justify-center shadow-2xl">
+                <span class="text-4xl filter drop-shadow-lg">🚌</span>
             </div>
-            <button onclick="setMode('BUS')"
-                class="flex-1 relative z-10 py-1.5 text-xs font-bold text-white">BUS</button>
-            <button onclick="setMode('EV')"
-                class="flex-1 relative z-10 py-1.5 text-xs font-bold text-slate-400">EV</button>
         </div>
 
-        <div class="flex gap-2">
-            <input type="text" id="busInput" placeholder="NO."
-                class="w-20 bg-slate-900 border border-slate-700 rounded-xl text-center text-white font-bold focus:border-blue-500 focus:outline-none uppercase">
+        <!-- Controls -->
+        <div class="px-6 pb-6 space-y-5">
+
+            <!-- Type Toggle -->
+            <div class="flex bg-slate-900/60 p-1.5 rounded-2xl border border-slate-700/50 relative" id="mode-toggle">
+                <div id="active-blob"
+                    class="absolute inset-y-1.5 left-1.5 w-[calc(50%-6px)] bg-blue-600 rounded-xl shadow-lg transition-transform duration-300">
+                </div>
+                <button onclick="setMode('BUS')"
+                    class="flex-1 relative z-10 py-3 text-sm font-bold text-white transition-colors">BUS ROUTE</button>
+                <button onclick="setMode('EV')"
+                    class="flex-1 relative z-10 py-3 text-sm font-bold text-slate-400 transition-colors">EV
+                    SHUTTLE</button>
+            </div>
+
+            <!-- Input -->
+            <div class="relative">
+                <label
+                    class="absolute -top-2.5 left-3 bg-slate-800/90 px-2 text-[10px] uppercase font-bold text-blue-400">Vehicle
+                    Identifier</label>
+                <input type="text" id="busInput" placeholder="ENTER NUMBER (e.g. 42)"
+                    class="w-full bg-transparent border-2 border-slate-600 rounded-2xl py-4 text-center text-xl text-white font-bold tracking-widest uppercase focus:border-blue-500 focus:outline-none transition-all placeholder-slate-700">
+            </div>
+
+            <!-- Big Action Button -->
             <button id="toggleBtn"
-                class="flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
-                GO LIVE
+                class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group">
+                <svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                </svg>
+                <span>START SESSION</span>
             </button>
         </div>
     </div>
@@ -311,7 +345,7 @@
     </div>
 
 
-    <!-- PANEL 3: GENERAL CHAT (New!) -->
+    <!-- PANEL 3: GENERAL CHAT -->
     <div id="panel-ai" class="pop-panel glass-card p-0 flex flex-col h-[400px]">
         <div class="p-4 border-b border-white/5 bg-slate-800/50">
             <h3 class="text-white font-bold text-sm flex items-center gap-2">
@@ -320,7 +354,7 @@
         </div>
 
         <div id="chat-history" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-            <div class="chat-ai chat-msg">Hello Driver! How can I help you today?</div>
+            <div class="chat-ai chat-msg">Hello Driver! How can I help you?</div>
         </div>
 
         <div class="p-3 bg-slate-900/50 flex gap-2">
@@ -402,11 +436,15 @@
         function startSession(val) {
             if (!navigator.geolocation) return alert("No GPS");
             isSharing = true;
-            btnMain.textContent = "STOP";
-            btnMain.classList.replace('bg-blue-600', 'bg-red-500');
-            document.getElementById('serverStatus').textContent = "LIVE";
-            document.getElementById('serverStatus').classList.replace('text-slate-400', 'text-green-400');
-            document.getElementById('status-dot').classList.replace('bg-red-500', 'bg-green-500');
+
+            // Update Big Card UI
+            btnMain.innerHTML = `<span class="animate-pulse">■</span> TERMINATE SESSION`;
+            btnMain.className = "w-full py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-red-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3";
+
+            document.getElementById('serverStatus').textContent = "LIVE BROADCAST";
+            document.getElementById('serverStatus').className = "text-[10px] font-bold text-green-400 uppercase tracking-widest animate-pulse";
+            document.getElementById('status-dot').className = "w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-green-900 transition-colors";
+            busInput.disabled = true;
 
             // Auto-open Speed
             togglePanel('speed');
@@ -419,11 +457,16 @@
             if (watchId) navigator.geolocation.clearWatch(watchId);
             watchId = null; isSharing = false;
             const socket = io(); socket.emit('driver_update', null);
-            btnMain.textContent = "GO LIVE";
-            btnMain.classList.replace('bg-red-500', 'bg-blue-600');
-            document.getElementById('serverStatus').textContent = "OFFLINE";
-            document.getElementById('serverStatus').classList.replace('text-green-400', 'text-slate-400');
-            document.getElementById('status-dot').classList.replace('bg-green-500', 'bg-red-500');
+
+            // Reset UI
+            btnMain.innerHTML = `<svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>START SESSION</span>`;
+            btnMain.className = "w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group";
+
+            document.getElementById('serverStatus').textContent = "Idle";
+            document.getElementById('serverStatus').className = "text-[10px] font-bold text-slate-400 uppercase tracking-widest";
+            document.getElementById('status-dot').className = "w-2.5 h-2.5 rounded-full bg-slate-600 ring-2 ring-slate-800 transition-colors";
+            busInput.disabled = false;
+
             updateSpeed(0);
             if (map && userMarker) map.removeLayer(userMarker);
         }
@@ -471,7 +514,7 @@
         btnSend.addEventListener('click', async () => {
             const msg = finalInput.value;
             if (!msg) return;
-            if (document.getElementById('serverStatus').textContent !== "LIVE") return alert("Go Live First");
+            if (document.getElementById('serverStatus').textContent !== "LIVE BROADCAST") return alert("Go Live First");
 
             const busNo = document.getElementById('busInput').value || "EV";
             const app = window.firebaseApp;
@@ -486,19 +529,17 @@
         });
 
 
-        // --- 4. GENERAL CHAT (NEW) ---
+        // --- 4. GENERAL CHAT ---
         const chatInput = document.getElementById('chatInput');
         const btnChat = document.getElementById('btnChatSend');
         const chatHistory = document.getElementById('chat-history');
 
         async function sendChat() {
             const txt = chatInput.value.trim(); if (!txt) return;
-            // Add User Msg
             chatHistory.innerHTML += `<div class="chat-user chat-msg">${txt}</div>`;
             chatInput.value = "";
             chatHistory.scrollTop = chatHistory.scrollHeight;
 
-            // Call API
             try {
                 const res = await fetch('/api/driver/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: txt }) });
                 const data = await res.json();
