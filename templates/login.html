@@ -72,53 +72,54 @@
                     class="text-xs text-slate-400 hover:text-white transition-colors">
                     Forgot Password?
                 </button>
+                </button>
             </div>
-    </div>
-    <button type="submit" id="submit-btn"
-        class="w-full py-4 {% if role == 'driver' %}bg-emerald-600 hover:bg-emerald-500{% else %}bg-blue-600 hover:bg-blue-500{% endif %} text-white font-bold rounded-xl transition-all transform active:scale-95 shadow-lg mt-4">
-        LOGIN
-    </button>
-    </form>
-
-    <!-- Reset Password Modal -->
-    <div id="reset-modal"
-        class="absolute inset-0 bg-slate-800 z-50 transform translation-all duration-300 translate-y-full flex flex-col p-8 opacity-0 pointer-events-none">
-        <div class="flex items-center mb-6">
-            <button onclick="hideForgotPassword()" class="p-2 -ml-2 text-slate-400 hover:text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-                </svg>
+            <button type="submit" id="submit-btn"
+                class="w-full py-4 {% if role == 'driver' %}bg-emerald-600 hover:bg-emerald-500{% else %}bg-blue-600 hover:bg-blue-500{% endif %} text-white font-bold rounded-xl transition-all transform active:scale-95 shadow-lg mt-4">
+                LOGIN
             </button>
-            <h3 class="text-xl font-bold text-white ml-2">Reset Password</h3>
+        </form>
+
+        <!-- Reset Password Modal -->
+        <div id="reset-modal"
+            class="absolute inset-0 bg-slate-800 z-50 transform translation-all duration-300 translate-y-full flex flex-col p-8 opacity-0 pointer-events-none">
+            <div class="flex items-center mb-6">
+                <button onclick="hideForgotPassword()" class="p-2 -ml-2 text-slate-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                        </path>
+                    </svg>
+                </button>
+                <h3 class="text-xl font-bold text-white ml-2">Reset Password</h3>
+            </div>
+            <p class="text-slate-400 text-sm mb-6">Enter your email address and we'll send you a link to reset your
+                password.</p>
+
+            <div id="reset-success"
+                class="hidden bg-emerald-500/20 text-emerald-300 p-3 rounded-xl mb-4 text-sm border border-emerald-500/50">
+                ✅ Reset link sent! Check your email.
+            </div>
+            <div id="reset-error"
+                class="hidden bg-red-500/20 text-red-200 p-3 rounded-xl mb-4 text-sm border border-red-500/50"></div>
+
+            <input type="email" id="reset-email" placeholder="Enter your email"
+                class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors mb-4">
+
+            <button onclick="sendResetLink()" id="btn-reset"
+                class="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-all">
+                SEND LINK
+            </button>
         </div>
-        <p class="text-slate-400 text-sm mb-6">Enter your email address and we'll send you a link to reset your
-            password.</p>
 
-        <div id="reset-success"
-            class="hidden bg-emerald-500/20 text-emerald-300 p-3 rounded-xl mb-4 text-sm border border-emerald-500/50">
-            ✅ Reset link sent! Check your email.
+        <p class="text-slate-500 text-center mt-6 text-sm">
+            Don't have an account? <a href="/signup?role={{ role }}"
+                class="{% if role == 'driver' %}text-emerald-400 hover:text-emerald-300{% else %}text-blue-400 hover:text-blue-300{% endif %} font-bold">Sign
+                Up</a>
+        </p>
+
+        <div class="text-center mt-4">
+            <a href="/" class="text-slate-600 text-xs hover:text-slate-400">← Back to Role Selection</a>
         </div>
-        <div id="reset-error"
-            class="hidden bg-red-500/20 text-red-200 p-3 rounded-xl mb-4 text-sm border border-red-500/50"></div>
-
-        <input type="email" id="reset-email" placeholder="Enter your email"
-            class="w-full bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors mb-4">
-
-        <button onclick="sendResetLink()" id="btn-reset"
-            class="w-full py-4 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-all">
-            SEND LINK
-        </button>
-    </div>
-
-    <p class="text-slate-500 text-center mt-6 text-sm">
-        Don't have an account? <a href="/signup?role={{ role }}"
-            class="{% if role == 'driver' %}text-emerald-400 hover:text-emerald-300{% else %}text-blue-400 hover:text-blue-300{% endif %} font-bold">Sign
-            Up</a>
-    </p>
-
-    <div class="text-center mt-4">
-        <a href="/" class="text-slate-600 text-xs hover:text-slate-400">← Back to Role Selection</a>
-    </div>
     </div>
 
     <!-- Firebase SDK -->
