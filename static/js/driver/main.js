@@ -1,0 +1,34 @@
+import { auth } from '../firebase-config.js';
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { initMap, toggleSession, stopSession } from './tracking.js';
+import { initAnnouncements } from './announcements.js';
+import { initSchedule, addTimeSlot, saveSchedule } from './schedule.js';
+import { initChat } from './chat.js';
+import { togglePanel } from './ui.js';
+
+// Global Exports for HTML onclick
+window.togglePanel = togglePanel;
+window.toggleSession = toggleSession;
+window.stopSession = stopSession;
+window.addTimeSlot = addTimeSlot;
+window.saveSchedule = saveSchedule;
+window.logout = function () {
+    auth.signOut().then(() => window.location.href = '/').catch(console.error);
+};
+
+// Auth and Init
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        console.log("Driver Module Loaded:", user.email);
+        const body = document.getElementById('main-body');
+        if (body) body.style.display = 'block';
+
+        // Init Components
+        initMap();
+        initAnnouncements();
+        initSchedule();
+        initChat();
+    } else {
+        window.location.href = '/login?role=driver';
+    }
+});
