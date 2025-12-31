@@ -128,6 +128,14 @@
 </head>
 
 <body class="h-screen w-screen overflow-hidden relative bg-slate-900" style="display: none;" id="main-body">
+    <!-- Global Debug Handler -->
+    <script>
+        window.onerror = function (msg, url, lineNo, columnNo, error) {
+            if (msg.includes("extension") || msg.includes("ResizeObserver")) return false;
+            alert("System Error: " + msg + "\nLine: " + lineNo);
+            return false;
+        };
+    </script>
     <!-- Auth Guard -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -336,7 +344,7 @@
                 <span id="badge-count"
                     class="hidden min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-red-500/20 ring-2 ring-slate-900 transform scale-100 transition-all">0</span>
             </button>
-            <button onclick="openSchedule()"
+            <button id="btn-open-sched"
                 class="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700 hover:border-blue-500/50 transition-all group mt-2">
                 <div class="flex items-center gap-3">
                     <div
@@ -1731,14 +1739,27 @@
 
             // --- Schedule Logic ---
             window.openSchedule = function () {
-                console.log("Opening Schedule...");
-                const overlay = document.getElementById('schedule-overlay');
-                if (!overlay) return console.error("Schedule overlay not found");
+                // Legacy support or direct call if needed
+                const btn = document.getElementById('btn-open-sched');
+                if (btn) btn.click();
+            }
 
-                overlay.classList.remove('hidden');
-                if (window.innerWidth < 768 && typeof toggleSidebar === 'function') toggleSidebar();
+            // Bind Event Listener (Robust Binding)
+            const btnSched = document.getElementById('btn-open-sched');
+            if (btnSched) {
+                btnSched.addEventListener('click', () => {
+                    console.log("Schedule Button Clicked (Event)");
+                    const overlay = document.getElementById('schedule-overlay');
+                    if (!overlay) return alert("Error: Overlay missing");
 
-                fetchSchedules();
+                    overlay.classList.remove('hidden');
+                    // Use optional chaining for toggleSidebar
+                    if (window.innerWidth < 768 && window.toggleSidebar) window.toggleSidebar();
+
+                    fetchSchedules();
+                });
+            } else {
+                console.error("Schedule Button ID not found in DOM");
             }
 
             window.closeSchedule = function () {
