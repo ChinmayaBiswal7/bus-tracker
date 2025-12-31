@@ -446,6 +446,12 @@
             document.getElementById('status-dot').className = "w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-green-900 transition-colors";
             busInput.disabled = true;
 
+            // Map Icon Update
+            if (userMarker) {
+                const isEv = val === 'EV';
+                userMarker.setIcon(isEv ? createEvIcon() : createBusIcon());
+            }
+
             // Auto-open Speed
             togglePanel('speed');
 
@@ -468,7 +474,8 @@
             busInput.disabled = false;
 
             updateSpeed(0);
-            if (map && userMarker) map.removeLayer(userMarker);
+            // Revert to Idle Icon
+            if (userMarker) userMarker.setIcon(createIdleIcon());
         }
 
         function handleGPS(pos, busNo) {
@@ -553,12 +560,43 @@
         chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChat(); });
 
 
+        // --- ICONS ---
+        function createIdleIcon() {
+            return L.divIcon({ className: 'custom-icon', html: `<div class="w-6 h-6 bg-slate-500 rounded-full border-4 border-white shadow-lg"></div>`, iconSize: [24, 24], iconAnchor: [12, 12] });
+        }
+
+        function createBusIcon() {
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="relative w-12 h-12 flex items-center justify-center">
+                        <div class="absolute inset-0 bg-amber-500 rounded-full animate-ping opacity-20"></div>
+                        <div class="relative w-10 h-10 bg-amber-500 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-xl">
+                            🚌
+                        </div>
+                       </div>`,
+                iconSize: [48, 48], iconAnchor: [24, 24]
+            });
+        }
+
+        function createEvIcon() {
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="relative w-12 h-12 flex items-center justify-center">
+                        <div class="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
+                        <div class="relative w-10 h-10 bg-emerald-500 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-xl">
+                            ⚡
+                        </div>
+                       </div>`,
+                iconSize: [48, 48], iconAnchor: [24, 24]
+            });
+        }
+
         // --- MAP INIT ---
         window.initMap = function () {
             if (map) return;
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20.2961, 85.8245], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
-            const icon = L.divIcon({ className: 'custom-icon', html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-lg pulse-ring"></div>`, iconSize: [24, 24], iconAnchor: [12, 12] });
+            const icon = createIdleIcon();
             userMarker = L.marker([0, 0], { icon: icon });
         }
 
