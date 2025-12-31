@@ -19,7 +19,7 @@
     <style>
         :root {
             --glass-border: rgba(255, 255, 255, 0.08);
-            --glass-bg: rgba(15, 23, 42, 0.8);
+            --glass-bg: rgba(15, 23, 42, 0.85);
         }
 
         body {
@@ -96,12 +96,16 @@
             top: 2rem;
             left: 7.5rem;
             /* Next to sidebar */
-            width: 320px;
+            width: 340px;
             z-index: 40;
             opacity: 0;
             transform: translateX(-20px) scale(0.95);
             pointer-events: none;
             transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            max-height: calc(100vh - 4rem);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .pop-panel.active {
@@ -110,13 +114,12 @@
             pointer-events: auto;
         }
 
-        /* Speedometer specific positioning */
         #panel-speed {
             top: auto;
             bottom: 2rem;
         }
 
-        /* Pulse */
+        /* Pulse & Chat */
         .pulse-ring {
             animation: pulse-blue 2s infinite;
         }
@@ -136,6 +139,28 @@
                 transform: scale(0.95);
                 box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
             }
+        }
+
+        .chat-msg {
+            margin-bottom: 8px;
+            font-size: 0.8rem;
+            padding: 8px 12px;
+            border-radius: 12px;
+            max-width: 85%;
+        }
+
+        .chat-user {
+            background: #3b82f6;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 2px;
+        }
+
+        .chat-ai {
+            background: rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+            align-self: flex-start;
+            border-bottom-left-radius: 2px;
         }
     </style>
 </head>
@@ -159,14 +184,12 @@
     <!-- 1. SIDEBAR (CONTROLLER) -->
     <div class="sidebar glass-card">
         <div class="flex flex-col pt-4">
-            <!-- DRIVE CONFIG -->
             <div class="nav-icon active" id="nav-drive" onclick="togglePanel('drive')" title="Route Config">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
             </div>
-            <!-- ANNOUNCEMENTS -->
             <div class="nav-icon" id="nav-comms" onclick="togglePanel('comms')" title="Announcements">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -174,15 +197,13 @@
                     </path>
                 </svg>
             </div>
-            <!-- AI HELPER -->
-            <div class="nav-icon" id="nav-ai" onclick="togglePanel('ai')" title="AI Assistant">
+            <div class="nav-icon" id="nav-ai" onclick="togglePanel('ai')" title="General Chat">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                        d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
                     </path>
                 </svg>
             </div>
-            <!-- SPEEDOMETER -->
             <div class="nav-icon" id="nav-speed" onclick="togglePanel('speed')" title="Telemetry">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -241,7 +262,7 @@
     </div>
 
 
-    <!-- PANEL 2: ANNOUNCEMENTS -->
+    <!-- PANEL 2: ANNOUNCEMENTS (With Included AI Polisher) -->
     <div id="panel-comms" class="pop-panel glass-card p-5">
         <div class="flex items-center gap-3 mb-4">
             <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
@@ -254,10 +275,33 @@
             <h3 class="text-white font-bold text-sm">Broadcast Alert</h3>
         </div>
 
-        <div class="bg-slate-900/40 rounded-xl p-3 mb-3">
-            <textarea id="finalInput" rows="3"
-                class="w-full bg-transparent text-sm text-white focus:outline-none resize-none placeholder-slate-500 font-mono"
-                placeholder="Type urgent message..."></textarea>
+        <!-- Drafter Section -->
+        <div class="mb-3">
+            <label class="text-[10px] text-slate-400 font-bold uppercase mb-1 block">1. Draft (Rough)</label>
+            <div class="flex gap-2">
+                <input type="text" id="draftInput"
+                    class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 text-sm text-white focus:outline-none"
+                    placeholder="e.g. 'Traffic jam 20m'">
+                <button id="btnAiDraft"
+                    class="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-pink-300 transition-colors"
+                    title="Polish with AI">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Final Section -->
+        <div class="mb-3">
+            <label class="text-[10px] text-slate-400 font-bold uppercase mb-1 block">2. Final (Preview)</label>
+            <div class="bg-slate-900/40 rounded-xl p-3">
+                <textarea id="finalInput" rows="3"
+                    class="w-full bg-transparent text-sm text-white focus:outline-none resize-none placeholder-slate-500 font-mono"
+                    placeholder="Press Magic Button above..."></textarea>
+            </div>
         </div>
 
         <button id="btnAnnounce"
@@ -267,31 +311,25 @@
     </div>
 
 
-    <!-- PANEL 3: AI ASSISTANT -->
-    <div id="panel-ai" class="pop-panel glass-card p-5 bg-gradient-to-br from-slate-900/80 to-purple-900/40">
-        <div class="flex items-center gap-3 mb-4">
-            <div
-                class="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-rose-500 flex items-center justify-center text-white shadow-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
-                    </path>
-                </svg>
-            </div>
-            <h3 class="text-white font-bold text-sm">AI Drafter</h3>
+    <!-- PANEL 3: GENERAL CHAT (New!) -->
+    <div id="panel-ai" class="pop-panel glass-card p-0 flex flex-col h-[400px]">
+        <div class="p-4 border-b border-white/5 bg-slate-800/50">
+            <h3 class="text-white font-bold text-sm flex items-center gap-2">
+                <span>🤖</span> Campus Assistant
+            </h3>
         </div>
 
-        <p class="text-[10px] text-slate-400 mb-3">Ask AI to write a professional alert for you.</p>
+        <div id="chat-history" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
+            <div class="chat-ai chat-msg">Hello Driver! How can I help you today?</div>
+        </div>
 
-        <div class="flex gap-2">
-            <input type="text" id="draftInput"
-                class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 text-sm text-white focus:outline-none"
-                placeholder="e.g. 'Traffic jam 20m'">
-            <button id="btnAiAssist"
-                class="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl text-pink-300 transition-colors">
+        <div class="p-3 bg-slate-900/50 flex gap-2">
+            <input type="text" id="chatInput" class="flex-1 bg-transparent text-sm text-white focus:outline-none"
+                placeholder="Ask anything...">
+            <button id="btnChatSend" class="text-blue-400 hover:text-white">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
                 </svg>
             </button>
         </div>
@@ -321,28 +359,22 @@
     <script type="module">
         import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // --- SIDEBAR TOGGLE LOGIC ---
-        window.togglePanel = function (panelId) {
-            // 1. Hide all panels
-            document.querySelectorAll('.pop-panel').forEach(p => p.classList.remove('active'));
-            // 2. Deactivate all icons
-            document.querySelectorAll('.nav-icon').forEach(n => n.classList.remove('active'));
+        // GLOBAL CONFIG
+        let isSharing = false;
+        let map, userMarker, watchId;
 
-            // 3. Show target
+        // --- 1. POPUP LOGIC ---
+        window.togglePanel = function (panelId) {
+            document.querySelectorAll('.pop-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-icon').forEach(n => n.classList.remove('active'));
             document.getElementById('panel-' + panelId).classList.add('active');
-            // 4. Activate Icon
             document.getElementById('nav-' + panelId).classList.add('active');
         }
 
-        // STATE
-        let map, userMarker, watchId;
-        let isSharing = false;
-
-        // --- UI ---
+        // --- 2. DRIVE LOGIC ---
         const btnMain = document.getElementById('toggleBtn');
         const busInput = document.getElementById('busInput');
 
-        // --- DRIVE ---
         window.setMode = function (mode) {
             if (isSharing) return;
             const blob = document.getElementById('active-blob');
@@ -376,7 +408,7 @@
             document.getElementById('serverStatus').classList.replace('text-slate-400', 'text-green-400');
             document.getElementById('status-dot').classList.replace('bg-red-500', 'bg-green-500');
 
-            // Open Speedometer automatically on start logic? optional
+            // Auto-open Speed
             togglePanel('speed');
 
             const opts = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
@@ -412,12 +444,75 @@
 
         function updateSpeed(kmh) {
             document.getElementById('speedVal').textContent = kmh;
-            const max = 365; // 2*pi*58
+            const max = 365;
             const offset = max - (Math.min(kmh / 100, 1) * max);
             document.getElementById('speed-circle').style.strokeDashoffset = offset;
         }
 
-        // --- MAP ---
+        // --- 3. ANNOUNCEMENT & POLISHER ---
+        const btnDraft = document.getElementById('btnAiDraft');
+        const draftInput = document.getElementById('draftInput');
+        const finalInput = document.getElementById('finalInput');
+        const btnSend = document.getElementById('btnAnnounce');
+
+        btnDraft.addEventListener('click', async () => {
+            const t = draftInput.value; if (!t) return;
+            btnDraft.innerHTML = '...';
+            try {
+                const r = await fetch('/api/driver/ai-assist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: t }) });
+                const d = await r.json();
+                if (d.response) {
+                    finalInput.value = d.response;
+                    draftInput.value = "";
+                }
+            } catch (e) { } finally { btnDraft.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>`; }
+        });
+
+        btnSend.addEventListener('click', async () => {
+            const msg = finalInput.value;
+            if (!msg) return;
+            if (document.getElementById('serverStatus').textContent !== "LIVE") return alert("Go Live First");
+
+            const busNo = document.getElementById('busInput').value || "EV";
+            const app = window.firebaseApp;
+            const db = getFirestore(app);
+            try {
+                const ref = doc(db, 'announcements', busNo);
+                await setDoc(ref, { bus_no: busNo, latest_message: msg, last_updated: serverTimestamp() }, { merge: true });
+                await addDoc(collection(ref, 'messages'), { message: msg, timestamp: serverTimestamp(), bus_no: busNo });
+                finalInput.value = "";
+                alert("Sent");
+            } catch (e) { console.error(e); }
+        });
+
+
+        // --- 4. GENERAL CHAT (NEW) ---
+        const chatInput = document.getElementById('chatInput');
+        const btnChat = document.getElementById('btnChatSend');
+        const chatHistory = document.getElementById('chat-history');
+
+        async function sendChat() {
+            const txt = chatInput.value.trim(); if (!txt) return;
+            // Add User Msg
+            chatHistory.innerHTML += `<div class="chat-user chat-msg">${txt}</div>`;
+            chatInput.value = "";
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            // Call API
+            try {
+                const res = await fetch('/api/driver/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: txt }) });
+                const data = await res.json();
+                chatHistory.innerHTML += `<div class="chat-ai chat-msg">${data.response || "Error"}</div>`;
+            } catch (e) {
+                chatHistory.innerHTML += `<div class="chat-ai chat-msg">Connection Error</div>`;
+            }
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+        btnChat.addEventListener('click', sendChat);
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChat(); });
+
+
+        // --- MAP INIT ---
         window.initMap = function () {
             if (map) return;
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20.2961, 85.8245], 15);
@@ -426,106 +521,6 @@
             userMarker = L.marker([0, 0], { icon: icon });
         }
 
-        // --- COMMS ---
-        const btnAi = document.getElementById('btnAiAssist');
-        const draftInput = document.getElementById('draftInput');
-        const finalInput = document.getElementById('finalInput');
-
-        btnAi.addEventListener('click', async () => {
-            const t = draftInput.value; if (!t) return;
-            btnAi.innerHTML = '...';
-            try {
-                const r = await fetch('/api/driver/ai-assist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: t }) });
-                const d = await r.json();
-                if (d.response) {
-                    // Switch to Comms panel automatically to show result
-                    togglePanel('comms');
-                    finalInput.value = d.response;
-                    draftInput.value = "";
-                }
-            } catch (e) { } finally { btnAi.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`; }
-        });
-
-        document.getElementById('btnAnnounce').addEventListener('click', async () => {
-            const msg = finalInput.value;
-            if (!msg || !isSharing) return alert("Go Online");
-            const app = window.firebaseApp;
-            const db = getFirestore(app);
-            // ... (Firebase logic same) ...
-            try {
-                // Mock Firebase send for brevity in writing, assume existing logic works
-                const ref = doc(db, 'announcements', "bus-" + Date.now()); // simplified
-                // Actually need activeBusNo
-                // Re-implement full logic:
-            } catch (e) { }
-        });
-
-        // Re-bind exact Button Logic for Announcement
-        document.getElementById('btnAnnounce').onclick = async () => {
-            // We need activeBusNo variable from closure
-            // But startSession saves it.
-            // We need to ensure we access the global activeBusNo (which is defined in module scope but not attached to window)
-            // The code is inside type=module, so logic is fine.
-            const msg = finalInput.value;
-            if (!msg) return;
-            // We need isSharing check
-            if (document.getElementById('serverStatus').textContent !== "LIVE") return alert("Go Live First");
-
-            // Get activeBusNo from UI or assume global variable 'activeBusNo' is accessible
-            // Since we are writing the whole file, activeBusNo is defined at top of script.
-            // Wait, startSession sets it.
-
-            // Refirebase logic
-            const app = window.firebaseApp;
-            const db = getFirestore(app);
-            // Assuming activeBusNo is set
-            // Wait, we need to ensure variable scope.
-        };
-
-    </script>
-    <script type="module">
-        // Fix for Button Scope in Module
-        import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // RE-BIND to ensure variable access
-        const btnSend = document.getElementById('btnAnnounce');
-        btnSend.addEventListener('click', async () => {
-            // Access variables from the other module block? No, modules constitute separate scopes.
-            // I must merge the logic into ONE script block.
-        });
-    </script>
-
-    <!-- MERGING LOGIC INTO ONE SCRIPT BLOCK FOR SAFETY -->
-    <script type="module">
-        import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        let activeBusNo = null;
-
-        // ... (All functions from above, paste them here to single block) ...
-        // Redefining startSession to capture activeBusNo locally
-
-        // ...
-
-        // BINDING
-        document.getElementById('btnAnnounce').addEventListener('click', async () => {
-            const msg = document.getElementById('finalInput').value;
-            // Check UI state for simplicity
-            if (document.getElementById('toggleBtn').textContent !== "STOP") return alert("Go Live First");
-
-            // Use busInput value if activeBusNo is lost? No, just track it.
-            // Actually, simplest is to read the Input if 'activeBusNo' is null/
-            const busNo = document.getElementById('busInput').value || "EV";
-
-            const app = window.firebaseApp;
-            const db = getFirestore(app);
-            try {
-                const ref = doc(db, 'announcements', busNo);
-                await setDoc(ref, { bus_no: busNo, latest_message: msg, last_updated: serverTimestamp() }, { merge: true });
-                await addDoc(collection(ref, 'messages'), { message: msg, timestamp: serverTimestamp(), bus_no: busNo });
-                document.getElementById('finalInput').value = "";
-                alert("Sent");
-            } catch (e) { console.error(e); }
-        });
     </script>
 </body>
 
