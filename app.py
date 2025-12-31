@@ -28,14 +28,32 @@ import os
 from groq import Groq
 import google.generativeai as genai
 
-# Initialize Google Gemini (AI Assist)
-genai_client = None
-if os.environ.get("GEMINI_API_KEY"):
+import requests
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+def call_gemini(prompt):
+    if not GEMINI_API_KEY:
+        raise Exception("GEMINI_API_KEY not set")
+    
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{
+            "role": "user",
+            "parts": [{"text": prompt}]
+        }]
+    }
+    
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code != 200:
+        raise Exception(f"API Error {response.status_code}: {response.text}")
+    
+    data = response.json()
     try:
-        genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-        genai_client = genai.GenerativeModel('gemini-pro')
-    except Exception as e:
-        print(f"[ERROR] Gemini Init: {e}")
+        return data['candidates'][0]['content']['parts'][0]['text']
+    except (KeyError, IndexError):
+        return "Thinking..."
 
 # Initialize Groq (Llama 3)
 groq_client = None
@@ -185,7 +203,7 @@ def driver_ai_assist():
     if not raw_text:
         return {"response": ""}
 
-    if not genai_client:
+    if not GEMINI_API_KEY:
         return {"response": "AI Error: GEMINI_API_KEY not set on server."}
 
     prompt = f"""
@@ -203,8 +221,8 @@ def driver_ai_assist():
     """
 
     try:
-        response = genai_client.generate_content(prompt)
-        return {"response": response.text.strip()}
+        response_text = call_gemini(prompt)
+        return {"response": response_text.strip()}
     except Exception as e:
         print(f"[ERROR] Gemini API Error: {e}")
         return {"response": f"Error: {str(e)}"}
@@ -218,7 +236,7 @@ def driver_chat():
     if not user_msg:
         return {"response": ""}
 
-    if not genai_client:
+    if not GEMINI_API_KEY:
         return {"response": "AI Error: GEMINI_API_KEY not set."}
 
     prompt = f"""
@@ -232,8 +250,8 @@ def driver_chat():
     """
 
     try:
-        response = genai_client.generate_content(prompt)
-        return {"response": response.text.strip()}
+        response_text = call_gemini(prompt)
+        return {"response": response_text.strip()}
     except Exception as e:
         print(f"[ERROR] Gemini Chat Error: {e}")
         return {"response": f"AI Error: {str(e)}"}
