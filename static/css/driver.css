@@ -51,24 +51,36 @@ body {
 @media (max-width: 768px) {
     #map {
         top: 4rem;
-        /* h-16 = 4rem header */
         height: calc(100vh - 4rem);
     }
 
     .pop-panel {
         top: auto;
-        bottom: 0px !important;
-        /* Touch bottom */
-        left: 0;
-        right: 0;
-        width: 100% !important;
-        max-width: 100% !important;
-        border-radius: 1.5rem 1.5rem 0 0;
-        border-bottom: none;
-        transform: translateY(100%);
-        padding-bottom: 2rem;
-        /* Safe area */
-        max-height: 80vh;
+        bottom: 1.5rem !important;
+        /* Floating above button */
+        left: 1rem !important;
+        right: 1rem !important;
+        width: auto !important;
+        max-width: 400px !important;
+        /* Prevent too wide on tablets */
+        margin: 0 auto;
+        /* Center if max-width hit */
+        border-radius: 2rem !important;
+        border-bottom: 1px solid var(--glass-border);
+        transform: translateY(120%) scale(0.95);
+        /* Slide from bottom */
+        max-height: 75vh;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .pop-panel.active {
+        transform: translateY(0) scale(1) !important;
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    #panel-speed {
+        bottom: 1.5rem !important;
     }
 }
 
@@ -113,9 +125,7 @@ body {
     flex-direction: column;
 }
 
-.pop-panel.active {
-    transform: translateY(0);
-}
+
 
 
 .pop-panel.active {
