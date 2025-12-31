@@ -3,68 +3,98 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Driver Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Driver Console | Campus Ride</title>
+
+    <!-- Core Libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
         rel="stylesheet">
     <script src="/static/pwa-update.js"></script>
+
     <style>
         body {
             font-family: 'Outfit', sans-serif;
             background: #0f172a;
+            overflow: hidden;
         }
 
         .mono {
             font-family: 'JetBrains Mono', monospace;
         }
 
+        #map {
+            height: 100vh;
+            width: 100vw;
+            z-index: 0;
+            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+        }
+
+        /* Glassmorphism */
         .glass-panel {
-            background: linear-gradient(145deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8));
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
 
         .pulse-ring {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            height: 100%;
-            border-radius: 9999px;
-            box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
-            animation: pulse-green 2s infinite;
-            z-index: -1;
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            animation: pulse-blue 2s infinite;
         }
 
-        @keyframes pulse-green {
+        @keyframes pulse-blue {
             0% {
-                transform: translate(-50%, -50%) scale(0.95);
-                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
             }
 
             70% {
-                transform: translate(-50%, -50%) scale(1.3);
-                box-shadow: 0 0 0 20px rgba(74, 222, 128, 0);
+                transform: scale(1);
+                box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
             }
 
             100% {
-                transform: translate(-50%, -50%) scale(0.95);
-                box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+            }
+        }
+
+        /* Drawer Transition */
+        .drawer-closed {
+            transform: translateY(110%);
+        }
+
+        .drawer-open {
+            transform: translateY(0);
+        }
+
+        /* Loading Spinner */
+        .loader {
+            border: 2px solid transparent;
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
             }
         }
     </style>
 </head>
 
-<body id="main-body" style="display: none;"
-    class="h-screen w-full flex flex-col items-center justify-center p-6 bg-[url('https://images.unsplash.com/photo-1494515855673-102c2f58aa64?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center relative">
-
-    <!-- Back Button -->
-
+<body id="main-body" style="display: none;">
 
     <!-- Auth Guard -->
     <script type="module">
@@ -87,540 +117,391 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                console.log("Auth Guard: Driver logged in", user.email);
-                document.getElementById('main-body').style.display = 'flex';
+                document.getElementById('main-body').style.display = 'block';
+                if (window.initMap) window.initMap(); // Init map after auth
             } else {
-                console.log("Auth Guard: No user, redirecting...");
                 window.location.href = '/login?role=driver';
             }
         });
 
         window.logout = function () {
-            auth.signOut().then(() => {
-                window.location.href = '/';
-            }).catch((error) => {
-                console.error("Logout failed:", error);
-            });
+            auth.signOut().then(() => window.location.href = '/');
         }
     </script>
 
-    <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm"></div>
+    <!-- MAP BACKGROUND -->
+    <div id="map"></div>
 
-    <div
-        class="glass-panel relative w-full max-w-sm rounded-[2.5rem] p-8 flex flex-col items-center shadow-2xl z-10 border-t border-slate-700/50">
+    <!-- TOP BAR (Status) -->
+    <div class="fixed top-0 left-0 right-0 p-4 z-20 flex justify-between items-start pointer-events-none">
 
-        <!-- Back Button -->
-        <!-- Back Button (Acts as Logout) -->
-        <button onclick="logout()"
-            class="absolute top-6 left-6 p-2 bg-slate-800/50 rounded-full hover:bg-red-500/20 hover:text-red-400 border border-slate-600 transition-colors z-20 group"
-            title="Logout & Home">
-            <svg class="w-5 h-5 text-slate-400 group-hover:text-white transition-colors" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18">
-                </path>
-            </svg>
-        </button>
-
-        <!-- Status Indicator -->
-        <div class="relative mb-8">
-            <div id="statusRing" class="hidden pulse-ring"></div>
-            <div
-                class="w-24 h-24 rounded-full bg-slate-800 flex items-center justify-center shadow-inner border border-slate-700">
-                <span class="text-6xl filter drop-shadow no-select">🚌</span>
-            </div>
-            <div id="liveBadge"
-                class="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300">
-                Offline
-            </div>
+        <!-- Connection Badge -->
+        <div class="glass-panel px-3 py-1.5 rounded-full flex items-center gap-2 pointer-events-auto">
+            <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+            <span id="serverStatus" class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">OFFLINE</span>
         </div>
 
-        <h2 class="text-white text-2xl font-bold mb-1">Driver Console</h2>
-        <p class="text-slate-400 text-sm mb-8">Manage your route visibility</p>
-
-        <!-- Vehicle Type Toggle -->
-        <div class="flex bg-slate-800/50 p-1 rounded-xl mb-6 border border-slate-700 w-full relative">
-            <div id="active-blob"
-                class="absolute top-1 left-1 w-[calc(50%-4px)] h-[calc(100%-8px)] bg-blue-600 rounded-lg transition-all duration-300 z-0">
+        <!-- Speed & Stats -->
+        <div class="flex flex-col items-end gap-2">
+            <div class="glass-panel px-4 py-2 rounded-2xl flex flex-col items-center pointer-events-auto min-w-[80px]">
+                <span class="text-[10px] text-slate-400 uppercase font-bold">Speed</span>
+                <span class="text-2xl font-bold text-white mono leading-none"><span id="speedVal">0</span></span>
+                <span class="text-[10px] text-slate-500">km/h</span>
             </div>
 
-            <button id="btn-bus"
-                class="flex-1 py-3 text-sm font-bold text-white relative z-10 transition-colors flex items-center justify-center gap-2"
-                onclick="setMode('BUS')">
-                <span>🚌</span> BUS
+            <div class="glass-panel px-3 py-1 rounded-full flex items-center gap-1.5 pointer-events-auto">
+                <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 18d2 2 0 100-4 2 2 0 000 4z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16.24 7.76a6 6 0 10-8.49 0" />
+                </svg>
+                <span id="accVal" class="text-[10px] font-mono text-slate-300">--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGOUT BUTTON (Top Left) -->
+    <button onclick="logout()"
+        class="fixed top-20 left-4 z-20 w-10 h-10 glass-panel rounded-full flex items-center justify-center text-slate-400 hover:text-white transition-colors shadow-lg active:scale-95">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+        </svg>
+    </button>
+
+    <!-- FAB: ANNOUNCEMENTS (Bottom Right) -->
+    <button id="fab-announce" onclick="toggleDrawer()"
+        class="fixed bottom-36 right-6 z-30 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full shadow-lg shadow-blue-500/40 flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-all">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
+            </path>
+        </svg>
+        <!-- Unread Dot (optional) -->
+        <span class="absolute top-3 right-3 w-3 h-3 bg-red-500 border-2 border-slate-900 rounded-full hidden"></span>
+    </button>
+
+
+    <!-- MAIN DRIVE CONTROLS (Bottom Floating Island) -->
+    <div class="fixed bottom-6 left-4 right-4 z-30 flex flex-col items-center">
+
+        <div
+            class="glass-panel w-full max-w-md p-4 rounded-[2rem] shadow-2xl border border-white/10 bg-slate-900/90 relative overflow-hidden group">
+
+            <!-- Type Toggle & Input Row -->
+            <div class="flex items-center gap-3 mb-4 transition-all duration-300" id="config-row">
+                <!-- Toggle -->
+                <div class="bg-slate-800/50 p-1 rounded-xl flex border border-slate-700 w-32 shrink-0 relative">
+                    <div id="active-blob"
+                        class="absolute inset-y-1 left-1 w-[calc(50%-4px)] bg-blue-500 rounded-lg transition-all duration-300">
+                    </div>
+                    <button onclick="setMode('BUS')"
+                        class="relative z-10 w-1/2 text-xs font-bold text-white py-2 text-center">BUS</button>
+                    <button onclick="setMode('EV')"
+                        class="relative z-10 w-1/2 text-xs font-bold text-slate-400 py-2 text-center">EV</button>
+                </div>
+
+                <!-- Input -->
+                <input type="text" id="busInput" placeholder="BUS NO."
+                    class="w-full bg-transparent border-b border-slate-600 text-center text-xl font-bold text-white py-1 focus:outline-none focus:border-blue-500 placeholder-slate-600 mono uppercase">
+            </div>
+
+            <!-- Main Button -->
+            <button id="toggleBtn"
+                class="w-full py-4 bg-blue-600 hover:bg-blue-500 active:scale-[0.98] rounded-2xl text-white font-bold text-lg shadow-lg shadow-blue-900/50 transition-all flex items-center justify-center gap-3">
+                <span class="text-2xl">▶</span> START DRIVING
             </button>
-            <button id="btn-ev"
-                class="flex-1 py-3 text-sm font-bold text-slate-400 relative z-10 transition-colors flex items-center justify-center gap-2"
-                onclick="setMode('EV')">
-                <span>⚡</span> EV
-            </button>
+
+            <!-- Locked Cover (When active) -->
+            <div id="active-cover" class="hidden absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-0"></div>
         </div>
 
-        <!-- Input -->
-        <div class="w-full relative group mb-6">
-            <span id="prefix-label"
-                class="absolute left-0 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xl hidden ml-4">EV-</span>
-            <input type="text" id="busInput" placeholder="BUS NO. (e.g. 12)"
-                class="w-full bg-transparent border-b-2 border-slate-600 text-center text-2xl font-bold text-white py-2 focus:outline-none focus:border-blue-500 transition-colors placeholder-slate-700 uppercase tracking-wider mono">
+        <p class="text-[10px] text-slate-500 mt-2 font-mono" id="debug-text">Ready to connect...</p>
+    </div>
+
+
+    <!-- ANNOUNCEMENT DRAWER (Slide Up) -->
+    <div id="drawer-backdrop" onclick="toggleDrawer()"
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 hidden transition-opacity opacity-0"></div>
+
+    <div id="announcement-drawer"
+        class="fixed bottom-0 inset-x-0 bg-slate-900 z-40 rounded-t-[2.5rem] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] transform drawer-closed transition-transform duration-300 border-t border-slate-700/50 max-h-[80vh] flex flex-col">
+
+        <!-- Handle -->
+        <div class="w-full flex justify-center pt-3 pb-1" onclick="toggleDrawer()">
+            <div class="w-12 h-1.5 bg-slate-700 rounded-full"></div>
         </div>
 
-        <!-- Action Button -->
-        <button id="toggleBtn"
-            class="w-full py-4 rounded-2xl font-bold text-lg shadow-xl transform transition-all duration-200 active:scale-95 bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 group">
-            <span id="btnIcon" class="text-xl">▶</span>
-            <span id="btnText">START SHARING</span>
-        </button>
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-white mb-1 flex items-center gap-2">
+                📢 Announcements
+                <span class="text-xs bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-normal">Broadcast</span>
+            </h2>
+            <p class="text-xs text-slate-500 mb-6">Send urgent updates to students tracked to this bus.</p>
 
-        <!-- Stats Panel -->
-        <div id="statsPanel"
-            class="w-full mt-8 pt-6 border-t border-slate-700/50 opacity-50 transition-opacity duration-300">
-            <div class="grid grid-cols-2 gap-4">
-                <div class="bg-slate-800/50 p-3 rounded-xl text-center">
-                    <p class="text-[10px] text-slate-400 uppercase tracking-wider">Speed</p>
-                    <p class="text-xl font-bold text-white mono"><span id="speedVal">0</span> <span
-                            class="text-xs font-normal text-slate-500">km/h</span></p>
-                </div>
-                <div class="bg-slate-800/50 p-3 rounded-xl text-center">
-                    <p class="text-[10px] text-slate-400 uppercase tracking-wider">GPS Signal</p>
-                    <p class="text-xl font-bold text-white mono"><span id="accVal">--</span> <span
-                            class="text-xs font-normal text-slate-500"></span></p>
-                </div>
-                <div
-                    class="col-span-2 bg-slate-800/50 p-3 rounded-xl text-center flex items-center justify-between px-6">
-                    <p class="text-[10px] text-slate-400 uppercase tracking-wider">Server Link</p>
-                    <p class="text-sm font-bold text-white mono" id="serverStatus">CONNECTING...</p>
-                </div>
-            </div>
+            <!-- Input Area -->
+            <div class="relative">
+                <textarea id="announceInput" rows="3" placeholder="Type message... (e.g. Traffic delay)"
+                    class="w-full bg-slate-800 border border-slate-700 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-blue-500 resize-none mb-3"></textarea>
 
-            <!-- Announcement Input -->
-            <div class="mt-4 pt-4 border-t border-slate-700/50">
-                <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-2">Broadcast Message</p>
-                <div class="flex gap-2">
-                    <input type="text" id="announceInput" placeholder="Traffic delay, etc..."
-                        class="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors">
-
-                    <!-- AI Assist Button -->
-                    <button id="btnAiAssist" title="Auto-Polish with AI"
-                        class="bg-purple-600 hover:bg-purple-500 text-white rounded-lg px-3 py-1 transition-colors flex items-center justify-center">
-                        <span class="text-white text-xs">✨</span>
-                    </button>
-
-                    <button id="btnAnnounce"
-                        class="bg-amber-600 hover:bg-amber-500 text-white rounded-lg px-3 py-1 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z">
-                            </path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Log -->
-            <div id="debug"
-                class="mt-4 text-[10px] text-slate-500 font-mono h-12 overflow-hidden text-center leading-relaxed">
-                Ready to connect...
-            </div>
-        </div>
-        <!-- Weak Signal Modal -->
-        <div id="warningModal"
-            class="hidden absolute inset-0 bg-slate-900/95 z-50 flex flex-col items-center justify-center p-6 text-center backdrop-blur-md">
-            <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mb-6 animate-pulse">
-                <span class="text-3xl text-slate-900">⚠️</span>
-            </div>
-            <h3 class="text-white text-2xl font-bold mb-2">Weak Signal Detected</h3>
-            <p class="text-slate-400 mb-8 max-w-xs">NO GPS LOCK found. Accuracy is low (>30m). Location may be
-                inaccurate.</p>
-
-            <div class="flex flex-col gap-3 w-full max-w-xs">
-                <button id="btnProceed"
-                    class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl transition-colors">
-                    PROCEED ANYWAY
-                </button>
-                <button id="btnExit"
-                    class="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white font-bold rounded-xl transition-colors">
-                    EXIT
+                <!-- AI Button (Inside) -->
+                <button id="btnAiAssist"
+                    class="absolute bottom-6 right-3 p-2 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl text-white shadow-lg hover:scale-110 transition-transform"
+                    title="Standardize with AI">
+                    <span class="text-lg">✨</span>
                 </button>
             </div>
-            <p class="text-xs text-slate-500 mt-4">Select "Proceed" for laptops/testing.</p>
+
+            <!-- Actions -->
+            <button id="btnAnnounce"
+                class="w-full py-3.5 bg-slate-100 hover:bg-white text-slate-900 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 shadow-lg">
+                🚀 SEND ALERT
+            </button>
         </div>
+    </div>
 
-        <script type="module">
-            import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-            // Expose functions to window
-            window.DriverApp = {};
+    <!-- JAVASCRIPT LOGIC -->
+    <script type="module">
+        import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-            const socket = io();
+        // --- MAP & UI STATE ---
+        let map, userMarker;
+        window.initMap = function () {
+            if (map) return;
+            // Default center, will behave if GPS kicks in
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20.2961, 85.8245], 14);
 
-            // Connection Status Logic
-            socket.on('connect', () => {
-                const el = document.getElementById('serverStatus');
-                if (el) {
-                    el.textContent = "CONNECTED";
-                    el.className = "text-sm font-bold text-green-400 mono";
-                }
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: ''
+            }).addTo(map);
+
+            // Custom Marker
+            const icon = L.divIcon({
+                className: 'custom-icon',
+                html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-lg pulse-ring"></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
             });
+            userMarker = L.marker([0, 0], { icon: icon });
+        }
 
-            socket.on('disconnect', () => {
-                const el = document.getElementById('serverStatus');
-                if (el) {
-                    el.textContent = "DISCONNECTED";
-                    el.className = "text-sm font-bold text-red-500 mono animate-pulse";
-                }
-            });
+        // --- CORE VARIABLES ---
+        const socket = io();
+        const app = window.firebaseApp;
+        const db = getFirestore(app);
 
-            let watchId = null;
-            let isSharing = false;
-            let allowLowAccuracy = false;
-            let currentMode = 'BUS';
-            let activeBusNo = null;
+        let watchId = null;
+        let isSharing = false;
+        let currentMode = 'BUS';
+        let activeBusNo = null;
 
-            const btn = document.getElementById('toggleBtn');
-            const btnText = document.getElementById('btnText');
-            const btnIcon = document.getElementById('btnIcon');
+        // --- UI ELEMENTS ---
+        const btnMain = document.getElementById('toggleBtn');
+        const busInput = document.getElementById('busInput');
 
-            // Toggle Elements
-            const btnBus = document.getElementById('btn-bus');
-            const btnEv = document.getElementById('btn-ev');
-            const activeBlob = document.getElementById('active-blob');
-            const prefixLabel = document.getElementById('prefix-label');
-            const busInput = document.getElementById('busInput');
+        // Mode Toggle
+        window.setMode = function (mode) {
+            if (isSharing) return;
+            currentMode = mode;
+            const blob = document.getElementById('active-blob');
 
-            window.setMode = function (mode) {
-                if (isSharing) return; // Lock while sharing
-                currentMode = mode;
-
-                if (mode === 'BUS') {
-                    activeBlob.style.transform = 'translateX(0)';
-                    activeBlob.classList.remove('bg-emerald-500');
-                    activeBlob.classList.add('bg-blue-600');
-
-                    btnBus.classList.add('text-white');
-                    btnBus.classList.remove('text-slate-400');
-                    btnEv.classList.remove('text-white');
-                    btnEv.classList.add('text-slate-400');
-
-                    busInput.parentElement.classList.remove('hidden'); // Show Input
-                    busInput.placeholder = "BUS NUMBER (e.g. 12)";
-                    prefixLabel.classList.add('hidden');
-                    busInput.classList.remove('pl-16');
-                } else {
-                    activeBlob.style.transform = 'translateX(100%)'; // Move to right
-                    activeBlob.classList.remove('bg-blue-600');
-                    activeBlob.classList.add('bg-emerald-500');
-
-                    btnEv.classList.add('text-white');
-                    btnEv.classList.remove('text-slate-400');
-                    btnBus.classList.remove('text-white');
-                    btnBus.classList.add('text-slate-400');
-
-                    busInput.parentElement.classList.add('hidden'); // Hide Input for EV
-                }
-            }
-
-            // --- INTERNAL LOGIC ---
-
-            const debugDiv = document.getElementById('debug');
-            const warningModal = document.getElementById('warningModal');
-            const btnProceed = document.getElementById('btnProceed');
-            const btnExit = document.getElementById('btnExit');
-            const liveBadge = document.getElementById('liveBadge');
-            const statusRing = document.getElementById('statusRing');
-            const statsPanel = document.getElementById('statsPanel');
-            const speedVal = document.getElementById('speedVal');
-            const accVal = document.getElementById('accVal');
-
-            function log(msg) {
-                debugDiv.textContent = msg;
-            }
-
-            btn.addEventListener('click', () => {
-                if (!isSharing) {
-                    let finalBusNo;
-
-                    if (currentMode === 'BUS') {
-                        let inputVal = busInput.value.trim().toUpperCase();
-                        if (!inputVal) {
-                            busInput.classList.add('animate-pulse', 'border-red-500');
-                            setTimeout(() => busInput.classList.remove('animate-pulse', 'border-red-500'), 1000);
-                            return;
-                        }
-                        finalBusNo = inputVal;
-                    } else {
-                        // EV Mode: Auto-generate ID
-                        const randId = Math.floor(Math.random() * 9000) + 1000;
-                        finalBusNo = 'EV-' + randId;
-                    }
-
-                    startTracking(finalBusNo);
-                } else {
-                    stopTracking();
-                }
-            });
-
-            // Modal Handlers
-            btnProceed.addEventListener('click', () => {
-                allowLowAccuracy = true;
-                warningModal.classList.add('hidden');
-                log("User override: Low accuracy allowed.");
-            });
-
-            btnExit.addEventListener('click', () => {
-                warningModal.classList.add('hidden');
-                stopTracking();
-            });
-
-            window.startTracking = function (busNo, useHighAccuracy = true) {
-                activeBusNo = busNo;
-                if (!navigator.geolocation) {
-                    alert("Geolocation not supported");
-                    return;
-                }
-
-                // UI State: Active
-                if (!isSharing) {
-                    btnText.textContent = "STOP SHARING";
-                    btnIcon.textContent = "■";
-                    btn.classList.replace('bg-blue-600', 'bg-red-500');
-                    btn.classList.replace('hover:bg-blue-500', 'hover:bg-red-600');
-
-                    // Disable Mode Switch
-                    document.getElementById('btn-bus').disabled = true;
-                    document.getElementById('btn-ev').disabled = true;
-                    if (currentMode === 'EV') activeBlob.classList.replace('bg-emerald-500', 'bg-emerald-700');
-                    else activeBlob.classList.replace('bg-blue-600', 'bg-blue-800');
-
-                    statusRing.classList.remove('hidden');
-                    if (currentMode === 'EV') {
-                        statusRing.style.boxShadow = '0 0 0 0 rgba(16, 185, 129, 0.7)'; // Emerald
-                    }
-
-                    busInput.disabled = true;
-                    busInput.classList.add('opacity-50');
-                    statsPanel.classList.remove('opacity-50');
-                    isSharing = true;
-                }
-
-                // Clear watch if restarting logic
-                if (watchId) navigator.geolocation.clearWatch(watchId);
-
-                const typeLabel = useHighAccuracy ? "GPS" : "NET";
-                liveBadge.textContent = "INIT " + typeLabel;
-                liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-blue-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
-
-                allowLowAccuracy = false;
-                log(`Initializing ${typeLabel} (${busNo})...`);
-
-                // Config
-                // FIX: Increased timeout to 20s (was 5s) to prevent premature fallback
-                const options = {
-                    enableHighAccuracy: useHighAccuracy,
-                    timeout: useHighAccuracy ? 5000 : 20000, // FIX: 5s timeout for GPS to ensure quick fallback
-                    maximumAge: 0
-                };
-
-                watchId = navigator.geolocation.watchPosition(
-                    (position) => {
-                        if (!isSharing) return;
-                        const { latitude, longitude, accuracy, speed, heading } = position.coords;
-
-                        // Stats update
-                        const speedKmh = speed ? (speed * 3.6).toFixed(1) : 0;
-                        speedVal.textContent = speedKmh;
-                        const signalEl = document.getElementById('accVal');
-
-                        warningModal.classList.add('hidden');
-
-                        // Signal Quality Display
-                        if (accuracy <= 30) {
-                            signalEl.textContent = "GPS LOCKED";
-                            signalEl.className = "text-green-400 font-bold mono";
-                            liveBadge.textContent = "GPS LIVE";
-                            liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
-                        } else if (accuracy <= 100) {
-                            signalEl.textContent = `GOOD (${Math.round(accuracy)}m)`;
-                            signalEl.className = "text-emerald-400 font-bold mono";
-                            liveBadge.textContent = "LIVE";
-                            liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
-                        } else {
-                            // Weak
-                            signalEl.textContent = `WEAK (${Math.round(accuracy)}m)`;
-                            signalEl.className = "text-yellow-500 font-bold mono";
-                            liveBadge.textContent = useHighAccuracy ? "GPS WEAK" : "NET LIVE";
-                            liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-yellow-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300";
-                        }
-
-                        const data = {
-                            lat: latitude,
-                            lng: longitude,
-                            accuracy: accuracy,
-                            speed: speed,
-                            heading: heading,
-                            bus_no: busNo
-                        };
-                        socket.emit('driver_update', data);
-                        log(`Sent (${useHighAccuracy ? 'H' : 'L'}): ${new Date().toLocaleTimeString()} (Acc: ${Math.round(accuracy)}m)`);
-                    },
-                    (error) => {
-                        log("GPS Error: " + error.message);
-                        if (useHighAccuracy) {
-                            log("High Accuracy failed. Switching to Network...");
-                            startTracking(busNo, false);
-                        } else {
-                            if (error.code === 1) stopTracking();
-                            else {
-                                // Don't give up! Just show we are searching via Network
-                                liveBadge.textContent = "SEARCHING...";
-                                liveBadge.className = "absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-amber-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-lg transition-colors duration-300 animate-pulse";
-                                log("Network weak, retrying...");
-                            }
-                        }
-                    },
-                    options
-                );
-            }
-
-            window.stopTracking = function () {
-                activeBusNo = null;
-                if (watchId) {
-                    navigator.geolocation.clearWatch(watchId);
-                    watchId = null;
-                }
-                isSharing = false;
-                allowLowAccuracy = false;
-                warningModal.classList.add('hidden');
-
-                // UI State: Inactive
-                btnText.textContent = "START SHARING";
-                btnIcon.textContent = "▶";
-                btn.classList.replace('bg-red-500', 'bg-blue-600');
-                btn.classList.replace('hover:bg-red-600', 'hover:bg-blue-500');
-
-                // Re-enable toggle
-                document.getElementById('btn-bus').disabled = false;
-                document.getElementById('btn-ev').disabled = false;
-                if (currentMode === 'EV') activeBlob.classList.replace('bg-emerald-700', 'bg-emerald-500');
-                else activeBlob.classList.replace('bg-blue-800', 'bg-blue-600');
-
-                liveBadge.textContent = "Offline";
-                liveBadge.classList.replace('bg-green-500', 'bg-red-500');
-                liveBadge.classList.replace('bg-blue-500', 'bg-red-500');
-                liveBadge.classList.replace('bg-yellow-600', 'bg-red-500');
-                statusRing.classList.add('hidden');
-
-                const signalEl = document.getElementById('accVal'); // Corrected variable name
-                signalEl.textContent = "--";
-                signalEl.className = "text-white font-bold mono";
-
+            if (mode === 'BUS') {
+                blob.style.transform = 'translateX(0)';
+                blob.classList.replace('bg-emerald-500', 'bg-blue-500');
+                busInput.placeholder = "BUS NO.";
+                busInput.value = "";
                 busInput.disabled = false;
-                busInput.classList.remove('opacity-50');
-                statsPanel.classList.add('opacity-50');
-
-                log("Session ended.");
-                socket.emit('driver_update', null);
+            } else {
+                blob.style.transform = 'translateX(100%)';
+                blob.classList.replace('bg-blue-500', 'bg-emerald-500');
+                busInput.value = "EV-" + Math.floor(Math.random() * 9000 + 1000);
+                busInput.disabled = true;
             }
+        }
 
-            window.addEventListener('beforeunload', () => {
-                if (isSharing) {
-                    socket.emit('driver_update', null);
-                }
-            });
-
-            // --- ANNOUNCEMENT LOGIC ---
-
-
-            const app = window.firebaseApp;
-            const db = getFirestore(app);
-
-            const btnAnnounce = document.getElementById('btnAnnounce');
-            const inputAnnounce = document.getElementById('announceInput');
-
-            const btnAiAssist = document.getElementById('btnAiAssist');
-
-            btnAiAssist.addEventListener('click', async () => {
-                const text = inputAnnounce.value.trim();
-                if (!text) return;
-
-                // Loading State
-                const originalIcon = btnAiAssist.innerHTML;
-                btnAiAssist.innerHTML = `<svg class="w-3 h-3 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-                btnAiAssist.disabled = true;
-
-                try {
-                    const res = await fetch('/api/driver/ai-assist', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: text })
-                    });
-                    const data = await res.json();
-
-                    if (data.response) {
-                        inputAnnounce.value = data.response;
-                    } else {
-                        alert("AI failed to respond.");
-                    }
-                } catch (e) {
-                    console.error("AI Error:", e);
-                    alert("Failed to connect to AI assistant.");
-                } finally {
-                    btnAiAssist.innerHTML = originalIcon;
-                    btnAiAssist.disabled = false;
-                }
-            });
-
-            btnAnnounce.addEventListener('click', async () => {
-                const msg = inputAnnounce.value.trim();
-                if (!msg) return;
-
-                // Visual feedback
-                const originalIcon = btnAnnounce.innerHTML;
-                btnAnnounce.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
-                btnAnnounce.disabled = true;
-
-                let busNo = activeBusNo;
+        // --- MAIN DRIVE LOGIC ---
+        btnMain.addEventListener('click', () => {
+            if (!isSharing) {
+                // START
+                let busNo = busInput.value.trim().toUpperCase();
                 if (!busNo) {
-                    if (currentMode === 'BUS') {
-                        busNo = busInput.value.trim().toUpperCase();
-                    }
-                }
-
-                if (!busNo) {
-                    if (currentMode === 'EV') alert("Please START SHARING to broadcast as EV.");
-                    else alert("Please enter a Bus Number.");
-                    btnAnnounce.innerHTML = originalIcon;
-                    btnAnnounce.disabled = false;
+                    alert('Please enter Bus Number');
                     return;
                 }
+                startSession(busNo);
+            } else {
+                // STOP
+                stopSession();
+            }
+        });
 
-                try {
-                    const busDocRef = doc(db, "announcements", busNo);
-                    await setDoc(busDocRef, {
-                        bus_no: busNo,
-                        latest_message: msg,
-                        last_updated: serverTimestamp()
-                    }, { merge: true });
+        function startSession(busNo) {
+            if (!navigator.geolocation) return alert("No GPS support");
 
-                    await addDoc(collection(busDocRef, "messages"), {
-                        message: msg,
-                        timestamp: serverTimestamp(),
-                        author: busNo,
-                        bus_no: busNo
-                    });
-                    inputAnnounce.value = "";
-                    btnAnnounce.classList.replace('bg-amber-600', 'bg-green-600');
-                    setTimeout(() => {
-                        btnAnnounce.classList.replace('bg-green-600', 'bg-amber-600');
-                        btnAnnounce.innerHTML = originalIcon;
-                        btnAnnounce.disabled = false;
-                    }, 1000);
-                } catch (e) {
-                    console.error("Error adding document: ", e);
-                    alert("Failed to broadcast. Check console.");
-                    btnAnnounce.innerHTML = originalIcon;
-                    btnAnnounce.disabled = false;
-                }
+            activeBusNo = busNo;
+            isSharing = true;
+
+            // UI Update
+            btnMain.innerHTML = `<span class="text-2xl">■</span> STOP SHARING`;
+            btnMain.classList.replace('bg-blue-600', 'bg-red-500');
+            btnMain.classList.replace('hover:bg-blue-500', 'hover:bg-red-600');
+            btnMain.classList.add('shadow-red-900/50');
+
+            // Lock Inputs
+            document.getElementById('config-row').classList.add('opacity-50', 'pointer-events-none');
+
+            // Start Watch
+            const options = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
+            watchId = navigator.geolocation.watchPosition(
+                (pos) => { handleLocation(pos, busNo) },
+                (err) => { console.error(err); document.getElementById('debug-text').textContent = "GPS Error: " + err.message; },
+                options
+            );
+        }
+
+        function stopSession() {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            watchId = null;
+            isSharing = false;
+            activeBusNo = null;
+
+            socket.emit('driver_update', null); // Kill signal
+
+            // UI Reset
+            btnMain.innerHTML = `<span class="text-2xl">▶</span> START DRIVING`;
+            btnMain.classList.replace('bg-red-500', 'bg-blue-600');
+            btnMain.classList.replace('hover:bg-red-600', 'hover:bg-blue-500');
+            btnMain.classList.remove('shadow-red-900/50');
+
+            document.getElementById('config-row').classList.remove('opacity-50', 'pointer-events-none');
+            document.getElementById('debug-text').textContent = "Session ended";
+            document.getElementById('speedVal').textContent = "0";
+            document.getElementById('accVal').textContent = "--";
+
+            if (userMarker && map) map.removeLayer(userMarker);
+        }
+
+        function handleLocation(pos, busNo) {
+            if (!isSharing) return;
+
+            const { latitude, longitude, speed, accuracy, heading } = pos.coords;
+            const speedKmh = speed ? (speed * 3.6).toFixed(0) : 0;
+
+            // Update UI Stats
+            document.getElementById('speedVal').textContent = speedKmh;
+            document.getElementById('accVal').textContent = `Acc: ${Math.round(accuracy)}m`;
+            document.getElementById('debug-text').textContent = `Broadcasting... ${new Date().toLocaleTimeString()}`;
+
+            // Update Map
+            if (map) {
+                userMarker.setLatLng([latitude, longitude]).addTo(map);
+                map.setView([latitude, longitude], 16); // Follow user
+            }
+
+            // Emit to Server
+            socket.emit('driver_update', {
+                lat: latitude,
+                lng: longitude,
+                accuracy, speed, heading,
+                bus_no: busNo
             });
-        </script>
+        }
+
+        // --- DRAWER & AI LOGIC ---
+        const drawer = document.getElementById('announcement-drawer');
+        const backdrop = document.getElementById('drawer-backdrop');
+        const fab = document.getElementById('fab-announce');
+
+        window.toggleDrawer = function () {
+            const isOpen = !drawer.classList.contains('drawer-closed');
+            if (isOpen) {
+                drawer.classList.add('drawer-closed');
+                drawer.classList.remove('drawer-open');
+                backdrop.classList.add('hidden');
+                backdrop.classList.remove('opacity-100');
+                fab.classList.remove('scale-0');
+            } else {
+                drawer.classList.remove('drawer-closed');
+                drawer.classList.add('drawer-open');
+                backdrop.classList.remove('hidden');
+                setTimeout(() => backdrop.classList.add('opacity-100'), 10);
+                fab.classList.add('scale-0'); // Hide FAB when open
+            }
+        }
+
+        // AI ASSIST
+        const btnAi = document.getElementById('btnAiAssist');
+        const inputAnnounce = document.getElementById('announceInput');
+
+        btnAi.addEventListener('click', async () => {
+            const text = inputAnnounce.value;
+            if (!text) return;
+
+            const oldIcon = btnAi.innerHTML;
+            btnAi.innerHTML = '<div class="loader w-5 h-5 border-white"></div>';
+            btnAi.disabled = true;
+
+            try {
+                const res = await fetch('/api/driver/ai-assist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const data = await res.json();
+                if (data.response) inputAnnounce.value = data.response;
+            } catch (e) {
+                alert('AI Error');
+            } finally {
+                btnAi.innerHTML = oldIcon;
+                btnAi.disabled = false;
+            }
+        });
+
+        // SEND ANNOUNCEMENT
+        document.getElementById('btnAnnounce').addEventListener('click', async () => {
+            const msg = inputAnnounce.value;
+            if (!msg) return;
+            if (!activeBusNo) return alert('Start driving first to identify your bus!');
+
+            try {
+                const busRef = doc(db, 'announcements', activeBusNo);
+                await setDoc(busRef, {
+                    bus_no: activeBusNo,
+                    latest_message: msg,
+                    last_updated: serverTimestamp()
+                }, { merge: true });
+
+                await addDoc(collection(busRef, 'messages'), {
+                    message: msg,
+                    timestamp: serverTimestamp(),
+                    bus_no: activeBusNo
+                });
+
+                inputAnnounce.value = "";
+                toggleDrawer(); // Close on success
+                alert('Alert Sent! 🚀');
+            } catch (e) {
+                console.error(e);
+                alert('Failed to send');
+            }
+        });
+
+
+        // --- SOCKET STATUS ---
+        socket.on('connect', () => {
+            document.getElementById('serverStatus').textContent = "LIVE";
+            document.getElementById('serverStatus').className = "text-[10px] font-bold text-emerald-400 uppercase tracking-wider";
+            document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]";
+        });
+        socket.on('disconnect', () => {
+            document.getElementById('serverStatus').textContent = "OFFLINE";
+            document.getElementById('serverStatus').className = "text-[10px] font-bold text-red-400 uppercase tracking-wider";
+            document.getElementById('status-dot').className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
+        });
+
+    </script>
 </body>
 
 </html>
