@@ -78,17 +78,18 @@ function attemptGPS(stage, busNo) {
     const statStatus = document.getElementById('stat-status');
 
     if (stage === 'GPS_HIGH') {
-        opts = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
-        nextStage = 'GPS_WEAK';
-        uiIcon = "🛰️"; uiMsg = "SEARCHING SATELLITE..."; uiColor = "text-yellow-400"; uiStatusShort = "GPS SCAN..."; uiPulse = "bg-yellow-500";
-    } else if (stage === 'GPS_WEAK') {
+        opts = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+        nextStage = 'GPS_RETRY';
+        uiIcon = "🛰️"; uiMsg = "SEARCHING SATELLITE (HIGH)..."; uiColor = "text-yellow-400"; uiStatusShort = "GPS SCAN..."; uiPulse = "bg-yellow-500";
+    } else if (stage === 'GPS_RETRY') {
         opts = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
-        nextStage = 'NETWORK';
-        uiIcon = "📡"; uiMsg = "SEARCHING WEAK SIGNAL..."; uiColor = "text-orange-400"; uiStatusShort = "BOOSTING..."; uiPulse = "bg-orange-500";
+        nextStage = 'WIFI_CELL';
+        uiIcon = "📡"; uiMsg = "RETRYING HIGH ACCURACY..."; uiColor = "text-orange-400"; uiStatusShort = "GPS RETRY..."; uiPulse = "bg-orange-500";
     } else {
+        // "Low Accuracy" in browser usually means Wifi/Cell triangulation
         opts = { enableHighAccuracy: false, timeout: 20000, maximumAge: 0 };
         nextStage = null;
-        uiIcon = "📶"; uiMsg = "SEARCHING NETWORK..."; uiColor = "text-blue-400"; uiStatusShort = "NET SCAN..."; uiPulse = "bg-blue-500";
+        uiIcon = "📶"; uiMsg = "SEARCHING NETWORK/TOWER..."; uiColor = "text-blue-400"; uiStatusShort = "NET SCAN..."; uiPulse = "bg-blue-500";
     }
 
     if (btnMain) {

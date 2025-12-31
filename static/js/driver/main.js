@@ -4,11 +4,12 @@ import { initMap, toggleSession, stopSession, setMode } from './tracking.js';
 import { initAnnouncements } from './announcements.js';
 import { initSchedule, addTimeSlot, saveSchedule } from './schedule.js';
 import { initChat } from './chat.js';
-import { togglePanel, closePanels } from './ui.js';
+import { togglePanel, closePanels, toggleSidebar } from './ui.js';
 
 // Global Exports for HTML onclick
 window.togglePanel = togglePanel;
 window.closePanels = closePanels;
+window.toggleSidebar = toggleSidebar;
 window.toggleSession = toggleSession;
 window.stopSession = stopSession;
 window.setMode = setMode;
