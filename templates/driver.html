@@ -4,23 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Driver Console | Campus Ride</title>
+    <title>Driver Console | Glass OS</title>
 
-    <!-- Core Libs -->
+    <!-- Libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-    <!-- Fonts -->
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
         rel="stylesheet">
     <script src="/static/pwa-update.js"></script>
 
     <style>
+        :root {
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-bg: rgba(15, 23, 42, 0.6);
+        }
+
         body {
             font-family: 'Outfit', sans-serif;
             background: #0f172a;
@@ -33,99 +34,103 @@
             font-family: 'JetBrains Mono', monospace;
         }
 
-        /* Map Layer */
+        /* Map Background */
         #map {
             position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            inset: 0;
             z-index: 0;
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+            filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%);
         }
 
-        /* Bottom Sheet */
-        .bottom-sheet {
+        /* GLASS MORPHISM */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            border-radius: 2rem;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* SIDEBAR */
+        .sidebar {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 2rem 2rem 0 0;
-            box-shadow: 0 -10px 50px rgba(0, 0, 0, 0.6);
-            z-index: 50;
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            max-height: 85vh;
+            top: 1.5rem;
+            left: 1.5rem;
+            bottom: 1.5rem;
+            width: 5rem;
             display: flex;
             flex-direction: column;
-        }
-
-        /* Sheet States */
-        .sheet-minimized {
-            transform: translateY(calc(100% - 130px));
-        }
-
-        /* Show only top 130px */
-        .sheet-expanded {
-            transform: translateY(0);
-        }
-
-        /* Handle */
-        .sheet-handle-area {
-            width: 100%;
-            height: 24px;
-            display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: space-between;
+            background: rgba(15, 23, 42, 0.8);
+            border-radius: 2.5rem;
+            padding: 2rem 0;
+            z-index: 50;
+        }
+
+        .nav-icon {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            transition: all 0.2s;
             cursor: pointer;
-            flex-shrink: 0;
         }
 
-        .sheet-handle {
-            width: 48px;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 100px;
+        .nav-icon.active {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.5);
         }
 
-        /* Gauge */
-        .gauge-container {
-            position: relative;
-            width: 100px;
-            height: 50px;
-            margin: 0 auto;
+        .nav-icon:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
         }
 
-        .gauge-bg {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100px;
-            height: 100px;
+        /* FLOATING WIDGETS */
+        .widget {
+            position: fixed;
+            z-index: 40;
+        }
+
+        /* Profile & Speed (Top Left - pinned next to sidebar) */
+        .widget-profile {
+            top: 2rem;
+            left: 8rem;
+            width: 280px;
+        }
+
+        /* Comms (Bottom Left) */
+        .widget-comms {
+            bottom: 2rem;
+            left: 8rem;
+            width: 350px;
+        }
+
+        /* Speed Gauge (Bottom Right) */
+        .widget-speed {
+            bottom: 2rem;
+            right: 2rem;
+            width: 140px;
+            height: 140px;
             border-radius: 50%;
-            border: 8px solid rgba(255, 255, 255, 0.1);
-            border-bottom-color: transparent;
-            border-left-color: transparent;
-            transform: rotate(135deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .gauge-fill {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100px;
-            height: 100px;
-            border-radius: 50%;
-            border: 8px solid transparent;
-            border-top-color: #3b82f6;
-            border-right-color: #3b82f6;
-            transform: rotate(45deg);
-            transition: transform 0.5s;
-        }
-
-        /* Animations */
+        /* Pulse */
         .pulse-ring {
             animation: pulse-blue 2s infinite;
         }
@@ -146,19 +151,6 @@
                 box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
             }
         }
-
-        .loader {
-            border: 2px solid transparent;
-            border-top-color: white;
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
     </style>
 </head>
 
@@ -177,152 +169,151 @@
     <!-- MAP -->
     <div id="map"></div>
 
-    <!-- TOP BAR (Float) -->
-    <div class="fixed top-0 left-0 right-0 p-4 z-40 flex justify-between items-start pointer-events-none">
-        <div
-            class="bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 pointer-events-auto border border-white/10">
-            <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-            <span id="serverStatus" class="text-[10px] font-bold text-slate-300 uppercase tracking-wider">OFFLINE</span>
+
+    <!-- 1. SIDEBAR NAVIGATION -->
+    <div class="sidebar glass-card">
+        <div class="flex flex-col gap-6">
+            <div class="nav-icon active" onclick="setView('home')">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
+                    </path>
+                </svg>
+            </div>
+            <div class="nav-icon" onclick="toggleRouteConfig()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z">
+                    </path>
+                </svg>
+            </div>
         </div>
-        <button onclick="logout()"
-            class="pointer-events-auto w-9 h-9 bg-slate-900/80 rounded-full flex items-center justify-center text-slate-400 hover:text-white border border-white/10">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
-                </path>
-            </svg>
-        </button>
+
+        <div class="flex flex-col gap-6">
+            <div
+                class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white border border-white/20">
+                DS
+            </div>
+            <div class="nav-icon" onclick="logout()" style="color: #ef4444;">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                    </path>
+                </svg>
+            </div>
+        </div>
     </div>
 
 
-    <!-- BOTTOM SHEET -->
-    <div id="dashboard-sheet" class="bottom-sheet sheet-expanded">
-
-        <!-- Drag Handle -->
-        <div class="sheet-handle-area" onclick="toggleSheet()">
-            <div class="sheet-handle max-w-[40px]"></div>
-        </div>
-
-        <!-- 1. HEADER / MINIMIZED VIEW (Always Visible) -->
-        <div class="px-6 pb-2 pt-1 flex justify-between items-center shrink-0 h-[80px]">
-
-            <!-- Context: Active Route -->
+    <!-- 2. WIDGET: PROFILE & CONFIG (Top Left) -->
+    <div class="widget widget-profile glass-card p-5">
+        <div class="flex justify-between items-start mb-4">
             <div>
-                <h1 class="text-white font-bold text-lg leading-tight" id="header-title">Setup Route</h1>
-                <p class="text-[10px] text-slate-400 font-mono" id="header-subtitle">Select Bus No.</p>
-            </div>
-
-            <!-- Mini Gauge (Only visible when driving?) No, always keep mini status -->
-            <div class="flex items-center gap-4">
-                <div class="text-right">
-                    <div class="text-2xl font-bold text-blue-500 mono leading-none"><span id="mini-speed">0</span></div>
-                    <div class="text-[8px] text-slate-500 uppercase">km/h</div>
+                <h2 class="text-white font-bold text-lg leading-tight" id="widget-title">Driver Console</h2>
+                <div class="flex items-center gap-2 mt-1">
+                    <div id="status-dot" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                    <span id="serverStatus"
+                        class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">OFFLINE</span>
                 </div>
-
-                <!-- Toggle Button (Changes based on state) -->
-                <button id="toggleBtn"
-                    class="bg-blue-600 hover:bg-blue-500 text-white w-12 h-12 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/30 transition-all active:scale-95">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                    </svg> <!-- GPS Start Icon -->
-                </button>
+            </div>
+            <div
+                class="bg-gradient-to-tr from-blue-500 to-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
             </div>
         </div>
 
-        <!-- 2. EXPANDED CONTENT (Scrollable) -->
-        <div class="flex-1 overflow-y-auto px-6 pb-6 pt-2 space-y-4">
+        <!-- Mode Toggle -->
+        <div class="flex bg-slate-800/50 p-1 rounded-xl border border-slate-700 mb-3 relative" id="mode-toggle">
+            <div id="active-blob"
+                class="absolute inset-y-1 left-1 w-[calc(50%-4px)] bg-blue-600 rounded-lg transition-transform duration-300">
+            </div>
+            <button onclick="setMode('BUS')"
+                class="flex-1 relative z-10 py-1.5 text-xs font-bold text-white">BUS</button>
+            <button onclick="setMode('EV')"
+                class="flex-1 relative z-10 py-1.5 text-xs font-bold text-slate-400">EV</button>
+        </div>
 
-            <hr class="border-slate-800 mb-4">
+        <div class="flex gap-2">
+            <input type="text" id="busInput" placeholder="NO."
+                class="w-16 bg-slate-900 border border-slate-700 rounded-xl text-center text-white font-bold focus:border-blue-500 focus:outline-none uppercase">
+            <button id="toggleBtn"
+                class="flex-1 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+                GO LIVE
+            </button>
+        </div>
+    </div>
 
-            <!-- Grid Layout -->
-            <div class="grid grid-cols-1 gap-4">
 
-                <!-- CONFIG CARD -->
-                <div class="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
-                    <h3 class="text-xs text-slate-400 font-bold uppercase mb-3">Vehicle Configuration</h3>
-                    <div class="flex gap-3">
-                        <div class="bg-slate-900 rounded-xl p-1 flex border border-slate-700 h-12 shrink-0 relative w-32"
-                            id="mode-toggle">
-                            <div id="active-blob"
-                                class="absolute inset-y-1 left-1 w-[calc(50%-4px)] bg-blue-600 rounded-lg transition-transform duration-300">
-                            </div>
-                            <button onclick="setMode('BUS')"
-                                class="flex-1 relative z-10 text-xs font-bold text-white">BUS</button>
-                            <button onclick="setMode('EV')"
-                                class="flex-1 relative z-10 text-xs font-bold text-slate-400">EV</button>
-                        </div>
-                        <input type="text" id="busInput" placeholder="NO."
-                            class="w-20 bg-slate-900 border border-slate-700 rounded-xl text-center text-white font-bold text-lg focus:border-blue-500 focus:outline-none uppercase">
-                    </div>
+    <!-- 3. WIDGET: COMMS (Bottom Left) -->
+    <div class="widget widget-comms glass-card p-0 overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-white/5 bg-slate-800/30 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
+                        </path>
+                    </svg>
                 </div>
+                <div>
+                    <h3 class="text-white font-bold text-sm">Announcements</h3>
+                    <p class="text-[10px] text-slate-400">Broadcast to students</p>
+                </div>
+            </div>
+            <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-white font-mono">LIVE</span>
+        </div>
 
-                <!-- ANNOUNCEMENTS -->
-                <div class="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
-                    <div class="flex justify-between mb-2">
-                        <h3 class="text-xs text-slate-400 font-bold uppercase">Broadcast</h3>
-                        <span class="text-[10px] text-purple-400">AI Enabled</span>
-                    </div>
-                    <div class="relative mb-3">
-                        <textarea id="announceInput" rows="3"
-                            class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-purple-500 focus:outline-none resize-none"
-                            placeholder="Alert message..."></textarea>
-                        <button id="btnAiAssist"
-                            class="absolute bottom-2 right-2 p-1.5 bg-slate-800 hover:bg-purple-600 rounded text-white shadow"><span
-                                class="text-xs">✨</span></button>
-                    </div>
+        <div class="p-4 bg-slate-900/40">
+            <div class="relative">
+                <textarea id="announceInput" rows="2"
+                    class="w-full bg-transparent text-sm text-white focus:outline-none resize-none placeholder-slate-500"
+                    placeholder="Type urgent message..."></textarea>
+                <div class="absolute bottom-[-4px] right-[-4px] flex gap-2">
+                    <button id="btnAiAssist" class="p-1.5 text-purple-400 hover:text-white transition-colors"
+                        title="AI Polish">✨</button>
                     <button id="btnAnnounce"
-                        class="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold rounded-lg text-sm">Send
-                        Alert</button>
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-lg transition-transform active:scale-95">SEND</button>
                 </div>
-
-                <!-- TELEMETRY DETAILS -->
-                <div class="bg-slate-800/50 rounded-2xl p-4 border border-slate-700 flex justify-between items-center">
-                    <div>
-                        <p class="text-[10px] text-slate-500 uppercase">GPS Quality</p>
-                        <p id="gps-quality" class="text-sm font-mono text-white font-bold">--</p>
-                    </div>
-                    <div>
-                        <p class="text-[10px] text-slate-500 uppercase">Last Update</p>
-                        <p id="last-updated" class="text-sm font-mono text-white text-right">Running...</p>
-                    </div>
-                </div>
-
             </div>
         </div>
     </div>
 
 
-    <!-- APP LOGIC -->
+    <!-- 4. WIDGET: TELEMETRY GAUGE (Bottom Right) -->
+    <div class="widget widget-speed glass-card">
+        <div class="relative w-full h-full flex items-center justify-center">
+            <!-- Circular Progress SVG -->
+            <svg class="w-28 h-28 transform -rotate-90">
+                <circle cx="56" cy="56" r="52" stroke="rgba(255,255,255,0.1)" stroke-width="8" fill="none" />
+                <circle id="speed-circle" cx="56" cy="56" r="52" stroke="#3b82f6" stroke-width="8" fill="none"
+                    stroke-dasharray="326" stroke-dashoffset="326" stroke-linecap="round"
+                    class="transition-all duration-500" />
+            </svg>
+            <div class="absolute text-center">
+                <span class="block text-3xl font-bold text-white mono" id="speedVal">0</span>
+                <span class="block text-[8px] text-slate-400 uppercase font-bold tracking-widest">KM/H</span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- JS LOGIC -->
     <script type="module">
         import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        // UI REFS
-        const sheet = document.getElementById('dashboard-sheet');
-        const btnMain = document.getElementById('toggleBtn');
-        const headerTitle = document.getElementById('header-title');
-        const headerSub = document.getElementById('header-subtitle');
-        const busInput = document.getElementById('busInput');
-        const miniSpeed = document.getElementById('mini-speed');
-
         // STATE
-        let isSharing = false;
         let map, userMarker, watchId;
+        let isSharing = false;
         let currentMode = 'BUS';
         let activeBusNo = null;
 
-        // SHEET LOGIC
-        window.toggleSheet = function () {
-            if (sheet.classList.contains('sheet-expanded')) {
-                sheet.classList.replace('sheet-expanded', 'sheet-minimized');
-            } else {
-                sheet.classList.replace('sheet-minimized', 'sheet-expanded');
-            }
-        }
-        // Auto-minimize on start
-        function minimize() { sheet.classList.replace('sheet-expanded', 'sheet-minimized'); }
-        function expand() { sheet.classList.replace('sheet-minimized', 'sheet-expanded'); }
+        // UI
+        const btnMain = document.getElementById('toggleBtn');
+        const busInput = document.getElementById('busInput');
 
-        // MODE TOGGLE
+        // --- MODE TOGGLE ---
         window.setMode = function (mode) {
             if (isSharing) return;
             currentMode = mode;
@@ -335,16 +326,15 @@
             } else {
                 blob.style.transform = 'translateX(100%)';
                 btns[1].style.color = 'white'; btns[0].style.color = '#94a3b8';
-                busInput.value = "EV-" + Math.floor(Math.random() * 900 + 100); busInput.disabled = true;
+                busInput.value = "EV"; busInput.disabled = true;
             }
         }
 
-        // DRIVE ACTION
-        btnMain.addEventListener('click', (e) => {
-            e.stopPropagation(); // Don't toggle sheet
+        // --- DRIVE ACTION ---
+        btnMain.addEventListener('click', () => {
             if (!isSharing) {
                 const val = busInput.value.trim().toUpperCase();
-                if (!val) return alert("Enter Bus Number");
+                if (!val) return alert("Enter No.");
                 startSession(val);
             } else {
                 stopSession();
@@ -356,17 +346,16 @@
             activeBusNo = busNo;
             isSharing = true;
 
-            // UI UPDATES
-            btnMain.innerHTML = `<div class="w-4 h-4 bg-white rounded-sm"></div>`; // Stop Stop Square
+            // UI Lock
+            btnMain.textContent = "STOP";
             btnMain.classList.replace('bg-blue-600', 'bg-red-500');
-            headerTitle.textContent = `Bus ${busNo}`;
-            headerTitle.classList.add('text-green-400');
-            headerSub.textContent = "● LIVE BROADCASTING";
+            btnMain.classList.replace('hover:bg-blue-500', 'hover:bg-red-600');
+            busInput.disabled = true;
 
-            // Minimize map for navigation
-            minimize();
+            document.getElementById('serverStatus').textContent = "LIVE BROADCAST";
+            document.getElementById('serverStatus').classList.replace('text-slate-400', 'text-green-400');
+            document.getElementById('status-dot').classList.replace('bg-red-500', 'bg-green-500');
 
-            // GPS
             const opts = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
             watchId = navigator.geolocation.watchPosition(
                 (pos) => handleGPS(pos, busNo),
@@ -378,56 +367,59 @@
             if (watchId) navigator.geolocation.clearWatch(watchId);
             watchId = null;
             isSharing = false;
+            const socket = io(); socket.emit('driver_update', null);
 
-            const socket = io();
-            socket.emit('driver_update', null);
-
-            // RESET
-            btnMain.innerHTML = `<svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>`;
+            // UI Unlock
+            btnMain.textContent = "GO LIVE";
             btnMain.classList.replace('bg-red-500', 'bg-blue-600');
-            headerTitle.textContent = "Setup Route";
-            headerTitle.classList.remove('text-green-400');
-            headerSub.textContent = "Select Bus No.";
-            miniSpeed.textContent = "0";
+            btnMain.classList.replace('hover:bg-red-600', 'hover:bg-blue-500');
+            busInput.disabled = (currentMode === 'EV');
 
-            expand(); // Show config again
+            document.getElementById('serverStatus').textContent = "OFFLINE";
+            document.getElementById('serverStatus').classList.replace('text-green-400', 'text-slate-400');
+            document.getElementById('status-dot').classList.replace('bg-green-500', 'bg-red-500');
             if (map && userMarker) map.removeLayer(userMarker);
+            updateSpeed(0);
         }
 
         function handleGPS(pos, busNo) {
             const { latitude, longitude, speed, headings, accuracy } = pos.coords;
             const kmh = speed ? Math.round(speed * 3.6) : 0;
-
-            miniSpeed.textContent = kmh;
-            document.getElementById('gps-quality').textContent = `±${Math.round(accuracy)}m`;
-            document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+            updateSpeed(kmh);
 
             if (map) {
                 userMarker.setLatLng([latitude, longitude]).addTo(map);
                 map.setView([latitude, longitude], 17);
             }
-
             const socket = io();
             socket.emit('driver_update', { lat: latitude, lng: longitude, speed, headings, bus_no: busNo, accuracy });
         }
 
-        // MAP INIT
+        function updateSpeed(kmh) {
+            document.getElementById('speedVal').textContent = kmh;
+            // Circle Perimeter = 2 * pi * 52 ≈ 326
+            const maxOffset = 326;
+            const percent = Math.min(kmh / 100, 1);
+            const offset = maxOffset - (percent * maxOffset);
+            document.getElementById('speed-circle').style.strokeDashoffset = offset;
+            document.getElementById('speed-circle').style.stroke = kmh > 60 ? '#ef4444' : '#3b82f6';
+        }
+
+        // --- MAP ---
         window.initMap = function () {
             if (map) return;
             map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20.2961, 85.8245], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '' }).addTo(map);
-
             const icon = L.divIcon({ className: 'custom-icon', html: `<div class="w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-lg pulse-ring"></div>`, iconSize: [24, 24], iconAnchor: [12, 12] });
             userMarker = L.marker([0, 0], { icon: icon });
         }
 
-        // ANNOUNCEMENT (Same logic)
+        // --- COMMS ---
         const btnAi = document.getElementById('btnAiAssist');
         const inputAnnounce = document.getElementById('announceInput');
         const btnSend = document.getElementById('btnAnnounce');
 
         btnAi.addEventListener('click', async () => {
-            // ... AI logic reuse ...
             const text = inputAnnounce.value; if (!text) return;
             btnAi.innerHTML = '...';
             try {
@@ -446,17 +438,8 @@
                 const ref = doc(db, 'announcements', activeBusNo);
                 await setDoc(ref, { bus_no: activeBusNo, latest_message: msg, last_updated: serverTimestamp() }, { merge: true });
                 await addDoc(collection(ref, 'messages'), { message: msg, timestamp: serverTimestamp(), bus_no: activeBusNo });
-                inputAnnounce.value = ""; alert("Sent");
+                inputAnnounce.value = "";
             } catch (e) { }
-        });
-
-        // SOCKET
-        const socket = io();
-        socket.on('connect', () => {
-            document.getElementById('serverStatus').textContent = "ONLINE";
-            document.getElementById('serverStatus').classList.replace('text-slate-300', 'text-green-400');
-            document.getElementById('status-dot').classList.replace('bg-red-500', 'bg-green-500');
-            document.getElementById('status-dot').classList.remove('animate-pulse');
         });
 
     </script>
