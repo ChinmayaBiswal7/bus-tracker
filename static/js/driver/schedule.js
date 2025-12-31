@@ -1,4 +1,3 @@
-import { db, doc, setDoc, serverTimestamp } from '../firebase-config.js';
 
 export function initSchedule() {
     const schedDate = document.getElementById('sched-date');
@@ -55,19 +54,25 @@ export async function saveSchedule() {
     if (btn) btn.textContent = "Publishing...";
 
     try {
-        // Save to: schedules/{busNo}/dates/{date}
-        await setDoc(doc(db, "schedules", busNo, "dates", date), {
-            timings: timings,
-            updated_at: serverTimestamp()
+        // Updated: Send to Backend API
+        const response = await fetch('/api/schedule/publish', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                bus_no: busNo,
+                date: date,
+                timings: timings
+            })
         });
 
-        // Also update the main 'schedules' doc to know this bus has a schedule
-        await setDoc(doc(db, "schedules", busNo), {
-            last_update: serverTimestamp(),
-            bus_no: busNo
-        }, { merge: true });
+        const result = await response.json();
 
-        alert("Schedule Published! 📅");
+        if (response.ok) {
+            alert("Schedule Published! 📅");
+        } else {
+            throw new Error(result.message || "Unknown error");
+        }
+
     } catch (e) {
         console.error(e);
         alert("Error saving: " + e.message);

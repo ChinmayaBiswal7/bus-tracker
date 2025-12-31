@@ -14,110 +14,37 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# --- Firebase Admin SDK Setup (Backend) ---
-import firebase_admin
-from firebase_admin import credentials, firestore, messaging
-from firebase_admin import _apps 
-from groq import Groq
+# --- Extensions & Blueprints ---
+from server.extensions import init_firebase, f_db # Import f_db for usage in other routes
+init_firebase()
+
+from routes.schedule import schedule_bp
+app.register_blueprint(schedule_bp)
+
+# --- AI & Other Imports ---
 import os
+from groq import Groq
 import google.generativeai as genai
 
-
-
-# Initialize Google Gemini (AI Assist for Drivers)
+# Initialize Google Gemini (AI Assist)
 genai_client = None
 if os.environ.get("GEMINI_API_KEY"):
     try:
         genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-        
-        # Dynamic Model Selection
-        # We search for a model that supports 'generateContent'
-        # Priority: gemini-1.5-flash -> gemini-pro -> any other valid model
-        available_models = []
-        try:
-            for m in genai.list_models():
-                if 'generateContent' in m.supported_generation_methods:
-                    available_models.append(m.name)
-        except Exception as e:
-            print(f"[WARN] Could not list models: {e}")
-
-        selected_model_name = None
-        if available_models:
-            # Check for preferred models
-            for preferred in ['models/gemini-1.5-flash', 'models/gemini-pro', 'models/gemini-1.0-pro']:
-                if preferred in available_models:
-                    selected_model_name = preferred
-                    break
-            # Fallback to first available if preference not found
-            if not selected_model_name:
-                selected_model_name = available_models[0]
-        else:
-            # Fallback if list_models fails or returns empty (e.g. permission issues)
-            # We try the user's suggestion as a hard fallback
-            selected_model_name = 'gemini-pro'
-
-        print(f"[INFO] Selected Gemini Model: {selected_model_name}")
-        genai_client = genai.GenerativeModel(selected_model_name)
-        
+        genai_client = genai.GenerativeModel('gemini-pro')
     except Exception as e:
-        print(f"[ERROR] Failed to configure Gemini: {e}")
-else:
-    print("[WARN] GEMINI_API_KEY not found. Driver AI Assist will be disabled.")
+        print(f"[ERROR] Gemini Init: {e}")
 
-
-# Initialize Groq Client (Llama 3)
+# Initialize Groq (Llama 3)
 groq_client = None
 if os.environ.get("GROQ_API_KEY"):
     groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-else:
-    print("[WARN] GROQ_API_KEY not found. AI Chatbot will be limited.") 
-
-# Prevent re-initialization error on reload
-import os
-import json
-
-# Prevent re-initialization error on reload
-if not firebase_admin._apps:
-    if os.path.exists("serviceAccountKey.json"):
-        cred = credentials.Certificate("serviceAccountKey.json")
-        firebase_admin.initialize_app(cred)
-    else:
-        # Fallback for Render: Use Environment Variable or Dummy
-        print("[WARN] serviceAccountKey.json not found.")
-        firebase_creds = os.environ.get('FIREBASE_CREDENTIALS')
-        if firebase_creds:
-            print("[INFO] Loading credentials from Environment Variable...")
-            cred_dict = json.loads(firebase_creds)
-            cred = credentials.Certificate(cred_dict)
-            firebase_admin.initialize_app(cred)
-        else:
-            print("[ERROR] No Firebase Credentials found! Push Notifications will NOT work.")
-            # We do NOT crash, but f_db will fail if used.
-            # Initialize with default (might fail depending on GCP env) or just pass.
-            # Better to not initialize and let f_db usage fail gracefully?
-            # Try initializing with default (no explicit creds) - might work if Env Vars are set automatically
-            try:
-                firebase_admin.initialize_app()
-                print("[INFO] Initialized Firebase with default/no credentials.")
-            except Exception as e:
-                print(f"[ERROR] Failed to init Firebase Default: {e}")
-
-# Initialize Firestore (Global)
-f_db = None
-try:
-    f_db = firestore.client()
-except Exception as e:
-    print(f"[ERROR] Firestore Client Init Failed: {e}")
-    print("[WARN] Running without Firestore backend.")
 
 # --- Database Models ---
-# --- Database Models ---
-# User model removed - Auth handled by Firebase
-
 class UserActivity(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100)) # Changed to String for Firebase UID
-    action = db.Column(db.String(50)) # 'search', 'track'
+    user_id = db.Column(db.String(100))
+    action = db.Column(db.String(50))
     bus_no = db.Column(db.String(20))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
