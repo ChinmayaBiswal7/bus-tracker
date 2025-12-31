@@ -118,6 +118,13 @@
             width: 350px;
         }
 
+        /* AI Assistant (Floating above Comms) */
+        .widget-ai {
+            bottom: 12rem;
+            left: 8rem;
+            width: 350px;
+        }
+
         /* Speed Gauge (Bottom Right) */
         .widget-speed {
             bottom: 2rem;
@@ -246,37 +253,46 @@
     </div>
 
 
-    <!-- 3. WIDGET: COMMS (Bottom Left) -->
-    <div class="widget widget-comms glass-card p-0 overflow-hidden flex flex-col">
-        <div class="p-4 border-b border-white/5 bg-slate-800/30 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
-                        </path>
-                    </svg>
-                </div>
-                <div>
-                    <h3 class="text-white font-bold text-sm">Announcements</h3>
-                    <p class="text-[10px] text-slate-400">Broadcast to students</p>
-                </div>
-            </div>
-            <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-white font-mono">LIVE</span>
+    <!-- 3A. WIDGET: AI DRAFTER (Floating) -->
+    <div class="widget widget-ai glass-card p-3 flex items-center gap-3 z-40 transition-all hover:scale-[1.02]">
+        <div
+            class="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shrink-0">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z">
+                </path>
+            </svg>
         </div>
+        <div class="flex-1">
+            <input type="text" id="draftInput"
+                class="w-full bg-transparent border-none text-sm text-white focus:outline-none placeholder-slate-400"
+                placeholder="Ask AI to draft... (e.g. 'late 10m')">
+        </div>
+        <button id="btnAiAssist" class="p-2 bg-white/10 hover:bg-white/20 rounded-lg text-purple-300 transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z">
+                </path>
+            </svg>
+        </button>
+    </div>
 
-        <div class="p-4 bg-slate-900/40">
-            <div class="relative">
-                <textarea id="announceInput" rows="2"
-                    class="w-full bg-transparent text-sm text-white focus:outline-none resize-none placeholder-slate-500"
-                    placeholder="Type urgent message..."></textarea>
-                <div class="absolute bottom-[-4px] right-[-4px] flex gap-2">
-                    <button id="btnAiAssist" class="p-1.5 text-purple-400 hover:text-white transition-colors"
-                        title="AI Polish">✨</button>
-                    <button id="btnAnnounce"
-                        class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded-lg text-xs font-bold shadow-lg transition-transform active:scale-95">SEND</button>
-                </div>
+
+    <!-- 3B. WIDGET: BROADCAST (Bottom Left) -->
+    <div class="widget widget-comms glass-card p-0 flex flex-col z-50">
+        <div class="p-3 border-b border-white/5 bg-slate-800/50 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
+                <h3 class="text-white font-bold text-xs uppercase tracking-wider">Live Broadcast</h3>
             </div>
+            <button id="btnAnnounce"
+                class="bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2">
+                <span>📣</span> SEND ALERT
+            </button>
+        </div>
+        <div class="p-3 bg-slate-900/60">
+            <textarea id="finalInput" rows="2"
+                class="w-full bg-transparent text-sm text-white focus:outline-none resize-none placeholder-slate-500 font-mono"
+                placeholder="Final message to students..."></textarea>
         </div>
     </div>
 
@@ -414,31 +430,46 @@
             userMarker = L.marker([0, 0], { icon: icon });
         }
 
-        // --- COMMS ---
+        // --- SEPARATED COMMS LOGIC ---
         const btnAi = document.getElementById('btnAiAssist');
-        const inputAnnounce = document.getElementById('announceInput');
+        const draftInput = document.getElementById('draftInput');
+        const finalInput = document.getElementById('finalInput');
         const btnSend = document.getElementById('btnAnnounce');
 
         btnAi.addEventListener('click', async () => {
-            const text = inputAnnounce.value; if (!text) return;
-            btnAi.innerHTML = '...';
+            const text = draftInput.value; if (!text) return;
+
+            // Loading State
+            const originalHtml = btnAi.innerHTML;
+            btnAi.innerHTML = '<div class="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>';
+
             try {
                 const res = await fetch('/api/driver/ai-assist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
                 const data = await res.json();
-                if (data.response) inputAnnounce.value = data.response;
-            } catch (e) { } finally { btnAi.innerHTML = '✨'; }
+                if (data.response) {
+                    finalInput.value = data.response; // Move to Broadcaster
+                    draftInput.value = ""; // Clear Drafter
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                btnAi.innerHTML = originalHtml;
+            }
         });
 
         btnSend.addEventListener('click', async () => {
-            const msg = inputAnnounce.value;
-            if (!msg || !isSharing) return alert("Go Online first");
+            const msg = finalInput.value;
+            if (!msg) return alert("Message is empty");
+            if (!isSharing) return alert("Go Online first");
+
             const app = window.firebaseApp;
             const db = getFirestore(app);
             try {
                 const ref = doc(db, 'announcements', activeBusNo);
                 await setDoc(ref, { bus_no: activeBusNo, latest_message: msg, last_updated: serverTimestamp() }, { merge: true });
                 await addDoc(collection(ref, 'messages'), { message: msg, timestamp: serverTimestamp(), bus_no: activeBusNo });
-                inputAnnounce.value = "";
+                finalInput.value = "";
+                alert("Alert Sent! 📣");
             } catch (e) { }
         });
 
