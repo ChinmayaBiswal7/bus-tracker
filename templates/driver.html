@@ -94,7 +94,7 @@
 
             .sidebar .nav-group-bottom {
                 display: none;
-                /* Hide logout on bottom bar, maybe move to a panel? */
+                /* Hide logout on bottom bar */
             }
 
             .nav-icon {
@@ -126,7 +126,6 @@
                 box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
             }
         }
-
 
         .nav-icon {
             width: 3rem;
@@ -493,7 +492,15 @@
 
     <!-- PANEL 4: SPEEDOMETER & TELEMETRY -->
     <div id="panel-speed" class="pop-panel glass-card p-5 flex flex-col items-center">
-        <h3 class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-2">Live Telemetry</h3>
+        <div class="w-full flex justify-between items-center mb-2">
+            <h3 class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Live Telemetry</h3>
+            <button onclick="closePanels()"
+                class="mobile-close p-1.5 bg-slate-700/50 rounded-full text-slate-400 hover:text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
 
         <!-- Gauge -->
         <div class="relative w-32 h-32 flex items-center justify-center mb-4">
@@ -545,6 +552,11 @@
             document.querySelectorAll('.nav-icon').forEach(n => n.classList.remove('active'));
             document.getElementById('panel-' + panelId).classList.add('active');
             document.getElementById('nav-' + panelId).classList.add('active');
+        }
+
+        window.closePanels = function () {
+            document.querySelectorAll('.pop-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-icon').forEach(n => n.classList.remove('active'));
         }
 
         // --- 2. DRIVE LOGIC ---
