@@ -84,7 +84,7 @@ function renderScheduleList() {
         div.id = containerId;
 
         div.innerHTML = `
-             <div class="flex items-center justify-between p-4 bg-slate-800/80 hover:bg-slate-800 cursor-pointer text-left class="sched-item-header">
+             <div class="flex items-center justify-between p-4 bg-slate-800/80 hover:bg-slate-800 cursor-pointer text-left sched-item-header">
                 <div class="flex items-center gap-3 pointer-events-none">
                     <div class="w-8 h-8 rounded-full bg-purple-900/50 flex items-center justify-center text-xs">📅</div>
                     <span class="font-bold text-slate-200 text-sm">Bus ${bus.bus_no || bus.id}</span>

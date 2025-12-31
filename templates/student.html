@@ -362,45 +362,46 @@
             </div>
         </div>
 
-        <!-- Bus Schedules Overlay -->
-        <div id="schedule-overlay"
-            class="fixed inset-0 z-[3000] bg-slate-900/95 backdrop-blur-xl hidden flex flex-col transition-all duration-300">
-            <!-- Header -->
-            <div class="p-4 border-b border-slate-800 flex items-center gap-2 bg-slate-900 shadow-xl shrink-0">
-                <button onclick="closeSchedule()"
-                    class="p-2 -ml-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                </button>
-                <h2 class="text-lg font-bold text-white tracking-tight ml-auto">Bus Schedule</h2>
-            </div>
+    </div>
 
-            <!-- Schedule List -->
-            <div id="schedule-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                <p class="text-slate-500 text-center italic mt-10">Loading schedules...</p>
-            </div>
+    <!-- Bus Schedules Overlay -->
+    <div id="schedule-overlay"
+        class="fixed inset-0 z-[3000] bg-slate-900/95 backdrop-blur-xl hidden flex flex-col transition-all duration-300">
+        <!-- Header -->
+        <div class="p-4 border-b border-slate-800 flex items-center gap-2 bg-slate-900 shadow-xl shrink-0">
+            <button onclick="closeSchedule()"
+                class="p-2 -ml-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <h2 class="text-lg font-bold text-white tracking-tight ml-auto">Bus Schedule</h2>
         </div>
 
-        <!-- Trip Info Card (GPS Tracking) -->
-        <!-- ... (No changes here) ... -->
+        <!-- Schedule List -->
+        <div id="schedule-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+            <p class="text-slate-500 text-center italic mt-10">Loading schedules...</p>
+        </div>
+    </div>
 
-        <!-- Leaflet JS -->
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <!-- Leaflet Routing Machine -->
-        <link rel="stylesheet"
-            href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-        <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-        <style>
-            /* Hide the default instruction box of routing machine */
-            .leaflet-routing-container {
-                display: none !important;
-            }
-        </style>
+    <!-- Trip Info Card (GPS Tracking) -->
+    <!-- ... (No changes here) ... -->
 
-        <!-- Firebase SDK & Logic -->
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+    <style>
+        /* Hide the default instruction box of routing machine */
+        .leaflet-routing-container {
+            display: none !important;
+        }
+    </style>
 
-        <script type="module" src="/static/js/student/main.js?v=3"></script>
+    <!-- Firebase SDK & Logic -->
+
+    <script type="module" src="/static/js/student/main.js?v=3"></script>
 </body>
 
 </html>
