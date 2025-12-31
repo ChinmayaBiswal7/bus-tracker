@@ -17,60 +17,49 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 
     <!-- PWA Setup -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#0f172a">
-    caches.keys().then(names => {
-    for (let name of names) caches.delete(name);
-    });
 
-    localStorage.setItem(SW_RESET_KEY, 'true');
-    console.log("Service Workers & Cache Reset. Reloading...");
-    window.location.reload();
-    });
-    }
-    }
+    <!-- PWA Install & Cache Logic -->
+    <script>
+        // PWA Install Logic
+        let deferredPrompt;
+        window.addEventListener('load', () => {
+            const installBtn = document.getElementById('install-btn');
 
-    // PWA Install Logic
-    let deferredPrompt;
-    window.addEventListener('load', () => {
-    const installBtn = document.getElementById('install-btn');
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                if (installBtn) installBtn.classList.remove('hidden');
+                console.log("PWA Install Prompt ready");
+            });
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent Chrome 67 and earlier from automatically showing the prompt
-    e.preventDefault();
-    // Stash the event so it can be triggered later.
-    deferredPrompt = e;
-    // Update UI to notify the user they can add to home screen
-    if (installBtn) installBtn.classList.remove('hidden');
-    console.log("PWA Install Prompt ready");
-    });
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (deferredPrompt) {
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        console.log(`User response to the install prompt: ${outcome}`);
+                        deferredPrompt = null;
+                        installBtn.classList.add('hidden');
+                    }
+                });
+            }
 
-    if (installBtn) {
-    installBtn.addEventListener('click', async () => {
-    if (deferredPrompt) {
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`User response to the install prompt: ${outcome}`);
-    deferredPrompt = null;
-    installBtn.classList.add('hidden');
-    }
-    });
-    }
+            window.addEventListener('appinstalled', () => {
+                if (installBtn) installBtn.classList.add('hidden');
+                deferredPrompt = null;
+                console.log('PWA was installed');
+            });
+        });
 
-    window.addEventListener('appinstalled', () => {
-    if (installBtn) installBtn.classList.add('hidden');
-    deferredPrompt = null;
-    console.log('PWA was installed');
-    });
-    });
-
-    if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-    .then(reg => console.log('SW Registered!', reg.scope))
-    .catch(err => console.log('SW Failed:', err));
-    });
-    }
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('SW Registered!', reg.scope))
+                    .catch(err => console.log('SW Failed:', err));
+            });
+        }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
@@ -525,6 +514,7 @@
             const app = window.firebaseApp;
             const db = getFirestore(app);
             const messaging = getMessaging(app);
+            console.log("Student Module Loaded ✅");
 
             // --- FCM Logic (Push Notifications) ---
             const VAPID_KEY = "BJoiF9u6UpFvBbNQcjByY3IfcxS9yivCpdcMS5b1jpg4rFoTnM35kZzmgEuVCWgJiBrcofsPLrjh4CoO5i1DZBE";
