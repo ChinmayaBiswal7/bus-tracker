@@ -281,6 +281,35 @@ def driver_ai_assist():
         return {"response": f"Error: {str(e)}"}
 
 
+@app.route('/api/driver/chat', methods=['POST'])
+def driver_chat():
+    data = request.json
+    user_msg = data.get('message', '')
+    
+    if not user_msg:
+        return {"response": ""}
+
+    if not genai_client:
+        return {"response": "AI Error: GEMINI_API_KEY not set."}
+
+    prompt = f"""
+    You are a friendly and helpful assistant for a University Bus Driver.
+    User Query: "{user_msg}"
+    
+    Instructions:
+    - Keep responses short (max 2-3 sentences).
+    - Be helpful and operational (traffic, maintenance advice, or just friendly chat).
+    - If asked about the app, explain you are the Driver Console Assistant.
+    """
+
+    try:
+        response = genai_client.generate_content(prompt)
+        return {"response": response.text.strip()}
+    except Exception as e:
+        print(f"[ERROR] Gemini Chat Error: {e}")
+        return {"response": f"AI Error: {str(e)}"}
+
+
 @app.route('/subscribe', methods=['POST'])
 def subscribe_to_topic():
     token = request.json.get('token')
