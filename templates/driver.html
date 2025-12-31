@@ -602,16 +602,36 @@
         let map, userMarker, watchId;
 
         // --- 1. POPUP LOGIC ---
+        // --- 1. POPUP LOGIC ---
         window.togglePanel = function (panelId) {
-            document.querySelectorAll('.pop-panel').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-icon').forEach(n => n.classList.remove('active'));
-            document.getElementById('panel-' + panelId).classList.add('active');
-            document.getElementById('nav-' + panelId).classList.add('active');
+            const panel = document.getElementById('panel-' + panelId);
+            const nav = document.getElementById('nav-' + panelId);
+            const isActive = panel.classList.contains('active');
+
+            // Close all first
+            window.closePanels();
+
+            if (!isActive) {
+                // If it wasn't valid, open it
+                panel.classList.add('active');
+                nav.classList.add('active');
+
+                // Specific Logic on Open
+                if (panelId === 'schedule') {
+                    resetScheduleForm();
+                }
+            }
         }
 
         window.closePanels = function () {
             document.querySelectorAll('.pop-panel').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-icon').forEach(n => n.classList.remove('active'));
+        }
+
+        function resetScheduleForm() {
+            const list = document.getElementById('sched-list');
+            list.innerHTML = ''; // Clear old slots
+            addTimeSlot(); // Add one fresh slot
         }
 
         // --- 2. DRIVE LOGIC ---
@@ -855,7 +875,9 @@
             div.innerHTML = `
                 <input type="time" class="sched-time bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:border-blue-500 outline-none flex-1">
                 <input type="text" placeholder="Route / Gate" class="sched-note bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:border-blue-500 outline-none flex-[2]">
-                <button onclick="this.parentElement.remove()" class="p-2 text-red-400 hover:bg-slate-800 rounded-lg">✕</button>
+                <button onclick="this.closest('.flex').remove()" class="p-2 text-red-400 hover:bg-slate-800 rounded-lg" title="Remove">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
             `;
             schedList.appendChild(div);
         }
