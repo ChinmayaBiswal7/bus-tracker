@@ -409,6 +409,14 @@
         const btnMain = document.getElementById('toggleBtn');
         const busInput = document.getElementById('busInput');
 
+        // Stats Elements
+        const statAcc = document.getElementById('stat-acc');
+        const statLat = document.getElementById('stat-lat');
+        const statLng = document.getElementById('stat-lng');
+        const statStatus = document.getElementById('stat-status');
+        const serverStatus = document.getElementById('serverStatus');
+        const statusDot = document.getElementById('status-dot');
+
         window.setMode = function (mode) {
             if (isSharing) return;
             const blob = document.getElementById('active-blob');
@@ -434,29 +442,34 @@
         });
 
         function startSession(val) {
-            if (!navigator.geolocation) return alert("No GPS");
+            if (!navigator.geolocation) return alert("GPS Not Supported");
+
+            // Initial "Searching" State
+            btnMain.innerHTML = `<span class="animate-pulse">📡</span> SEARCHING GPS...`;
+            btnMain.className = "w-full py-4 bg-slate-700 text-slate-300 rounded-2xl font-bold text-lg cursor-wait flex items-center justify-center gap-3";
+
+            serverStatus.textContent = "SEARCHING...";
+            serverStatus.className = "text-[10px] font-bold text-yellow-400 uppercase tracking-widest animate-pulse";
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-yellow-500 ring-2 ring-yellow-900 transition-colors";
+
+            busInput.disabled = true;
             isSharing = true;
 
-            // Update Big Card UI
-            btnMain.innerHTML = `<span class="animate-pulse">■</span> TERMINATE SESSION`;
-            btnMain.className = "w-full py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-red-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3";
-
-            document.getElementById('serverStatus').textContent = "LIVE BROADCAST";
-            document.getElementById('serverStatus').className = "text-[10px] font-bold text-green-400 uppercase tracking-widest animate-pulse";
-            document.getElementById('status-dot').className = "w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-green-900 transition-colors";
-            busInput.disabled = true;
-
-            // Map Icon Update
+            // Map Icon Update (Pre-emptive)
             if (userMarker) {
                 const isEv = val === 'EV';
                 userMarker.setIcon(isEv ? createEvIcon() : createBusIcon());
             }
 
-            // Auto-open Speed
             togglePanel('speed');
 
-            const opts = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
-            watchId = navigator.geolocation.watchPosition((pos) => handleGPS(pos, val), (e) => console.error(e), opts);
+            const opts = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+
+            watchId = navigator.geolocation.watchPosition(
+                (pos) => handleGPS(pos, val),
+                (err) => handleGPSError(err),
+                opts
+            );
         }
 
         function stopSession() {
@@ -468,28 +481,73 @@
             btnMain.innerHTML = `<svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>START SESSION</span>`;
             btnMain.className = "w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 group";
 
-            document.getElementById('serverStatus').textContent = "Idle";
-            document.getElementById('serverStatus').className = "text-[10px] font-bold text-slate-400 uppercase tracking-widest";
-            document.getElementById('status-dot').className = "w-2.5 h-2.5 rounded-full bg-slate-600 ring-2 ring-slate-800 transition-colors";
+            serverStatus.textContent = "IDLE";
+            serverStatus.className = "text-[10px] font-bold text-slate-400 uppercase tracking-widest";
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-slate-600 ring-2 ring-slate-800 transition-colors";
             busInput.disabled = false;
 
             updateSpeed(0);
-            // Revert to Idle Icon
             if (userMarker) userMarker.setIcon(createIdleIcon());
+
+            // Reset Stats
+            statAcc.textContent = "--"; statAcc.className = "block text-white font-bold text-xs";
+            statLat.textContent = "--"; statLng.textContent = "--";
+            statStatus.textContent = "IDLE"; statStatus.className = "block text-slate-400 font-bold text-xs";
+        }
+
+        function handleGPSError(err) {
+            console.error(err);
+            serverStatus.textContent = "GPS ERROR";
+            serverStatus.className = "text-[10px] font-bold text-red-500 uppercase tracking-widest animate-pulse";
+            statusDot.className = "w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-900";
+            alert(`GPS Error: ${err.message}. Check permissions.`);
+            stopSession();
         }
 
         function handleGPS(pos, busNo) {
+            // Once we get first lock, update Button to "Terminate"
+            if (btnMain.textContent.includes("SEARCHING")) {
+                btnMain.innerHTML = `<span class="animate-pulse">■</span> TERMINATE SESSION`;
+                btnMain.className = "w-full py-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-2xl font-bold text-lg shadow-xl shadow-red-900/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3";
+                serverStatus.textContent = "LIVE BROADCAST";
+                serverStatus.className = "text-[10px] font-bold text-green-400 uppercase tracking-widest animate-pulse";
+                statusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-green-900 transition-colors";
+            }
+
             const { latitude, longitude, speed, accuracy } = pos.coords;
             const kmh = speed ? Math.round(speed * 3.6) : 0;
+
+            // UI Updates
             updateSpeed(kmh);
-            document.getElementById('gps-stats').textContent = `Acc: ${Math.round(accuracy)}m`;
+            statLat.textContent = latitude.toFixed(4);
+            statLng.textContent = longitude.toFixed(4);
+            statAcc.textContent = `${Math.round(accuracy)} m`;
+            statStatus.textContent = "LOCKED";
+
+            // Color code accuracy
+            if (accuracy < 20) {
+                statAcc.className = "block text-green-400 font-bold text-xs";
+                statStatus.className = "block text-green-400 font-bold text-xs";
+            } else if (accuracy < 50) {
+                statAcc.className = "block text-yellow-400 font-bold text-xs";
+                statStatus.className = "block text-yellow-400 font-bold text-xs";
+            } else {
+                statAcc.className = "block text-red-400 font-bold text-xs";
+                statStatus.className = "block text-red-400 font-bold text-xs";
+            }
 
             if (map) {
                 userMarker.setLatLng([latitude, longitude]).addTo(map);
-                map.setView([latitude, longitude], 17);
+                map.setView([latitude, longitude], 18); // Tighter zoom on driver
             }
+
             const socket = io();
-            socket.emit('driver_update', { lat: latitude, lng: longitude, speed, bus_no: busNo });
+            if (socket.connected) {
+                socket.emit('driver_update', { lat: latitude, lng: longitude, speed, bus_no: busNo });
+            } else {
+                statStatus.textContent = "NET ERROR";
+                statStatus.className = "block text-red-500 font-bold text-xs";
+            }
         }
 
         function updateSpeed(kmh) {
