@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, collection, query, orderBy, limit, onSnapshot, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, query, orderBy, limit, onSnapshot, getDocs, addDoc, setDoc, doc, updateDoc, serverTimestamp, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
 const firebaseConfig = {
@@ -19,4 +19,4 @@ const db = getFirestore(app);
 const messaging = getMessaging(app);
 
 // Export for use in other modules
-export { app, auth, db, messaging, collection, query, orderBy, limit, onSnapshot, getDocs, getToken, onMessage };
+export { app, auth, db, messaging, collection, query, orderBy, limit, onSnapshot, getDocs, getToken, onMessage, addDoc, setDoc, doc, updateDoc, serverTimestamp, where };
