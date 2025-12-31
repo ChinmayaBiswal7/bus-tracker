@@ -303,27 +303,35 @@
                     </path>
                 </svg>
             </div>
-            <div class="nav-icon" id="nav-speed" onclick="togglePanel('speed')" title="Telemetry">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-            </div>
+            </svg>
         </div>
+        <div class="nav-icon" id="nav-schedule" onclick="togglePanel('schedule')" title="Schedule">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+        </div>
+        <div class="nav-icon" id="nav-speed" onclick="togglePanel('speed')" title="Telemetry">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+    </div>
 
-        <div class="nav-group-bottom flex flex-col pb-4">
-            <div
-                class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white border border-white/20 mb-4">
-                DS
-            </div>
-            <div class="nav-icon mb-0" onclick="logout()" style="color: #ef4444;">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
-                    </path>
-                </svg>
-            </div>
+    <div class="nav-group-bottom flex flex-col pb-4">
+        <div
+            class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white border border-white/20 mb-4">
+            DS
         </div>
+        <div class="nav-icon mb-0" onclick="logout()" style="color: #ef4444;">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                </path>
+            </svg>
+        </div>
+    </div>
     </div>
 
 
@@ -490,8 +498,57 @@
     </div>
 
 
-    <!-- PANEL 4: SPEEDOMETER & TELEMETRY -->
+    <!-- PANEL 4: SCHEDULE EDITOR -->
+    <div id="panel-schedule" class="pop-panel glass-card p-5 overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-white font-bold text-sm flex items-center gap-2">
+                <span>📅</span> Manage Schedule
+            </h3>
+            <button onclick="closePanels()"
+                class="mobile-close p-1.5 bg-slate-700/50 rounded-full text-slate-400 hover:text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="space-y-4">
+            <!-- Date Selection -->
+            <div>
+                <label class="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Select Date</label>
+                <input type="date" id="sched-date"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-blue-500 text-sm">
+            </div>
+
+            <!-- Route Selection -->
+            <div>
+                <label class="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Bus / Route</label>
+                <input type="text" id="sched-bus" placeholder="e.g. 42"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none text-sm uppercase">
+            </div>
+
+            <!-- Timings List -->
+            <div>
+                <label class="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Departures</label>
+                <div id="sched-list" class="space-y-2 mb-3">
+                    <!-- Dynamic Items -->
+                </div>
+                <button onclick="addTimeSlot()"
+                    class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-blue-400 text-xs font-bold rounded-xl border border-dashed border-slate-600 transition-colors">
+                    + ADD DEPARTURE
+                </button>
+            </div>
+
+            <button onclick="saveSchedule()" id="btn-save-sched"
+                class="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl text-sm font-bold shadow-lg transition-all active:scale-95">
+                PUBLISH SCHEDULE
+            </button>
+        </div>
+    </div>
+
+    <!-- PANEL 5: SPEEDOMETER (Renumbered) -->
     <div id="panel-speed" class="pop-panel glass-card p-5 flex flex-col items-center">
+        <!-- ... (Existing Speedometer Content) ... -->
         <div class="w-full flex justify-between items-center mb-2">
             <h3 class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Live Telemetry</h3>
             <button onclick="closePanels()"
@@ -785,6 +842,76 @@
             } catch (e) { console.error(e); }
         });
 
+
+        // --- 5. SCHEDULE LOGIC ---
+        const schedDate = document.getElementById('sched-date');
+        const schedList = document.getElementById('sched-list');
+        const schedBus = document.getElementById('sched-bus');
+
+        // Set default date to today
+        schedDate.valueAsDate = new Date();
+
+        window.addTimeSlot = function () {
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-center animate-[fadeIn_0.3s_ease-out]";
+            div.innerHTML = `
+                <input type="time" class="sched-time bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:border-blue-500 outline-none flex-1">
+                <input type="text" placeholder="Route / Gate" class="sched-note bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:border-blue-500 outline-none flex-[2]">
+                <button onclick="this.parentElement.remove()" class="p-2 text-red-400 hover:bg-slate-800 rounded-lg">✕</button>
+            `;
+            schedList.appendChild(div);
+        }
+
+        // Add one empty slot by default
+        addTimeSlot();
+
+        window.saveSchedule = async function () {
+            const date = schedDate.value;
+            const busNo = schedBus.value.trim().toUpperCase();
+
+            if (!date || !busNo) return alert("Please set Date and Bus Number");
+
+            // Collect Data
+            const timings = [];
+            const timeInputs = document.querySelectorAll('.sched-time');
+            const noteInputs = document.querySelectorAll('.sched-note');
+
+            timeInputs.forEach((inp, i) => {
+                if (inp.value) {
+                    timings.push({
+                        time: inp.value,
+                        note: noteInputs[i].value || "Regular Route"
+                    });
+                }
+            });
+
+            if (timings.length === 0) return alert("Add at least one timing");
+
+            const btn = document.getElementById('btn-save-sched');
+            btn.textContent = "Publishing...";
+
+            const db = getFirestore(window.firebaseApp);
+            try {
+                // Save to: schedules/{busNo}/dates/{date}
+                await setDoc(doc(db, "schedules", busNo, "dates", date), {
+                    timings: timings,
+                    updated_at: serverTimestamp()
+                });
+
+                // Also update the main 'schedules' doc to know this bus has a schedule
+                await setDoc(doc(db, "schedules", busNo), {
+                    last_update: serverTimestamp(),
+                    bus_no: busNo
+                }, { merge: true });
+
+                alert("Schedule Published! 📅");
+            } catch (e) {
+                console.error(e);
+                alert("Error saving: " + e.message);
+            } finally {
+                btn.textContent = "PUBLISH SCHEDULE";
+            }
+        }
 
         // --- 4. GENERAL CHAT ---
         const chatInput = document.getElementById('chatInput');

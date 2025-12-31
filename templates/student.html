@@ -347,6 +347,19 @@
                 <span id="badge-count"
                     class="hidden min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-red-500/20 ring-2 ring-slate-900 transform scale-100 transition-all">0</span>
             </button>
+            <button onclick="openSchedule()"
+                class="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700 hover:border-blue-500/50 transition-all group mt-2">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="p-2 bg-purple-500/20 rounded-lg text-purple-500 group-hover:text-purple-400 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                    </div>
+                    <span class="font-bold text-slate-200 text-sm">Bus Schedule</span>
+                </div>
+            </button>
             <button onclick="openDrivers()"
                 class="w-full flex items-center justify-between p-3 bg-slate-800/50 hover:bg-slate-700/50 rounded-xl border border-slate-700 hover:border-blue-500/50 transition-all group mt-2">
                 <div class="flex items-center gap-3">
@@ -466,278 +479,298 @@
                 </a>
             </div>
         </div>
-    </div>
 
-    <!-- Trip Info Card (GPS Tracking) -->
-    <!-- ... (No changes here) ... -->
+        <!-- Bus Schedules Overlay -->
+        <div id="schedule-overlay"
+            class="fixed inset-0 z-[3000] bg-slate-900/95 backdrop-blur-xl hidden flex flex-col transition-all duration-300">
+            <!-- Header -->
+            <div class="p-4 border-b border-slate-800 flex items-center gap-2 bg-slate-900 shadow-xl shrink-0">
+                <button onclick="closeSchedule()"
+                    class="p-2 -ml-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <h2 class="text-lg font-bold text-white tracking-tight ml-auto">Bus Schedule</h2>
+            </div>
 
-    <!-- Leaflet JS -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <!-- Leaflet Routing Machine -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
-    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
-    <style>
-        /* Hide the default instruction box of routing machine */
-        .leaflet-routing-container {
-            display: none !important;
-        }
-    </style>
+            <!-- Schedule List -->
+            <div id="schedule-list" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                <p class="text-slate-500 text-center italic mt-10">Loading schedules...</p>
+            </div>
+        </div>
 
-    <!-- Firebase SDK & Logic -->
-    <script type="module">
-        import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
+        <!-- Trip Info Card (GPS Tracking) -->
+        <!-- ... (No changes here) ... -->
 
-        // Use the app instance from the Auth Guard
-        const app = window.firebaseApp;
-        const db = getFirestore(app);
-        const messaging = getMessaging(app);
+        <!-- Leaflet JS -->
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <!-- Leaflet Routing Machine -->
+        <link rel="stylesheet"
+            href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+        <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
+        <style>
+            /* Hide the default instruction box of routing machine */
+            .leaflet-routing-container {
+                display: none !important;
+            }
+        </style>
 
-        // --- FCM Logic (Push Notifications) ---
-        const VAPID_KEY = "BJoiF9u6UpFvBbNQcjByY3IfcxS9yivCpdcMS5b1jpg4rFoTnM35kZzmgEuVCWgJiBrcofsPLrjh4CoO5i1DZBE";
+        <!-- Firebase SDK & Logic -->
+        <script type="module">
+            import { getFirestore, collection, query, orderBy, limit, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+            import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
-        async function initFCM() {
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    // Visual Debug: Success
-                    const debugEl = document.getElementById('debug-status');
-                    if (debugEl) debugEl.innerHTML = "🔔 Perm: GRANTED";
+            // Use the app instance from the Auth Guard
+            const app = window.firebaseApp;
+            const db = getFirestore(app);
+            const messaging = getMessaging(app);
 
-                    // Wait for Service Worker (merged sw.js)
-                    let registration;
-                    if ('serviceWorker' in navigator) {
-                        try {
-                            registration = await navigator.serviceWorker.ready;
-                        } catch (e) {
-                            console.log("SW Ready Timeout/Error", e);
+            // --- FCM Logic (Push Notifications) ---
+            const VAPID_KEY = "BJoiF9u6UpFvBbNQcjByY3IfcxS9yivCpdcMS5b1jpg4rFoTnM35kZzmgEuVCWgJiBrcofsPLrjh4CoO5i1DZBE";
+
+            async function initFCM() {
+                try {
+                    const permission = await Notification.requestPermission();
+                    if (permission === 'granted') {
+                        // Visual Debug: Success
+                        const debugEl = document.getElementById('debug-status');
+                        if (debugEl) debugEl.innerHTML = "🔔 Perm: GRANTED";
+
+                        // Wait for Service Worker (merged sw.js)
+                        let registration;
+                        if ('serviceWorker' in navigator) {
+                            try {
+                                registration = await navigator.serviceWorker.ready;
+                            } catch (e) {
+                                console.log("SW Ready Timeout/Error", e);
+                            }
                         }
-                    }
 
-                    const token = await getToken(messaging, {
-                        vapidKey: VAPID_KEY,
-                        serviceWorkerRegistration: registration
-                    });
-
-                    if (token) {
-                        console.log("🔥 FCM Token:", token);
-                        if (debugEl) debugEl.innerHTML = "🔥 Token: OK";
-
-                        // Send token to server to subscribe to 'news' topic
-                        fetch('/subscribe', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ token: token }),
+                        const token = await getToken(messaging, {
+                            vapidKey: VAPID_KEY,
+                            serviceWorkerRegistration: registration
                         });
+
+                        if (token) {
+                            console.log("🔥 FCM Token:", token);
+                            if (debugEl) debugEl.innerHTML = "🔥 Token: OK";
+
+                            // Send token to server to subscribe to 'news' topic
+                            fetch('/subscribe', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({ token: token }),
+                            });
+                        } else {
+                            console.log("No registration token available.");
+                            if (debugEl) debugEl.innerHTML = "⚠️ Token: MISSING";
+                        }
                     } else {
-                        console.log("No registration token available.");
-                        if (debugEl) debugEl.innerHTML = "⚠️ Token: MISSING";
+                        alert("Notifications Denied! Please reset permissions.");
+                        const debugEl = document.getElementById('debug-status');
+                        if (debugEl) debugEl.innerHTML = "❌ Perm: DENIED";
                     }
-                } else {
-                    alert("Notifications Denied! Please reset permissions.");
-                    const debugEl = document.getElementById('debug-status');
-                    if (debugEl) debugEl.innerHTML = "❌ Perm: DENIED";
+                } catch (err) {
+                    console.log('An error occurred while retrieving token. ', err);
                 }
-            } catch (err) {
-                console.log('An error occurred while retrieving token. ', err);
             }
-        }
 
-        // Handle foreground messages
-        onMessage(messaging, (payload) => {
-            console.log('Message received. ', payload);
-            sendNotification(payload.notification.title, payload.notification.body);
-        });
+            // Handle foreground messages
+            onMessage(messaging, (payload) => {
+                console.log('Message received. ', payload);
+                sendNotification(payload.notification.title, payload.notification.body);
+            });
 
-        // Initialize FCM
-        initFCM();
+            // Initialize FCM
+            initFCM();
 
-        // --- Notification Logic (Local) ---
-        const notifyBtn = document.getElementById('btn-notify');
-        const notifyBadge = document.getElementById('notify-badge');
+            // --- Notification Logic (Local) ---
+            const notifyBtn = document.getElementById('btn-notify');
+            const notifyBadge = document.getElementById('notify-badge');
 
-        // Check initial state
-        if (Notification.permission === 'granted') {
-            notifyBadge.classList.add('hidden');
-            notifyBtn.classList.add('text-green-400');
-        }
-
-        window.requestNotificationPermission = function () {
+            // Check initial state
             if (Notification.permission === 'granted') {
-                alert("Notifications are already enabled! 🔔");
-                return;
+                notifyBadge.classList.add('hidden');
+                notifyBtn.classList.add('text-green-400');
             }
 
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    notifyBadge.classList.add('hidden');
-                    notifyBtn.classList.replace('text-slate-400', 'text-green-400');
-                    new Notification("Notifications Enabled", {
-                        body: "You will now receive alerts for new announcements!",
+            window.requestNotificationPermission = function () {
+                if (Notification.permission === 'granted') {
+                    alert("Notifications are already enabled! 🔔");
+                    return;
+                }
+
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        notifyBadge.classList.add('hidden');
+                        notifyBtn.classList.replace('text-slate-400', 'text-green-400');
+                        new Notification("Notifications Enabled", {
+                            body: "You will now receive alerts for new announcements!",
+                            icon: "https://cdn-icons-png.flaticon.com/512/3233/3233914.png"
+                        });
+                    }
+                });
+            };
+
+            function sendNotification(title, body) {
+                if (Notification.permission === 'granted') {
+                    new Notification(title, {
+                        body: body,
                         icon: "https://cdn-icons-png.flaticon.com/512/3233/3233914.png"
                     });
                 }
-            });
-        };
+            }
 
-        function sendNotification(title, body) {
-            if (Notification.permission === 'granted') {
-                new Notification(title, {
-                    body: body,
-                    icon: "https://cdn-icons-png.flaticon.com/512/3233/3233914.png"
+
+
+            // --- Refactored Announcement Logic (Hierarchical) ---
+            // ... (badgeEl, overlayEl, listEl definitions same) ...
+
+            const badgeEl = document.getElementById('badge-count');
+            const overlayEl = document.getElementById('announcement-overlay');
+            const listEl = document.getElementById('full-announcement-list');
+
+            // 1. Listen for Active Buses (Categories)
+            // Optimize: Limit to last 50 messages to fix slow loading
+            const qBuses = query(collection(db, "announcements"), orderBy("last_updated", "desc"), limit(50));
+            let activeBuses = [];
+            let unsubscribeMessages = {}; // Store unsubscribe functions for message listeners
+
+            onSnapshot(qBuses, (snapshot) => {
+                activeBuses = [];
+
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added" || change.type === "modified") {
+                        const data = change.doc.data();
+                        // Only notify if it's a recent update (prevent spam on reload)
+                        const now = new Date();
+                        const msgTime = data.last_updated ? data.last_updated.toDate() : new Date(); // Fallback to now if missing
+
+                        // Aggressive Notification: Send popup even if app is open
+                        // Relaxed check: 60 seconds to account for network/clock skew
+                        if ((now - msgTime) < 60000) {
+                            console.log("Triggering Notification for:", data.bus_no);
+                            sendNotification(`📢 Bus ${data.bus_no}`, data.latest_message || "New announcement");
+                        }
+                    }
                 });
-            }
-        }
 
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    activeBuses.push({ id: doc.id, ...data });
+                });
+                updateBadge();
 
-
-        // --- Refactored Announcement Logic (Hierarchical) ---
-        // ... (badgeEl, overlayEl, listEl definitions same) ...
-
-        const badgeEl = document.getElementById('badge-count');
-        const overlayEl = document.getElementById('announcement-overlay');
-        const listEl = document.getElementById('full-announcement-list');
-
-        // 1. Listen for Active Buses (Categories)
-        // Optimize: Limit to last 50 messages to fix slow loading
-        const qBuses = query(collection(db, "announcements"), orderBy("last_updated", "desc"), limit(50));
-        let activeBuses = [];
-        let unsubscribeMessages = {}; // Store unsubscribe functions for message listeners
-
-        onSnapshot(qBuses, (snapshot) => {
-            activeBuses = [];
-
-            snapshot.docChanges().forEach((change) => {
-                if (change.type === "added" || change.type === "modified") {
-                    const data = change.doc.data();
-                    // Only notify if it's a recent update (prevent spam on reload)
-                    const now = new Date();
-                    const msgTime = data.last_updated ? data.last_updated.toDate() : new Date(); // Fallback to now if missing
-
-                    // Aggressive Notification: Send popup even if app is open
-                    // Relaxed check: 60 seconds to account for network/clock skew
-                    if ((now - msgTime) < 60000) {
-                        console.log("Triggering Notification for:", data.bus_no);
-                        sendNotification(`📢 Bus ${data.bus_no}`, data.latest_message || "New announcement");
-                    }
+                // FIX: Refresh list if currently viewing
+                if (!overlayEl.classList.contains('hidden')) {
+                    renderBusList();
                 }
             });
 
-            snapshot.forEach(doc => {
-                const data = doc.data();
-                activeBuses.push({ id: doc.id, ...data });
-            });
-            updateBadge();
+            function updateBadge() {
+                // ... (Same logic) ...
+                if (!badgeEl) return;
+                const lastReadStr = localStorage.getItem('lastReadTime');
+                let unread = 0;
 
-            // FIX: Refresh list if currently viewing
-            if (!overlayEl.classList.contains('hidden')) {
+                if (!activeBuses.length) {
+                    badgeEl.classList.add('hidden');
+                    return;
+                }
+
+                if (!lastReadStr) {
+                    unread = activeBuses.length;
+                } else {
+                    const lastRead = new Date(lastReadStr);
+                    unread = activeBuses.filter(bus => {
+                        if (!bus.last_updated) return false;
+                        return bus.last_updated.toDate() > lastRead;
+                    }).length;
+                }
+
+                if (unread > 0) {
+                    badgeEl.textContent = unread > 9 ? '9+' : unread;
+                    badgeEl.classList.remove('hidden');
+                } else {
+                    badgeEl.classList.add('hidden');
+                }
+            }
+
+            window.openAnnouncements = function () {
+                // ... (Same) ...
+                overlayEl.classList.remove('hidden');
                 renderBusList();
-            }
-        });
-
-        function updateBadge() {
-            // ... (Same logic) ...
-            if (!badgeEl) return;
-            const lastReadStr = localStorage.getItem('lastReadTime');
-            let unread = 0;
-
-            if (!activeBuses.length) {
-                badgeEl.classList.add('hidden');
-                return;
+                localStorage.setItem('lastReadTime', new Date().toISOString());
+                updateBadge();
+                if (window.innerWidth < 768) toggleSidebar();
             }
 
-            if (!lastReadStr) {
-                unread = activeBuses.length;
-            } else {
-                const lastRead = new Date(lastReadStr);
-                unread = activeBuses.filter(bus => {
-                    if (!bus.last_updated) return false;
-                    return bus.last_updated.toDate() > lastRead;
-                }).length;
+            window.closeAnnouncements = function () {
+                overlayEl.classList.add('hidden');
             }
 
-            if (unread > 0) {
-                badgeEl.textContent = unread > 9 ? '9+' : unread;
-                badgeEl.classList.remove('hidden');
-            } else {
-                badgeEl.classList.add('hidden');
-            }
-        }
+            function renderBusList() {
+                const currentIds = new Set(activeBuses.map(b => b.id));
 
-        window.openAnnouncements = function () {
-            // ... (Same) ...
-            overlayEl.classList.remove('hidden');
-            renderBusList();
-            localStorage.setItem('lastReadTime', new Date().toISOString());
-            updateBadge();
-            if (window.innerWidth < 768) toggleSidebar();
-        }
+                // 1. Remove orphans (Buses that are no longer active)
+                Array.from(listEl.children).forEach(child => {
+                    // Ensure we only touch bus containers
+                    if (!child.id.startsWith('bus-container-')) return;
 
-        window.closeAnnouncements = function () {
-            overlayEl.classList.add('hidden');
-        }
-
-        function renderBusList() {
-            const currentIds = new Set(activeBuses.map(b => b.id));
-
-            // 1. Remove orphans (Buses that are no longer active)
-            Array.from(listEl.children).forEach(child => {
-                // Ensure we only touch bus containers
-                if (!child.id.startsWith('bus-container-')) return;
-
-                const id = child.id.replace('bus-container-', '');
-                if (!currentIds.has(id)) {
-                    if (unsubscribeMessages[id]) {
-                        unsubscribeMessages[id]();
-                        delete unsubscribeMessages[id];
+                    const id = child.id.replace('bus-container-', '');
+                    if (!currentIds.has(id)) {
+                        if (unsubscribeMessages[id]) {
+                            unsubscribeMessages[id]();
+                            delete unsubscribeMessages[id];
+                        }
+                        child.remove();
                     }
-                    child.remove();
-                }
-            });
+                });
 
-            // 2. Clear empty message if we have buses
-            if (activeBuses.length > 0) {
-                const emptyMsg = listEl.querySelector('p.italic');
-                if (emptyMsg) emptyMsg.remove();
-            } else if (listEl.children.length === 0) {
-                listEl.innerHTML = '<p class="text-slate-500 text-center italic mt-4">No active announcements channels.</p>';
-                return;
-            }
-
-            // 3. Create or Update / Re-order
-            activeBuses.forEach(bus => {
-                const containerId = `bus-container-${bus.id}`;
-                let container = document.getElementById(containerId);
-                const busStr = bus.bus_no || bus.id;
-
-                if (!container) {
-                    // CREATE NEW
-                    container = document.createElement('div');
-                    container.className = "border border-slate-700 rounded-xl overflow-hidden mb-2 transition-all";
-                    container.id = containerId;
-
-                    // Header (Create initial structure)
-                    const header = document.createElement('div');
-                    header.className = "flex items-center justify-between p-4 bg-slate-800/80 hover:bg-slate-800 cursor-pointer";
-                    header.onclick = () => toggleBusSection(bus.id);
-                    container.appendChild(header);
-
-                    // Content Area
-                    const content = document.createElement('div');
-                    content.id = `content-${bus.id}`;
-                    content.className = "hidden bg-slate-900/50 p-4 space-y-3 min-h-[50px]";
-                    content.innerHTML = '<div class="text-center text-xs text-slate-500 py-2"><span class="animate-pulse">Loading messages...</span></div>';
-                    container.appendChild(content);
+                // 2. Clear empty message if we have buses
+                if (activeBuses.length > 0) {
+                    const emptyMsg = listEl.querySelector('p.italic');
+                    if (emptyMsg) emptyMsg.remove();
+                } else if (listEl.children.length === 0) {
+                    listEl.innerHTML = '<p class="text-slate-500 text-center italic mt-4">No active announcements channels.</p>';
+                    return;
                 }
 
-                // UPDATE CONTENT (Header) - Safe to overwrite internal HTML of header
-                // We preserve the header element itself, so onclick is safe.
-                const header = container.firstElementChild;
-                const isContentOpen = !container.lastElementChild.classList.contains('hidden');
+                // 3. Create or Update / Re-order
+                activeBuses.forEach(bus => {
+                    const containerId = `bus-container-${bus.id}`;
+                    let container = document.getElementById(containerId);
+                    const busStr = bus.bus_no || bus.id;
 
-                header.innerHTML = `
+                    if (!container) {
+                        // CREATE NEW
+                        container = document.createElement('div');
+                        container.className = "border border-slate-700 rounded-xl overflow-hidden mb-2 transition-all";
+                        container.id = containerId;
+
+                        // Header (Create initial structure)
+                        const header = document.createElement('div');
+                        header.className = "flex items-center justify-between p-4 bg-slate-800/80 hover:bg-slate-800 cursor-pointer";
+                        header.onclick = () => toggleBusSection(bus.id);
+                        container.appendChild(header);
+
+                        // Content Area
+                        const content = document.createElement('div');
+                        content.id = `content-${bus.id}`;
+                        content.className = "hidden bg-slate-900/50 p-4 space-y-3 min-h-[50px]";
+                        content.innerHTML = '<div class="text-center text-xs text-slate-500 py-2"><span class="animate-pulse">Loading messages...</span></div>';
+                        container.appendChild(content);
+                    }
+
+                    // UPDATE CONTENT (Header) - Safe to overwrite internal HTML of header
+                    // We preserve the header element itself, so onclick is safe.
+                    const header = container.firstElementChild;
+                    const isContentOpen = !container.lastElementChild.classList.contains('hidden');
+
+                    header.innerHTML = `
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-blue-900/50 flex items-center justify-center text-xs">🚌</div>
                         <span class="font-bold text-slate-200 text-sm">${busStr}</span>
@@ -750,121 +783,121 @@
                     </div>
                 `;
 
-                // RE-INSERT to ensure sort order (appendChild moves existing node)
-                listEl.appendChild(container);
-            });
+                    // RE-INSERT to ensure sort order (appendChild moves existing node)
+                    listEl.appendChild(container);
+                });
 
-        }
-
-        window.toggleBusSection = function (busId) {
-            // ... (Same) ...
-            const content = document.getElementById(`content-${busId}`);
-            const arrow = document.getElementById(`arrow-${busId}`);
-
-            if (content.classList.contains('hidden')) {
-                // Open
-                content.classList.remove('hidden');
-                arrow.classList.add('rotate-180');
-                loadMessagesForBus(busId);
-            } else {
-                // Close
-                content.classList.add('hidden');
-                arrow.classList.remove('rotate-180');
             }
-        }
 
-        function loadMessagesForBus(busId) {
-            if (unsubscribeMessages[busId]) return; // Already listening
+            window.toggleBusSection = function (busId) {
+                // ... (Same) ...
+                const content = document.getElementById(`content-${busId}`);
+                const arrow = document.getElementById(`arrow-${busId}`);
 
-            const contentDiv = document.getElementById(`content-${busId}`);
-            const qMsgs = query(collection(db, "announcements", busId, "messages"), orderBy("timestamp", "desc"), limit(20));
-
-            const unsub = onSnapshot(qMsgs, (snapshot) => {
-                if (snapshot.empty) {
-                    contentDiv.innerHTML = '<p class="text-xs text-slate-500 text-center italic">No messages yet.</p>';
+                if (content.classList.contains('hidden')) {
+                    // Open
+                    content.classList.remove('hidden');
+                    arrow.classList.add('rotate-180');
+                    loadMessagesForBus(busId);
                 } else {
-                    // Detect NEW messages for notifications
-                    snapshot.docChanges().forEach((change) => {
-                        if (change.type === "added") {
-                            const data = change.doc.data();
-                            // Logic: Only notify if timestamp is very recent (< 1 min ago)
-                            // This prevents spamming on initial page load (history)
-                            if (data.timestamp) {
-                                const diff = new Date() - data.timestamp.toDate();
-                                if (diff < 60000) { // 60 seconds
-                                    sendNotification(`📢 Alert: ${busId}`, data.message);
+                    // Close
+                    content.classList.add('hidden');
+                    arrow.classList.remove('rotate-180');
+                }
+            }
+
+            function loadMessagesForBus(busId) {
+                if (unsubscribeMessages[busId]) return; // Already listening
+
+                const contentDiv = document.getElementById(`content-${busId}`);
+                const qMsgs = query(collection(db, "announcements", busId, "messages"), orderBy("timestamp", "desc"), limit(20));
+
+                const unsub = onSnapshot(qMsgs, (snapshot) => {
+                    if (snapshot.empty) {
+                        contentDiv.innerHTML = '<p class="text-xs text-slate-500 text-center italic">No messages yet.</p>';
+                    } else {
+                        // Detect NEW messages for notifications
+                        snapshot.docChanges().forEach((change) => {
+                            if (change.type === "added") {
+                                const data = change.doc.data();
+                                // Logic: Only notify if timestamp is very recent (< 1 min ago)
+                                // This prevents spamming on initial page load (history)
+                                if (data.timestamp) {
+                                    const diff = new Date() - data.timestamp.toDate();
+                                    if (diff < 60000) { // 60 seconds
+                                        sendNotification(`📢 Alert: ${busId}`, data.message);
+                                    }
                                 }
                             }
-                        }
-                    });
+                        });
 
-                    contentDiv.innerHTML = ''; // Clear loading
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        renderMessage(contentDiv, data);
-                    });
-                }
-            });
+                        contentDiv.innerHTML = ''; // Clear loading
+                        snapshot.forEach(doc => {
+                            const data = doc.data();
+                            renderMessage(contentDiv, data);
+                        });
+                    }
+                });
 
-            unsubscribeMessages[busId] = unsub;
-        }
-
-        function renderMessage(container, data) {
-            let dateStr = "Just now";
-            if (data.timestamp) {
-                const d = data.timestamp.toDate();
-                dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', ' + d.toLocaleDateString();
+                unsubscribeMessages[busId] = unsub;
             }
 
-            const item = document.createElement('div');
-            item.className = "bg-slate-800/40 border-l-2 border-blue-500 pl-3 py-1";
-            item.innerHTML = `
+            function renderMessage(container, data) {
+                let dateStr = "Just now";
+                if (data.timestamp) {
+                    const d = data.timestamp.toDate();
+                    dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', ' + d.toLocaleDateString();
+                }
+
+                const item = document.createElement('div');
+                item.className = "bg-slate-800/40 border-l-2 border-blue-500 pl-3 py-1";
+                item.innerHTML = `
                 <p class="text-slate-300 text-sm leading-relaxed mb-1">${data.message}</p>
                 <p class="text-[10px] text-slate-500">${dateStr}</p>
             `;
-            container.appendChild(item);
-        }
+                container.appendChild(item);
+            }
 
-        // Sidebar Toggle Logic
-        window.toggleSidebar = function () {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('-translate-x-full');
-        }
+            // Sidebar Toggle Logic
+            window.toggleSidebar = function () {
+                const sidebar = document.getElementById('sidebar');
+                sidebar.classList.toggle('-translate-x-full');
+            }
 
-        // --- Driver Directory Logic ---
-        const driversOverlay = document.getElementById('drivers-overlay');
-        const driverListEl = document.getElementById('driver-list');
-        const profileModal = document.getElementById('profile-modal');
-        let driversUnsub = null;
+            // --- Driver Directory Logic ---
+            const driversOverlay = document.getElementById('drivers-overlay');
+            const driverListEl = document.getElementById('driver-list');
+            const profileModal = document.getElementById('profile-modal');
+            let driversUnsub = null;
 
-        window.openDrivers = function () {
-            driversOverlay.classList.remove('hidden');
-            if (window.innerWidth < 768) toggleSidebar();
-            fetchDrivers();
-        }
+            window.openDrivers = function () {
+                driversOverlay.classList.remove('hidden');
+                if (window.innerWidth < 768) toggleSidebar();
+                fetchDrivers();
+            }
 
-        window.closeDrivers = function () {
-            driversOverlay.classList.add('hidden');
-            if (driversUnsub) driversUnsub(); // Stop listening when closed
-        }
+            window.closeDrivers = function () {
+                driversOverlay.classList.add('hidden');
+                if (driversUnsub) driversUnsub(); // Stop listening when closed
+            }
 
-        function fetchDrivers() {
-            const q = query(collection(db, "drivers"), orderBy("name"));
+            function fetchDrivers() {
+                const q = query(collection(db, "drivers"), orderBy("name"));
 
-            driversUnsub = onSnapshot(q, (snapshot) => {
-                if (snapshot.empty) {
-                    driverListEl.innerHTML = '<p class="text-slate-500 text-center italic mt-10">No registered drivers found.</p>';
-                    return;
-                }
+                driversUnsub = onSnapshot(q, (snapshot) => {
+                    if (snapshot.empty) {
+                        driverListEl.innerHTML = '<p class="text-slate-500 text-center italic mt-10">No registered drivers found.</p>';
+                        return;
+                    }
 
-                driverListEl.innerHTML = '';
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const card = document.createElement('div');
-                    card.className = "bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex items-center justify-between hover:bg-slate-800 hover:border-emerald-500/50 transition-all cursor-pointer group";
-                    card.onclick = () => showProfile(data);
+                    driverListEl.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const card = document.createElement('div');
+                        card.className = "bg-slate-800/60 p-4 rounded-xl border border-slate-700 flex items-center justify-between hover:bg-slate-800 hover:border-emerald-500/50 transition-all cursor-pointer group";
+                        card.onclick = () => showProfile(data);
 
-                    card.innerHTML = `
+                        card.innerHTML = `
                         <div class="flex items-center gap-4">
                             <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
                                 👮‍♂️
@@ -878,348 +911,348 @@
                              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         </div>
                     `;
-                    driverListEl.appendChild(card);
+                        driverListEl.appendChild(card);
+                    });
                 });
+            }
+
+            window.showProfile = function (data) {
+                document.getElementById('profile-name').textContent = data.name || "Driver";
+                document.getElementById('profile-mobile').textContent = data.mobile || "N/A";
+                document.getElementById('profile-call-btn').href = `tel:${data.mobile}`;
+                profileModal.classList.remove('hidden');
+            }
+
+            window.closeProfile = function () {
+                profileModal.classList.add('hidden');
+            }
+        </script>
+
+        <script>
+            // Initialize Map
+            const map = L.map('map', { zoomControl: false }).setView([20.2961, 85.8245], 13);
+            window.map = map;
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            const socket = io();
+
+            // GPS & Routing State
+            let userMarker = null;
+            let routeLine = null;
+            let targetBusId = null;
+            let userLat = null, userLng = null;
+            const tripCard = document.getElementById('trip-info-card');
+            const tripEta = document.getElementById('trip-eta');
+            const tripDist = document.getElementById('trip-dist');
+
+            // User Location Icon
+            const userIcon = L.divIcon({
+                className: 'custom-user-icon',
+                html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg pulse-ring"></div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
             });
-        }
 
-        window.showProfile = function (data) {
-            document.getElementById('profile-name').textContent = data.name || "Driver";
-            document.getElementById('profile-mobile').textContent = data.mobile || "N/A";
-            document.getElementById('profile-call-btn').href = `tel:${data.mobile}`;
-            profileModal.classList.remove('hidden');
-        }
+            // Robust Geolocation Handling
+            let watchId = null;
 
-        window.closeProfile = function () {
-            profileModal.classList.add('hidden');
-        }
-    </script>
+            // UI Helpers
+            const gpsDot = document.getElementById('gps-dot');
+            const gpsText = document.getElementById('gps-text');
+            const serverDot = document.getElementById('server-dot');
+            const serverText = document.getElementById('server-text');
 
-    <script>
-        // Initialize Map
-        const map = L.map('map', { zoomControl: false }).setView([20.2961, 85.8245], 13);
-        window.map = map;
+            // Socket Connection Status
+            socket.on('connect', () => {
+                if (serverDot && serverText) {
+                    serverDot.className = "w-2 h-2 rounded-full bg-green-500";
+                    serverText.textContent = "Server: Live";
+                }
+            });
 
-        L.control.zoom({ position: 'bottomright' }).addTo(map);
+            socket.on('disconnect', () => {
+                if (serverDot && serverText) {
+                    serverDot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
+                    serverText.textContent = "Server: Offline";
+                }
+            });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
+            function updateGpsStatus(state, msg) {
+                if (!gpsText || !gpsDot) return;
+                gpsText.textContent = msg;
 
-        const socket = io();
-
-        // GPS & Routing State
-        let userMarker = null;
-        let routeLine = null;
-        let targetBusId = null;
-        let userLat = null, userLng = null;
-        const tripCard = document.getElementById('trip-info-card');
-        const tripEta = document.getElementById('trip-eta');
-        const tripDist = document.getElementById('trip-dist');
-
-        // User Location Icon
-        const userIcon = L.divIcon({
-            className: 'custom-user-icon',
-            html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg pulse-ring"></div>`,
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
-        });
-
-        // Robust Geolocation Handling
-        let watchId = null;
-
-        // UI Helpers
-        const gpsDot = document.getElementById('gps-dot');
-        const gpsText = document.getElementById('gps-text');
-        const serverDot = document.getElementById('server-dot');
-        const serverText = document.getElementById('server-text');
-
-        // Socket Connection Status
-        socket.on('connect', () => {
-            if (serverDot && serverText) {
-                serverDot.className = "w-2 h-2 rounded-full bg-green-500";
-                serverText.textContent = "Server: Live";
-            }
-        });
-
-        socket.on('disconnect', () => {
-            if (serverDot && serverText) {
-                serverDot.className = "w-2 h-2 rounded-full bg-red-500 animate-pulse";
-                serverText.textContent = "Server: Offline";
-            }
-        });
-
-        function updateGpsStatus(state, msg) {
-            if (!gpsText || !gpsDot) return;
-            gpsText.textContent = msg;
-
-            if (state === 'searching') {
-                gpsDot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
-            } else if (state === 'active') {
-                gpsDot.className = "w-2 h-2 rounded-full bg-green-500";
-            } else if (state === 'error') {
-                gpsDot.className = "w-2 h-2 rounded-full bg-red-500";
-            }
-        }
-
-        function startLocationTracking(highAccuracy = true) {
-            if (watchId) navigator.geolocation.clearWatch(watchId);
-
-            // Fail fast on High Accuracy (Indoor fix), give more time for Low Accuracy
-            // usage: startLocationTracking(true) -> tries high acc, if fail -> tries low acc
-            const gpsTimeout = highAccuracy ? 5000 : 30000;
-            const maxAge = highAccuracy ? 0 : Infinity; // Accept any cached position for low accuracy
-
-            const options = {
-                enableHighAccuracy: highAccuracy,
-                timeout: gpsTimeout,
-                maximumAge: maxAge
-            };
-
-            console.log(`Starting GPS (High Acc: ${highAccuracy}, Timeout: ${gpsTimeout}ms)...`);
-            updateGpsStatus('searching', `GPS: Locating (${highAccuracy ? 'High' : 'Low'})...`);
-
-            watchId = navigator.geolocation.watchPosition(
-                (pos) => {
-                    // Success
-                    userLat = pos.coords.latitude;
-                    userLng = pos.coords.longitude;
-                    updateUserMarker(userLat, userLng);
-                    updateGpsStatus('active', 'GPS: Active');
-
-                    if (targetBusId) updateRoute();
-
-                    // Hide error card if visible
-                    const tripDist = document.getElementById('trip-dist');
-                    if (tripDist && tripDist.textContent.includes("GPS")) {
-                        document.getElementById('trip-info-card').classList.add('hidden');
-                    }
-                },
-                (err) => {
-                    console.warn(`GPS Error (${highAccuracy ? 'High' : 'Low'} Acc):`, err);
-
-                    // If High Accuracy fails (Timeout/Error), try Low Accuracy automatically
-                    if (highAccuracy) {
-                        console.log("High accuracy failed, switching to low accuracy...");
-                        startLocationTracking(false);
-                        return;
-                    }
-
-                    // Show Error to User
-                    updateGpsStatus('error', 'GPS: Failed');
-
-                    const tripCard = document.getElementById('trip-info-card');
-                    const tripDist = document.getElementById('trip-dist');
-                    const tripEta = document.getElementById('trip-eta');
-
-                    tripCard.classList.remove('hidden');
-                    tripEta.textContent = "⚠️";
-
-                    if (err.code === 1) tripDist.textContent = "GPS Access Denied";
-                    else if (err.code === 2) tripDist.textContent = "Location Unavailable";
-                    else if (err.code === 3) tripDist.textContent = "GPS Signal Weak";
-                    else tripDist.textContent = "GPS Error";
-                },
-                options
-            );
-        }
-
-        // Initialize Geolocation
-        if (navigator.geolocation) {
-            // Start with Low Accuracy (Wifi/IP) for instant results
-            // High Accuracy is often blocked/slow indoors
-            startLocationTracking(false);
-        } else {
-            console.error("Browser does not support Geolocation");
-        }
-
-        function updateUserMarker(lat, lng) {
-            if (userMarker) {
-                userMarker.setLatLng([lat, lng]);
-            } else {
-                userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
-            }
-        }
-
-        // Routing Machine Control
-        let routingControl = null;
-
-        function startTrackingRoute(busId) {
-            // Allow re-clicking to refresh UI even if already selected
-            targetBusId = busId;
-            tripCard.classList.remove('hidden');
-            updateRoute();
-        }
-
-        function stopTrackingRoute() {
-            targetBusId = null;
-            tripCard.classList.add('hidden');
-
-            if (routingControl) {
-                map.removeControl(routingControl);
-                routingControl = null;
-            }
-            // Remove legacy lines just in case
-            if (routeLine) {
-                map.removeLayer(routeLine);
-                routeLine = null;
-            }
-            // Remove dashed fallback line
-            if (window.fallbackLine) {
-                map.removeLayer(window.fallbackLine);
-                window.fallbackLine = null;
-            }
-        }
-
-        function updateRoute() {
-            if (!targetBusId || !markers[targetBusId]) return;
-
-            // If we don't have user location yet
-            if (!userLat) {
-                tripEta.textContent = "--";
-                tripDist.textContent = "Locating you...";
-                tripCard.classList.remove('hidden');
-
-                // Force GPS update check if stuck
-                if (!watchId) startLocationTracking(false);
-                return;
-            }
-
-            const busMarker = markers[targetBusId];
-
-            // UI Update for Offline Status
-            if (busMarker.isOffline) {
-                tripCard.classList.add('grayscale');
-                tripEta.style.color = '#94a3b8'; // Slate-400
-                tripDist.innerText += " (Offline)";
-            } else {
-                tripCard.classList.remove('grayscale');
-                tripEta.style.color = 'white';
-            }
-
-            const busLatLng = busMarker.getLatLng();
-
-            // Swap: From Bus (Source) -> To User (Destination)
-            const waypoints = [
-                L.latLng(busLatLng.lat, busLatLng.lng),
-                L.latLng(userLat, userLng)
-            ];
-
-            // Perform Instant Estimate (Haversine) & Draw Visual Fallback
-            runFallbackRouting(busLatLng); // Uses simple line + math immediately
-
-            // If control exists, update waypoints (attempting road match)
-            if (routingControl) {
-                if (window.routingTimer) clearTimeout(window.routingTimer);
-                startRoutingTimer(busLatLng);
-                routingControl.setWaypoints(waypoints);
-            } else {
-                // Initialize new control
-                tripCard.classList.remove('hidden');
-
-                if (window.routingTimer) clearTimeout(window.routingTimer);
-                startRoutingTimer(busLatLng);
-
-                try {
-                    routingControl = L.Routing.control({
-                        waypoints: waypoints,
-                        router: L.Routing.osrmv1({
-                            serviceUrl: 'https://router.project-osrm.org/route/v1',
-                            profile: 'driving',
-                            timeout: 5000,
-                            routingOptions: {
-                                alternatives: false,
-                                steps: false,
-                                overview: 'full'
-                            }
-                        }),
-                        lineOptions: {
-                            styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }]
-                        },
-                        createMarker: function () { return null; },
-                        addWaypoints: false,
-                        draggableWaypoints: false,
-                        fitSelectedRoutes: false,
-                        show: false
-                    }).addTo(map);
-
-                    // Listeners
-                    routingControl.on('routesfound', function (e) {
-                        // Success! Remove dashed fallback line
-                        if (window.fallbackLine) {
-                            map.removeLayer(window.fallbackLine);
-                            window.fallbackLine = null;
-                        }
-                        if (window.routingTimer) clearTimeout(window.routingTimer);
-
-                        const routes = e.routes;
-                        if (!routes || routes.length === 0) return;
-
-                        const summary = routes[0].summary;
-                        const durationMins = Math.ceil(summary.totalTime / 60);
-                        const distanceKm = (summary.totalDistance / 1000).toFixed(1);
-
-                        tripEta.textContent = `${durationMins} min`;
-                        tripDist.textContent = `(${distanceKm} km)`;
-                    });
-
-                    routingControl.on('routingerror', function (e) {
-                        if (window.routingTimer) clearTimeout(window.routingTimer);
-                        // Do nothing visually, fallback line is already there from start
-                        console.warn("Routing failed, keeping fallback line.");
-                    });
-
-                } catch (err) {
-                    console.error("Routing Init Error:", err);
-                    // Fallback line already drawn
+                if (state === 'searching') {
+                    gpsDot.className = "w-2 h-2 rounded-full bg-yellow-500 animate-pulse";
+                } else if (state === 'active') {
+                    gpsDot.className = "w-2 h-2 rounded-full bg-green-500";
+                } else if (state === 'error') {
+                    gpsDot.className = "w-2 h-2 rounded-full bg-red-500";
                 }
             }
-        }
 
-        // --- Routing Timeouts Helpers ---
-        function startRoutingTimer(busLatLng) {
-            window.routingTimer = setTimeout(() => {
-                console.warn("OSRM Timeout (5s) - Keeping Direct Line");
-                // Stop the routing spinner effect if any (not implemented, but good practice)
-                // We just let the dashed line stay.
-            }, 5000);
-        }
+            function startLocationTracking(highAccuracy = true) {
+                if (watchId) navigator.geolocation.clearWatch(watchId);
 
-        function runFallbackRouting(busLatLng) {
-            const dist = map.distance([userLat, userLng], busLatLng);
-            const distKm = (dist / 1000).toFixed(1);
-            const timeMins = Math.ceil((distKm / 30) * 60);
+                // Fail fast on High Accuracy (Indoor fix), give more time for Low Accuracy
+                // usage: startLocationTracking(true) -> tries high acc, if fail -> tries low acc
+                const gpsTimeout = highAccuracy ? 5000 : 30000;
+                const maxAge = highAccuracy ? 0 : Infinity; // Accept any cached position for low accuracy
 
-            tripDist.textContent = `(${distKm} km)`;
-            tripEta.textContent = `${timeMins} min`;
+                const options = {
+                    enableHighAccuracy: highAccuracy,
+                    timeout: gpsTimeout,
+                    maximumAge: maxAge
+                };
 
-            // Draw Dashed Line (Visual Fallback)
-            const waypoints = [
-                [userLat, userLng],
-                [busLatLng.lat, busLatLng.lng]
-            ];
+                console.log(`Starting GPS (High Acc: ${highAccuracy}, Timeout: ${gpsTimeout}ms)...`);
+                updateGpsStatus('searching', `GPS: Locating (${highAccuracy ? 'High' : 'Low'})...`);
 
-            if (window.fallbackLine) map.removeLayer(window.fallbackLine);
+                watchId = navigator.geolocation.watchPosition(
+                    (pos) => {
+                        // Success
+                        userLat = pos.coords.latitude;
+                        userLng = pos.coords.longitude;
+                        updateUserMarker(userLat, userLng);
+                        updateGpsStatus('active', 'GPS: Active');
 
-            window.fallbackLine = L.polyline(waypoints, {
-                color: '#64748b', // Slate-500
-                weight: 4,
-                dashArray: '10, 10', // Dashed
-                opacity: 0.7
-            }).addTo(map);
-        }
+                        if (targetBusId) updateRoute();
+
+                        // Hide error card if visible
+                        const tripDist = document.getElementById('trip-dist');
+                        if (tripDist && tripDist.textContent.includes("GPS")) {
+                            document.getElementById('trip-info-card').classList.add('hidden');
+                        }
+                    },
+                    (err) => {
+                        console.warn(`GPS Error (${highAccuracy ? 'High' : 'Low'} Acc):`, err);
+
+                        // If High Accuracy fails (Timeout/Error), try Low Accuracy automatically
+                        if (highAccuracy) {
+                            console.log("High accuracy failed, switching to low accuracy...");
+                            startLocationTracking(false);
+                            return;
+                        }
+
+                        // Show Error to User
+                        updateGpsStatus('error', 'GPS: Failed');
+
+                        const tripCard = document.getElementById('trip-info-card');
+                        const tripDist = document.getElementById('trip-dist');
+                        const tripEta = document.getElementById('trip-eta');
+
+                        tripCard.classList.remove('hidden');
+                        tripEta.textContent = "⚠️";
+
+                        if (err.code === 1) tripDist.textContent = "GPS Access Denied";
+                        else if (err.code === 2) tripDist.textContent = "Location Unavailable";
+                        else if (err.code === 3) tripDist.textContent = "GPS Signal Weak";
+                        else tripDist.textContent = "GPS Error";
+                    },
+                    options
+                );
+            }
+
+            // Initialize Geolocation
+            if (navigator.geolocation) {
+                // Start with Low Accuracy (Wifi/IP) for instant results
+                // High Accuracy is often blocked/slow indoors
+                startLocationTracking(false);
+            } else {
+                console.error("Browser does not support Geolocation");
+            }
+
+            function updateUserMarker(lat, lng) {
+                if (userMarker) {
+                    userMarker.setLatLng([lat, lng]);
+                } else {
+                    userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+                }
+            }
+
+            // Routing Machine Control
+            let routingControl = null;
+
+            function startTrackingRoute(busId) {
+                // Allow re-clicking to refresh UI even if already selected
+                targetBusId = busId;
+                tripCard.classList.remove('hidden');
+                updateRoute();
+            }
+
+            function stopTrackingRoute() {
+                targetBusId = null;
+                tripCard.classList.add('hidden');
+
+                if (routingControl) {
+                    map.removeControl(routingControl);
+                    routingControl = null;
+                }
+                // Remove legacy lines just in case
+                if (routeLine) {
+                    map.removeLayer(routeLine);
+                    routeLine = null;
+                }
+                // Remove dashed fallback line
+                if (window.fallbackLine) {
+                    map.removeLayer(window.fallbackLine);
+                    window.fallbackLine = null;
+                }
+            }
+
+            function updateRoute() {
+                if (!targetBusId || !markers[targetBusId]) return;
+
+                // If we don't have user location yet
+                if (!userLat) {
+                    tripEta.textContent = "--";
+                    tripDist.textContent = "Locating you...";
+                    tripCard.classList.remove('hidden');
+
+                    // Force GPS update check if stuck
+                    if (!watchId) startLocationTracking(false);
+                    return;
+                }
+
+                const busMarker = markers[targetBusId];
+
+                // UI Update for Offline Status
+                if (busMarker.isOffline) {
+                    tripCard.classList.add('grayscale');
+                    tripEta.style.color = '#94a3b8'; // Slate-400
+                    tripDist.innerText += " (Offline)";
+                } else {
+                    tripCard.classList.remove('grayscale');
+                    tripEta.style.color = 'white';
+                }
+
+                const busLatLng = busMarker.getLatLng();
+
+                // Swap: From Bus (Source) -> To User (Destination)
+                const waypoints = [
+                    L.latLng(busLatLng.lat, busLatLng.lng),
+                    L.latLng(userLat, userLng)
+                ];
+
+                // Perform Instant Estimate (Haversine) & Draw Visual Fallback
+                runFallbackRouting(busLatLng); // Uses simple line + math immediately
+
+                // If control exists, update waypoints (attempting road match)
+                if (routingControl) {
+                    if (window.routingTimer) clearTimeout(window.routingTimer);
+                    startRoutingTimer(busLatLng);
+                    routingControl.setWaypoints(waypoints);
+                } else {
+                    // Initialize new control
+                    tripCard.classList.remove('hidden');
+
+                    if (window.routingTimer) clearTimeout(window.routingTimer);
+                    startRoutingTimer(busLatLng);
+
+                    try {
+                        routingControl = L.Routing.control({
+                            waypoints: waypoints,
+                            router: L.Routing.osrmv1({
+                                serviceUrl: 'https://router.project-osrm.org/route/v1',
+                                profile: 'driving',
+                                timeout: 5000,
+                                routingOptions: {
+                                    alternatives: false,
+                                    steps: false,
+                                    overview: 'full'
+                                }
+                            }),
+                            lineOptions: {
+                                styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }]
+                            },
+                            createMarker: function () { return null; },
+                            addWaypoints: false,
+                            draggableWaypoints: false,
+                            fitSelectedRoutes: false,
+                            show: false
+                        }).addTo(map);
+
+                        // Listeners
+                        routingControl.on('routesfound', function (e) {
+                            // Success! Remove dashed fallback line
+                            if (window.fallbackLine) {
+                                map.removeLayer(window.fallbackLine);
+                                window.fallbackLine = null;
+                            }
+                            if (window.routingTimer) clearTimeout(window.routingTimer);
+
+                            const routes = e.routes;
+                            if (!routes || routes.length === 0) return;
+
+                            const summary = routes[0].summary;
+                            const durationMins = Math.ceil(summary.totalTime / 60);
+                            const distanceKm = (summary.totalDistance / 1000).toFixed(1);
+
+                            tripEta.textContent = `${durationMins} min`;
+                            tripDist.textContent = `(${distanceKm} km)`;
+                        });
+
+                        routingControl.on('routingerror', function (e) {
+                            if (window.routingTimer) clearTimeout(window.routingTimer);
+                            // Do nothing visually, fallback line is already there from start
+                            console.warn("Routing failed, keeping fallback line.");
+                        });
+
+                    } catch (err) {
+                        console.error("Routing Init Error:", err);
+                        // Fallback line already drawn
+                    }
+                }
+            }
+
+            // --- Routing Timeouts Helpers ---
+            function startRoutingTimer(busLatLng) {
+                window.routingTimer = setTimeout(() => {
+                    console.warn("OSRM Timeout (5s) - Keeping Direct Line");
+                    // Stop the routing spinner effect if any (not implemented, but good practice)
+                    // We just let the dashed line stay.
+                }, 5000);
+            }
+
+            function runFallbackRouting(busLatLng) {
+                const dist = map.distance([userLat, userLng], busLatLng);
+                const distKm = (dist / 1000).toFixed(1);
+                const timeMins = Math.ceil((distKm / 30) * 60);
+
+                tripDist.textContent = `(${distKm} km)`;
+                tripEta.textContent = `${timeMins} min`;
+
+                // Draw Dashed Line (Visual Fallback)
+                const waypoints = [
+                    [userLat, userLng],
+                    [busLatLng.lat, busLatLng.lng]
+                ];
+
+                if (window.fallbackLine) map.removeLayer(window.fallbackLine);
+
+                window.fallbackLine = L.polyline(waypoints, {
+                    color: '#64748b', // Slate-500
+                    weight: 4,
+                    dashArray: '10, 10', // Dashed
+                    opacity: 0.7
+                }).addTo(map);
+            }
 
 
-        const markers = {};
-        const circles = {};
-        let currentFilter = "";
-        let offlineResult = null; // Store result from server search if offline
+            const markers = {};
+            const circles = {};
+            let currentFilter = "";
+            let offlineResult = null; // Store result from server search if offline
 
-        function createBusIcon(busNo) {
-            return L.divIcon({
-                className: 'custom-div-icon',
-                // Orange Icon for Bus
-                html: `<div style="position: relative;">
+            function createBusIcon(busNo) {
+                return L.divIcon({
+                    className: 'custom-div-icon',
+                    // Orange Icon for Bus
+                    html: `<div style="position: relative;">
                         <div style="background-color: #f59e0b; width: 44px; height: 44px; border-radius: 50%; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
                             <span style="font-size: 22px;">🚌</span>
                         </div>
@@ -1227,16 +1260,16 @@
                             ${busNo}
                         </div>
                        </div>`,
-                iconSize: [44, 44],
-                iconAnchor: [22, 22]
-            });
-        }
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                });
+            }
 
-        function createEvIcon(busNo) {
-            return L.divIcon({
-                className: 'custom-div-icon',
-                // Green Icon for EV
-                html: `<div style="position: relative;">
+            function createEvIcon(busNo) {
+                return L.divIcon({
+                    className: 'custom-div-icon',
+                    // Green Icon for EV
+                    html: `<div style="position: relative;">
                         <div style="background-color: #10b981; width: 44px; height: 44px; border-radius: 50%; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
                             <span style="font-size: 22px;">⚡</span>
                         </div>
@@ -1244,107 +1277,107 @@
                             EV Shuttle
                         </div>
                        </div>`,
-                iconSize: [44, 44],
-                iconAnchor: [22, 22]
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                });
+            }
+
+            const trackInput = document.getElementById('trackInput');
+            const statusP = document.getElementById('tracking-status');
+
+            function quickSearch(busNo) {
+                trackInput.value = busNo;
+                setFilter();
+            }
+
+            function setFilter() {
+                const val = trackInput.value.trim().toUpperCase();
+                currentFilter = val;
+                offlineResult = null; // Reset offline result
+
+                // Logic to auto-select matching bus
+                let foundSid = null;
+                if (val) {
+                    for (let sid in markers) {
+                        if (markers[sid]._busNo === val) {
+                            foundSid = sid;
+                            break;
+                        }
+                    }
+
+                    if (foundSid) {
+                        startTrackingRoute(foundSid);
+                        // Optional: Center map
+                        // map.setView(markers[foundSid].getLatLng(), 15);
+                    }
+
+                    statusP.innerHTML = `<span>Filtered:</span> <b class="text-white">${val}</b> <button onclick="clearFilter()" class="ml-auto text-red-400 hover:text-red-300 text-xs underline">Reset</button>`;
+                    statusP.classList.remove('hidden');
+
+                    // Server Search (for offline/history check)
+                    socket.emit('search_bus', val);
+                } else {
+                    clearFilter();
+                    stopTrackingRoute();
+                }
+                refreshMap(); // Refresh immediately for local filtering
+            }
+
+            window.clearFilter = function () {
+                currentFilter = "";
+                trackInput.value = "";
+                offlineResult = null;
+                statusP.classList.add('hidden');
+                stopTrackingRoute();
+                refreshMap();
+            }
+
+            // Listener for server search results
+            socket.on('search_result', (data) => {
+                if (data.status === 'offline' || data.status === 'not_found') {
+                    offlineResult = data;
+                    updateBusList(); // Force update to show offline card
+                }
             });
-        }
 
-        const trackInput = document.getElementById('trackInput');
-        const statusP = document.getElementById('tracking-status');
-
-        function quickSearch(busNo) {
-            trackInput.value = busNo;
-            setFilter();
-        }
-
-        function setFilter() {
-            const val = trackInput.value.trim().toUpperCase();
-            currentFilter = val;
-            offlineResult = null; // Reset offline result
-
-            // Logic to auto-select matching bus
-            let foundSid = null;
-            if (val) {
-                for (let sid in markers) {
-                    if (markers[sid]._busNo === val) {
-                        foundSid = sid;
-                        break;
+            function refreshMap() {
+                for (const [sid, marker] of Object.entries(markers)) {
+                    if (shouldShow(marker._busNo)) {
+                        if (!map.hasLayer(marker)) map.addLayer(marker);
+                        if (circles[sid] && !map.hasLayer(circles[sid])) map.addLayer(circles[sid]);
+                    } else {
+                        if (map.hasLayer(marker)) map.removeLayer(marker);
+                        if (circles[sid] && map.hasLayer(circles[sid])) map.removeLayer(circles[sid]);
                     }
                 }
-
-                if (foundSid) {
-                    startTrackingRoute(foundSid);
-                    // Optional: Center map
-                    // map.setView(markers[foundSid].getLatLng(), 15);
-                }
-
-                statusP.innerHTML = `<span>Filtered:</span> <b class="text-white">${val}</b> <button onclick="clearFilter()" class="ml-auto text-red-400 hover:text-red-300 text-xs underline">Reset</button>`;
-                statusP.classList.remove('hidden');
-
-                // Server Search (for offline/history check)
-                socket.emit('search_bus', val);
-            } else {
-                clearFilter();
-                stopTrackingRoute();
+                updateBusList();
             }
-            refreshMap(); // Refresh immediately for local filtering
-        }
 
-        window.clearFilter = function () {
-            currentFilter = "";
-            trackInput.value = "";
-            offlineResult = null;
-            statusP.classList.add('hidden');
-            stopTrackingRoute();
-            refreshMap();
-        }
+            function shouldShow(busNo) {
+                // EVs are "Base Service" - Always show them regardless of filter
+                if (busNo.startsWith("EV-")) return true;
 
-        // Listener for server search results
-        socket.on('search_result', (data) => {
-            if (data.status === 'offline' || data.status === 'not_found') {
-                offlineResult = data;
-                updateBusList(); // Force update to show offline card
+                if (!currentFilter) return true;
+                return busNo.includes(currentFilter);
             }
-        });
-
-        function refreshMap() {
-            for (const [sid, marker] of Object.entries(markers)) {
-                if (shouldShow(marker._busNo)) {
-                    if (!map.hasLayer(marker)) map.addLayer(marker);
-                    if (circles[sid] && !map.hasLayer(circles[sid])) map.addLayer(circles[sid]);
-                } else {
-                    if (map.hasLayer(marker)) map.removeLayer(marker);
-                    if (circles[sid] && map.hasLayer(circles[sid])) map.removeLayer(circles[sid]);
-                }
-            }
-            updateBusList();
-        }
-
-        function shouldShow(busNo) {
-            // EVs are "Base Service" - Always show them regardless of filter
-            if (busNo.startsWith("EV-")) return true;
-
-            if (!currentFilter) return true;
-            return busNo.includes(currentFilter);
-        }
 
 
 
-        function renderBusCard(sid, marker) {
-            const isEv = marker._busNo.startsWith("EV-");
-            const typeIcon = isEv ? "⚡" : "🚌";
-            const typeColor = isEv ? "text-emerald-400" : "text-blue-100";
-            const iconBg = isEv ? "bg-emerald-900/50" : "bg-blue-900/50";
-            const activeColor = isEv ? "text-emerald-400" : "text-green-400";
-            const activeBg = isEv ? "bg-emerald-500" : "bg-green-500";
+            function renderBusCard(sid, marker) {
+                const isEv = marker._busNo.startsWith("EV-");
+                const typeIcon = isEv ? "⚡" : "🚌";
+                const typeColor = isEv ? "text-emerald-400" : "text-blue-100";
+                const iconBg = isEv ? "bg-emerald-900/50" : "bg-blue-900/50";
+                const activeColor = isEv ? "text-emerald-400" : "text-green-400";
+                const activeBg = isEv ? "bg-emerald-500" : "bg-green-500";
 
-            // Mask EV ID
-            const displayId = isEv ? "Campus Shuttle" : marker._busNo;
+                // Mask EV ID
+                const displayId = isEv ? "Campus Shuttle" : marker._busNo;
 
-            if (marker.isOffline) {
-                // OFFLINE CARD
-                const timeLabel = timeAgo(marker.disconnectTime);
-                return `
+                if (marker.isOffline) {
+                    // OFFLINE CARD
+                    const timeLabel = timeAgo(marker.disconnectTime);
+                    return `
                 <div class="group flex items-center justify-between p-3 bg-slate-800/20 rounded-xl border border-dashed border-slate-600 grayscale opacity-80 cursor-pointer" onclick="zoomToBus('${sid}')">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-lg">😴</div>
@@ -1357,9 +1390,9 @@
                     </div>
                 </div>
                 `;
-            } else {
-                // ACTIVE CARD
-                return `
+                } else {
+                    // ACTIVE CARD
+                    return `
                 <div class="group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500/50 transition-all cursor-pointer" onclick="zoomToBus('${sid}')">
                     <div class="flex items-center gap-3">
                         <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center text-lg">${typeIcon}</div>
@@ -1376,76 +1409,76 @@
                     </div>
                 </div>
                 `;
+                }
             }
-        }
 
-        function updateBusList() {
-            const listDiv = document.getElementById('bus-list');
-            let visibleCount = 0;
-            let html = '';
+            function updateBusList() {
+                const listDiv = document.getElementById('bus-list');
+                let visibleCount = 0;
+                let html = '';
 
-            // Separate Lists
-            let evHtml = '';
-            let busHtml = '';
-            let hasEv = false;
-            let hasBus = false;
+                // Separate Lists
+                let evHtml = '';
+                let busHtml = '';
+                let hasEv = false;
+                let hasBus = false;
 
-            for (const [sid, marker] of Object.entries(markers)) {
-                if (shouldShow(marker._busNo)) {
-                    visibleCount++;
-                    const card = renderBusCard(sid, marker);
-                    if (marker._busNo.startsWith("EV-")) {
-                        evHtml += card;
-                        hasEv = true;
-                    } else {
-                        busHtml += card;
-                        hasBus = true;
+                for (const [sid, marker] of Object.entries(markers)) {
+                    if (shouldShow(marker._busNo)) {
+                        visibleCount++;
+                        const card = renderBusCard(sid, marker);
+                        if (marker._busNo.startsWith("EV-")) {
+                            evHtml += card;
+                            hasEv = true;
+                        } else {
+                            busHtml += card;
+                            hasBus = true;
+                        }
                     }
                 }
-            }
 
-            if (hasEv) {
-                html += `<div class="mb-2"><h3 class="text-[10px] bg-emerald-900/30 text-emerald-400 px-3 py-1 rounded-lg font-bold uppercase tracking-wider mb-2 border border-emerald-900/50">⚡ EV Shuttles</h3><div class="space-y-2">${evHtml}</div></div>`;
-            }
-
-            if (hasBus) {
-                html += `<div class="mb-2"><h3 class="text-[10px] bg-blue-900/30 text-blue-400 px-3 py-1 rounded-lg font-bold uppercase tracking-wider mb-2 border border-blue-900/50">🚌 Campus Buses</h3><div class="space-y-2">${busHtml}</div></div>`;
-            }
-
-            // Empty States
-            if (visibleCount === 0) {
-                if (currentFilter && !offlineResult) {
-                    html = '<p class="text-xs text-slate-500 text-center py-4 italic">No matching vehicle found.</p>';
-                } else if (!currentFilter) {
-                    html = '<p class="text-xs text-slate-500 text-center py-4 italic">No active vehicles.</p>';
+                if (hasEv) {
+                    html += `<div class="mb-2"><h3 class="text-[10px] bg-emerald-900/30 text-emerald-400 px-3 py-1 rounded-lg font-bold uppercase tracking-wider mb-2 border border-emerald-900/50">⚡ EV Shuttles</h3><div class="space-y-2">${evHtml}</div></div>`;
                 }
+
+                if (hasBus) {
+                    html += `<div class="mb-2"><h3 class="text-[10px] bg-blue-900/30 text-blue-400 px-3 py-1 rounded-lg font-bold uppercase tracking-wider mb-2 border border-blue-900/50">🚌 Campus Buses</h3><div class="space-y-2">${busHtml}</div></div>`;
+                }
+
+                // Empty States
+                if (visibleCount === 0) {
+                    if (currentFilter && !offlineResult) {
+                        html = '<p class="text-xs text-slate-500 text-center py-4 italic">No matching vehicle found.</p>';
+                    } else if (!currentFilter) {
+                        html = '<p class="text-xs text-slate-500 text-center py-4 italic">No active vehicles.</p>';
+                    }
+                }
+
+                listDiv.innerHTML = html;
             }
 
-            listDiv.innerHTML = html;
-        }
+            window.zoomToBus = function (sid) {
+                if (markers[sid] && map.hasLayer(markers[sid])) {
+                    const ll = markers[sid].getLatLng();
+                    map.flyTo(ll, 16);
+                    startTrackingRoute(sid); // Start Ola-style tracking
+                }
+            };
 
-        window.zoomToBus = function (sid) {
-            if (markers[sid] && map.hasLayer(markers[sid])) {
-                const ll = markers[sid].getLatLng();
-                map.flyTo(ll, 16);
-                startTrackingRoute(sid); // Start Ola-style tracking
-            }
-        };
+            socket.on('update_buses', (buses) => {
+                for (const [sid, data] of Object.entries(buses)) updateMarker(sid, data);
+                updateBusList();
+            });
 
-        socket.on('update_buses', (buses) => {
-            for (const [sid, data] of Object.entries(buses)) updateMarker(sid, data);
-            updateBusList();
-        });
+            socket.on('update_bus', (msg) => {
+                updateMarker(msg.id, msg.data);
+                updateBusList();
+            });
 
-        socket.on('update_bus', (msg) => {
-            updateMarker(msg.id, msg.data);
-            updateBusList();
-        });
-
-        function createOfflineBusIcon(busNo) {
-            return L.divIcon({
-                className: 'custom-div-icon',
-                html: `<div style="position: relative; filter: grayscale(100%); opacity: 0.7;">
+            function createOfflineBusIcon(busNo) {
+                return L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="position: relative; filter: grayscale(100%); opacity: 0.7;">
                         <div style="background-color: #64748b; width: 40px; height: 40px; border-radius: 50%; border: 3px solid #1e293b; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.5);">
                             <span style="font-size: 20px;">🚌</span>
                         </div>
@@ -1453,223 +1486,224 @@
                             ${busNo}
                         </div>
                        </div>`,
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
-            });
-        }
-
-        socket.on('bus_disconnected', (sid) => {
-            if (markers[sid]) {
-                const marker = markers[sid];
-                marker.isOffline = true;
-                marker.disconnectTime = new Date();
-
-                // Update styling to offline
-                marker.setIcon(createOfflineBusIcon(marker._busNo));
-
-                // Remove accuracy circle
-                if (circles[sid]) {
-                    map.removeLayer(circles[sid]);
-                    delete circles[sid];
-                }
-
-                console.log(`Bus ${marker._busNo} went offline at ${marker.disconnectTime.toLocaleTimeString()}`);
-                updateBusList();
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 20]
+                });
             }
-        });
 
-        // Helper to format "X min ago"
-        function timeAgo(date) {
-            const seconds = Math.floor((new Date() - date) / 1000);
-            const interval = Math.floor(seconds / 60);
-            if (interval < 1) return "Just now";
-            if (interval === 1) return "1 min ago";
-            return interval + " mins ago";
-        }
+            socket.on('bus_disconnected', (sid) => {
+                if (markers[sid]) {
+                    const marker = markers[sid];
+                    marker.isOffline = true;
+                    marker.disconnectTime = new Date();
 
-        // Auto-update times every minute
-        setInterval(updateBusList, 60000);
+                    // Update styling to offline
+                    marker.setIcon(createOfflineBusIcon(marker._busNo));
 
-        function updateMarker(sid, data) {
-            if (!data) return;
-            const { lat, lng, bus_no, accuracy } = data;
+                    // Remove accuracy circle
+                    if (circles[sid]) {
+                        map.removeLayer(circles[sid]);
+                        delete circles[sid];
+                    }
 
-            // FIX: Remove 'Ghost Markers' (Duplicate bus_no with different SID)
-            for (const [existingSid, marker] of Object.entries(markers)) {
-                if (marker._busNo === bus_no && existingSid !== sid) {
-                    map.removeLayer(markers[existingSid]);
-                    delete markers[existingSid];
-                    if (circles[existingSid]) {
-                        map.removeLayer(circles[existingSid]);
-                        delete circles[existingSid];
+                    console.log(`Bus ${marker._busNo} went offline at ${marker.disconnectTime.toLocaleTimeString()}`);
+                    updateBusList();
+                }
+            });
+
+            // Helper to format "X min ago"
+            function timeAgo(date) {
+                const seconds = Math.floor((new Date() - date) / 1000);
+                const interval = Math.floor(seconds / 60);
+                if (interval < 1) return "Just now";
+                if (interval === 1) return "1 min ago";
+                return interval + " mins ago";
+            }
+
+            // Auto-update times every minute
+            setInterval(updateBusList, 60000);
+
+            function updateMarker(sid, data) {
+                if (!data) return;
+                const { lat, lng, bus_no, accuracy } = data;
+
+                // FIX: Remove 'Ghost Markers' (Duplicate bus_no with different SID)
+                for (const [existingSid, marker] of Object.entries(markers)) {
+                    if (marker._busNo === bus_no && existingSid !== sid) {
+                        map.removeLayer(markers[existingSid]);
+                        delete markers[existingSid];
+                        if (circles[existingSid]) {
+                            map.removeLayer(circles[existingSid]);
+                            delete circles[existingSid];
+                        }
                     }
                 }
-            }
 
-            if (markers[sid]) {
-                const marker = markers[sid];
-                if (marker.isOffline) {
-                    // Waking up! Reset to active state
-                    marker.isOffline = false;
+                if (markers[sid]) {
+                    const marker = markers[sid];
+                    if (marker.isOffline) {
+                        // Waking up! Reset to active state
+                        marker.isOffline = false;
+                        const isEv = bus_no.startsWith('EV-');
+                        marker.setIcon(isEv ? createEvIcon(bus_no) : createBusIcon(bus_no));
+                        console.log(`Bus ${bus_no} is back online!`);
+                    }
+                    marker.setLatLng([lat, lng]);
+                    marker._busNo = bus_no;
+                    if (circles[sid]) {
+                        circles[sid].setLatLng([lat, lng]);
+                        circles[sid].setRadius(accuracy || 0);
+                    }
+                } else {
                     const isEv = bus_no.startsWith('EV-');
-                    marker.setIcon(isEv ? createEvIcon(bus_no) : createBusIcon(bus_no));
-                    console.log(`Bus ${bus_no} is back online!`);
+                    const marker = L.marker([lat, lng], { icon: isEv ? createEvIcon(bus_no) : createBusIcon(bus_no) });
+                    marker._busNo = bus_no;
+
+                    // Click to track route
+                    marker.on('click', () => {
+                        startTrackingRoute(sid);
+                    });
+
+                    markers[sid] = marker;
+
+                    const circle = L.circle([lat, lng], {
+                        radius: accuracy || 0,
+                        color: '#60a5fa', // Blue-400
+                        fillColor: '#3b82f6',
+                        fillOpacity: 0.1,
+                        weight: 1,
+                        className: 'animate-pulse'
+                    });
+                    circles[sid] = circle;
+
+                    if (shouldShow(bus_no)) {
+                        marker.addTo(map);
+                        circle.addTo(map);
+                    }
                 }
-                marker.setLatLng([lat, lng]);
-                marker._busNo = bus_no;
-                if (circles[sid]) {
-                    circles[sid].setLatLng([lat, lng]);
-                    circles[sid].setRadius(accuracy || 0);
-                }
-            } else {
-                const isEv = bus_no.startsWith('EV-');
-                const marker = L.marker([lat, lng], { icon: isEv ? createEvIcon(bus_no) : createBusIcon(bus_no) });
-                marker._busNo = bus_no;
 
-                // Click to track route
-                marker.on('click', () => {
-                    startTrackingRoute(sid);
-                });
-
-                markers[sid] = marker;
-
-                const circle = L.circle([lat, lng], {
-                    radius: accuracy || 0,
-                    color: '#60a5fa', // Blue-400
-                    fillColor: '#3b82f6',
-                    fillOpacity: 0.1,
-                    weight: 1,
-                    className: 'animate-pulse'
-                });
-                circles[sid] = circle;
-
-                if (shouldShow(bus_no)) {
-                    marker.addTo(map);
-                    circle.addTo(map);
+                // Update route if this is the target bus
+                if (targetBusId === sid) {
+                    updateRoute();
                 }
             }
+        </script>
 
-            // Update route if this is the target bus
-            if (targetBusId === sid) {
-                updateRoute();
-            }
-        }
-    </script>
+        <!-- Chat Bot Widget -->
+        <!-- Floating Button -->
+        <button onclick="toggleChat()"
+            class="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-[2000] border-2 border-indigo-400">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
+                </path>
+            </svg>
+        </button>
 
-    <!-- Chat Bot Widget -->
-    <!-- Floating Button -->
-    <button onclick="toggleChat()"
-        class="fixed bottom-6 right-6 w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 z-[2000] border-2 border-indigo-400">
-        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
-            </path>
-        </svg>
-    </button>
+        <!-- Chat Window -->
+        <div id="chat-window"
+            class="fixed bottom-24 right-4 w-80 sm:w-96 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl z-[2000] transform transition-all duration-300 translate-y-10 opacity-0 pointer-events-none flex flex-col overflow-hidden max-h-[500px]">
+            <!-- Header -->
+            <div class="bg-indigo-600 p-4 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-lg">🤖</div>
+                    <div>
+                        <h3 class="font-bold text-white text-sm">Campus Assistant</h3>
+                        <div class="flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+                            <span class="text-[10px] text-indigo-100 font-bold">Online</span>
+                        </div>
+                    </div>
+                </div>
+                <button onclick="toggleChat()" class="text-white/70 hover:text-white">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                        </path>
+                    </svg>
+                </button>
+            </div>
 
-    <!-- Chat Window -->
-    <div id="chat-window"
-        class="fixed bottom-24 right-4 w-80 sm:w-96 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-2xl shadow-2xl z-[2000] transform transition-all duration-300 translate-y-10 opacity-0 pointer-events-none flex flex-col overflow-hidden max-h-[500px]">
-        <!-- Header -->
-        <div class="bg-indigo-600 p-4 flex items-center justify-between">
-            <div class="flex items-center gap-2">
-                <div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-lg">🤖</div>
-                <div>
-                    <h3 class="font-bold text-white text-sm">Campus Assistant</h3>
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-                        <span class="text-[10px] text-indigo-100 font-bold">Online</span>
+            <!-- Messages Area -->
+            <div id="chat-messages"
+                class="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px] max-h-[300px] bg-slate-900/50">
+                <!-- Welcome Message -->
+                <div class="flex gap-2 items-start">
+                    <div
+                        class="w-6 h-6 rounded-full bg-indigo-600 flex-shrink-0 flex items-center justify-center text-xs">
+                        🤖
+                    </div>
+                    <div class="bg-slate-800 p-3 rounded-2xl rounded-tl-sm text-sm text-slate-200 shadow-md">
+                        Hi! I can help you navigate the app. Ask me about tracking, bus icons, or what "offline" means!
                     </div>
                 </div>
             </div>
-            <button onclick="toggleChat()" class="text-white/70 hover:text-white">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
-                    </path>
-                </svg>
-            </button>
-        </div>
 
-        <!-- Messages Area -->
-        <div id="chat-messages"
-            class="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px] max-h-[300px] bg-slate-900/50">
-            <!-- Welcome Message -->
-            <div class="flex gap-2 items-start">
-                <div class="w-6 h-6 rounded-full bg-indigo-600 flex-shrink-0 flex items-center justify-center text-xs">
-                    🤖
-                </div>
-                <div class="bg-slate-800 p-3 rounded-2xl rounded-tl-sm text-sm text-slate-200 shadow-md">
-                    Hi! I can help you navigate the app. Ask me about tracking, bus icons, or what "offline" means!
-                </div>
+            <!-- Input Area -->
+            <div class="p-3 border-t border-slate-700 bg-slate-800/50">
+                <form onsubmit="handleChat(event)" class="flex gap-2">
+                    <input type="text" id="chat-input" placeholder="Type a question..."
+                        class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500">
+                    <button type="submit"
+                        class="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                        </svg>
+                    </button>
+                </form>
             </div>
         </div>
 
-        <!-- Input Area -->
-        <div class="p-3 border-t border-slate-700 bg-slate-800/50">
-            <form onsubmit="handleChat(event)" class="flex gap-2">
-                <input type="text" id="chat-input" placeholder="Type a question..."
-                    class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-500">
-                <button type="submit"
-                    class="bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-                    </svg>
-                </button>
-            </form>
-        </div>
-    </div>
+        <script>
+            // Chat Bot Logic
+            let isChatOpen = false;
 
-    <script>
-        // Chat Bot Logic
-        let isChatOpen = false;
+            function toggleChat() {
+                const windowEl = document.getElementById('chat-window');
+                isChatOpen = !isChatOpen;
 
-        function toggleChat() {
-            const windowEl = document.getElementById('chat-window');
-            isChatOpen = !isChatOpen;
-
-            if (isChatOpen) {
-                windowEl.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
-                document.getElementById('chat-input').focus();
-            } else {
-                windowEl.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+                if (isChatOpen) {
+                    windowEl.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+                    document.getElementById('chat-input').focus();
+                } else {
+                    windowEl.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+                }
             }
-        }
 
-        async function handleChat(e) {
-            e.preventDefault();
-            const input = document.getElementById('chat-input');
-            const msg = input.value.trim();
-            if (!msg) return;
+            async function handleChat(e) {
+                e.preventDefault();
+                const input = document.getElementById('chat-input');
+                const msg = input.value.trim();
+                if (!msg) return;
 
-            // User Message
-            addMessage(msg, 'user');
-            input.value = '';
+                // User Message
+                addMessage(msg, 'user');
+                input.value = '';
 
-            // Bot Response (Real Llama 3)
-            showTypingIndicator();
+                // Bot Response (Real Llama 3)
+                showTypingIndicator();
 
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: msg })
-                });
-                const data = await response.json();
-                removeTypingIndicator();
-                addMessage(data.response, 'bot');
-            } catch (err) {
-                console.error(err);
-                removeTypingIndicator();
-                addMessage("I'm having a little trouble connecting to the server. Please try again.", 'bot');
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: msg })
+                    });
+                    const data = await response.json();
+                    removeTypingIndicator();
+                    addMessage(data.response, 'bot');
+                } catch (err) {
+                    console.error(err);
+                    removeTypingIndicator();
+                    addMessage("I'm having a little trouble connecting to the server. Please try again.", 'bot');
+                }
             }
-        }
 
-        function addMessage(text, sender) {
-            const container = document.getElementById('chat-messages');
-            const isBot = sender === 'bot';
+            function addMessage(text, sender) {
+                const container = document.getElementById('chat-messages');
+                const isBot = sender === 'bot';
 
-            const html = `
+                const html = `
                 <div class="flex gap-2 items-start ${isBot ? '' : 'flex-row-reverse'}">
                     <div class="w-6 h-6 rounded-full ${isBot ? 'bg-indigo-600' : 'bg-slate-500'} flex-shrink-0 flex items-center justify-center text-xs">
                         ${isBot ? '🤖' : '👤'}
@@ -1679,13 +1713,13 @@
                     </div>
                 </div>
             `;
-            container.insertAdjacentHTML('beforeend', html);
-            container.scrollTop = container.scrollHeight;
-        }
+                container.insertAdjacentHTML('beforeend', html);
+                container.scrollTop = container.scrollHeight;
+            }
 
-        function showTypingIndicator() {
-            const container = document.getElementById('chat-messages');
-            const html = `
+            function showTypingIndicator() {
+                const container = document.getElementById('chat-messages');
+                const html = `
                 <div id="typing-indicator" class="flex gap-2 items-start">
                     <div class="w-6 h-6 rounded-full bg-indigo-600 flex-shrink-0 flex items-center justify-center text-xs">🤖</div>
                     <div class="bg-slate-800 p-3 rounded-2xl rounded-tl-sm text-sm text-slate-200 shadow-md flex gap-1 items-center h-10">
@@ -1695,16 +1729,128 @@
                     </div>
                 </div>
             `;
-            container.insertAdjacentHTML('beforeend', html);
-            container.scrollTop = container.scrollHeight;
-        }
+                container.insertAdjacentHTML('beforeend', html);
+                container.scrollTop = container.scrollHeight;
+            }
 
-        function removeTypingIndicator() {
-            const el = document.getElementById('typing-indicator');
-            if (el) el.remove();
-        }
+            function removeTypingIndicator() {
+                const el = document.getElementById('typing-indicator');
+                if (el) el.remove();
+            }
 
 
-    </script>
+            // --- Schedule Logic ---
+            const schedOverlay = document.getElementById('schedule-overlay');
+            const schedListEl = document.getElementById('schedule-list');
+
+            window.openSchedule = function () {
+                schedOverlay.classList.remove('hidden');
+                if (window.innerWidth < 768) toggleSidebar();
+                fetchSchedules();
+            }
+
+            window.closeSchedule = function () {
+                schedOverlay.classList.add('hidden');
+            }
+
+            function fetchSchedules() {
+                const q = query(collection(db, "schedules"), orderBy("last_update", "desc"));
+
+                // Re-use logic: List active schedule channels (Buses)
+                onSnapshot(q, (snapshot) => {
+                    if (snapshot.empty) {
+                        schedListEl.innerHTML = '<p class="text-slate-500 text-center italic mt-10">No schedules published yet.</p>';
+                        return;
+                    }
+
+                    schedListEl.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const busNo = data.bus_no || doc.id;
+                        const containerId = `sched-box-${doc.id}`;
+
+                        const div = document.createElement('div');
+                        div.className = "border border-slate-700 rounded-xl overflow-hidden mb-2";
+                        div.id = containerId;
+
+                        div.innerHTML = `
+                         <div class="flex items-center justify-between p-4 bg-slate-800/80 hover:bg-slate-800 cursor-pointer" onclick="loadBusSchedule('${doc.id}')">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-purple-900/50 flex items-center justify-center text-xs">📅</div>
+                                <span class="font-bold text-slate-200 text-sm">Bus ${busNo}</span>
+                            </div>
+                            <svg id="arrow-sched-${doc.id}" class="w-5 h-5 text-slate-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+                        <div id="sched-content-${doc.id}" class="hidden bg-slate-900/50 p-4 space-y-3 min-h-[50px]">
+                            <p class="text-xs text-slate-500 animate-pulse">Loading dates...</p>
+                        </div>
+                    `;
+                        schedListEl.appendChild(div);
+                    });
+                });
+            }
+
+            window.loadBusSchedule = function (busId) {
+                const content = document.getElementById(`sched-content-${busId}`);
+                const arrow = document.getElementById(`arrow-sched-${busId}`);
+
+                if (!content.classList.contains('hidden')) {
+                    content.classList.add('hidden');
+                    arrow.classList.remove('rotate-180');
+                    return;
+                }
+
+                // Open
+                content.classList.remove('hidden');
+                arrow.classList.add('rotate-180');
+
+                // Fetch Dates: schedules/{busId}/dates
+                // Filter: date >= today
+                const today = new Date().toISOString().split('T')[0];
+                const q = query(collection(db, "schedules", busId, "dates"), orderBy("__name__")); // Date string ID sorts correctly
+
+                getDocs(q).then(snapshot => {
+                    content.innerHTML = '';
+
+                    // Manual filter for >= today (since we store ID as YYYY-MM-DD)
+                    const validDocs = snapshot.docs.filter(d => d.id >= today);
+
+                    if (validDocs.length === 0) {
+                        content.innerHTML = '<p class="text-xs text-slate-500 text-center italic">No upcoming schedule.</p>';
+                        return;
+                    }
+
+                    validDocs.forEach(d => {
+                        const dateData = d.data();
+                        const timings = dateData.timings || [];
+
+                        // Helper for nice date format
+                        const niceDate = new Date(d.id).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+
+                        const row = document.createElement('div');
+                        row.className = "mb-3 last:mb-0";
+
+                        let timelineHTML = '';
+                        timings.forEach(t => {
+                            timelineHTML += `
+                            <div class="flex items-start gap-3 relative pb-4 last:pb-0 border-l border-slate-700 ml-2 pl-4">
+                                <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-purple-500 border-2 border-slate-900"></div>
+                                <div>
+                                    <p class="text-white font-bold font-mono text-sm">${t.time}</p>
+                                    <p class="text-slate-400 text-xs">${t.note}</p>
+                                </div>
+                            </div>
+                         `;
+                        });
+
+                        row.innerHTML = `
+                        <p class="text-[10px] uppercase font-bold text-slate-500 mb-2 sticky top-0 bg-slate-900/90 py-1 z-10">${niceDate}</p>
+                        <div class="pl-2">${timelineHTML}</div>
+                     `;
+                        content.appendChild(row);
+                    });
+                });
+            }
+        </script>
 
 </html>
