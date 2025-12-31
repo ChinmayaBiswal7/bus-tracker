@@ -52,7 +52,7 @@
             border-radius: 2rem;
         }
 
-        /* SIDEBAR (Left Fixed) */
+        /* SIDEBAR (Desktop: Left Fixed) */
         .sidebar {
             position: fixed;
             top: 1.5rem;
@@ -65,6 +65,68 @@
             justify-content: space-between;
             z-index: 50;
         }
+
+        /* MOBILE: Bottom Navigation */
+        @media (max-width: 768px) {
+            .sidebar {
+                top: auto;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                width: 100%;
+                height: 4.5rem;
+                flex-direction: row;
+                justify-content: space-around;
+                background: rgba(15, 23, 42, 0.95);
+                border-top: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                padding: 0 1rem;
+            }
+
+            .sidebar .nav-group-top {
+                flex-direction: row;
+                width: 100%;
+                justify-content: space-around;
+                padding-top: 0;
+            }
+
+            .sidebar .nav-group-bottom {
+                display: none;
+                /* Hide logout on bottom bar, maybe move to a panel? */
+            }
+
+            .nav-icon {
+                margin-bottom: 0;
+                width: auto;
+                height: 100%;
+                border-radius: 0;
+                background: transparent !important;
+                /* No bg on mobile nav */
+                box-shadow: none !important;
+                color: #64748b;
+            }
+
+            .nav-icon.active {
+                color: #3b82f6;
+                position: relative;
+            }
+
+            .nav-icon.active::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 24px;
+                height: 3px;
+                background: #3b82f6;
+                border-radius: 0 0 4px 4px;
+                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.6);
+            }
+        }
+
 
         .nav-icon {
             width: 3rem;
@@ -95,7 +157,6 @@
             position: fixed;
             top: 2rem;
             left: 7.5rem;
-            /* Next to sidebar */
             width: 340px;
             z-index: 40;
             opacity: 0;
@@ -106,6 +167,34 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+        }
+
+        /* MOBILE: Bottom Sheet */
+        @media (max-width: 768px) {
+            .pop-panel {
+                top: auto;
+                left: 0;
+                right: 0;
+                bottom: 4.5rem;
+                /* Above nav bar */
+                width: 100% !important;
+                /* Full width */
+                max-width: 100% !important;
+                border-radius: 1.5rem 1.5rem 0 0;
+                border-bottom: none;
+                transform: translateY(100%);
+                padding-bottom: 1rem;
+                max-height: 85vh;
+            }
+
+            .pop-panel.active {
+                transform: translateY(0);
+            }
+
+            #panel-speed {
+                bottom: 4.5rem !important;
+                /* Override desktop bottom prop */
+            }
         }
 
         .pop-panel.active {
@@ -162,6 +251,17 @@
             align-self: flex-start;
             border-bottom-left-radius: 2px;
         }
+
+        /* Close Button Mobile */
+        .mobile-close {
+            display: none;
+        }
+
+        @media(max-width: 768px) {
+            .mobile-close {
+                display: flex;
+            }
+        }
     </style>
 </head>
 
@@ -183,7 +283,7 @@
 
     <!-- 1. SIDEBAR (CONTROLLER) -->
     <div class="sidebar glass-card">
-        <div class="flex flex-col pt-4">
+        <div class="nav-group-top flex flex-col pt-4">
             <div class="nav-icon active" id="nav-drive" onclick="togglePanel('drive')" title="Route Config">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -212,7 +312,7 @@
             </div>
         </div>
 
-        <div class="flex flex-col pb-4">
+        <div class="nav-group-bottom flex flex-col pb-4">
             <div
                 class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white border border-white/20 mb-4">
                 DS
@@ -238,6 +338,13 @@
                     class="w-2.5 h-2.5 rounded-full bg-slate-600 ring-2 ring-slate-800 transition-colors"></div>
                 <span id="serverStatus"
                     class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Idle</span>
+                <button onclick="closePanels()"
+                    class="mobile-close p-1.5 ml-2 bg-slate-700/50 rounded-full text-slate-400 hover:text-white">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -298,15 +405,23 @@
 
     <!-- PANEL 2: ANNOUNCEMENTS (With Included AI Polisher) -->
     <div id="panel-comms" class="pop-panel glass-card p-5">
-        <div class="flex items-center gap-3 mb-4">
-            <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
-                    </path>
-                </svg>
+        <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z">
+                        </path>
+                    </svg>
+                </div>
+                <h3 class="text-white font-bold text-sm">Broadcast Alert</h3>
             </div>
-            <h3 class="text-white font-bold text-sm">Broadcast Alert</h3>
+            <button onclick="closePanels()"
+                class="mobile-close p-1.5 bg-slate-700/50 rounded-full text-slate-400 hover:text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
         <!-- Drafter Section -->
@@ -347,10 +462,16 @@
 
     <!-- PANEL 3: GENERAL CHAT -->
     <div id="panel-ai" class="pop-panel glass-card p-0 flex flex-col h-[400px]">
-        <div class="p-4 border-b border-white/5 bg-slate-800/50">
+        <div class="p-4 border-b border-white/5 bg-slate-800/50 flex items-center justify-between">
             <h3 class="text-white font-bold text-sm flex items-center gap-2">
                 <span>🤖</span> Campus Assistant
             </h3>
+            <button onclick="closePanels()"
+                class="mobile-close p-1.5 bg-slate-700/50 rounded-full text-slate-400 hover:text-white">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
         </div>
 
         <div id="chat-history" class="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
