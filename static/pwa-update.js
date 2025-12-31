@@ -1,6 +1,14 @@
 // PWA Auto-Update & Registration Logic
 
 function showUpdateToast(registration) {
+    // 1. Only show toast if in "App" mode (Standalone)
+    // The user requested this behavior to avoid annoying website visitors.
+    const isApp = window.matchMedia('(display-mode: standalone)').matches;
+    if (!isApp) {
+        console.log("Update available, but suppressed on website view.");
+        return;
+    }
+
     // Create toast element
     const toast = document.createElement('div');
     toast.className = 'fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl shadow-2xl flex flex-col gap-3 z-50 transform translate-y-20 transition-transform duration-300';
@@ -32,8 +40,11 @@ function showUpdateToast(registration) {
     });
 
     // Handlers
-    document.getElementById('pwa-update-btn').addEventListener('click', () => {
+    const btnUpdate = document.getElementById('pwa-update-btn');
+    btnUpdate.addEventListener('click', () => {
         if (registration.waiting) {
+            btnUpdate.textContent = "UPDATING...";
+            btnUpdate.disabled = true;
             registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
     });
