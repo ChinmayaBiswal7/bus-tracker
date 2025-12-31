@@ -11,6 +11,8 @@ let watchId = null;
 let markers = {};
 let fallbackLine = null;
 let routingTimer = null; // Internal timer
+let lastBusData = {};
+let currentBusFilter = '';
 const socket = io();
 
 // Initialize Map
@@ -47,55 +49,76 @@ function setupSocketListeners() {
     socket.on('disconnect', () => updateServerStatus(false));
 
     socket.on('update_bus_locations', (data) => {
-        const busList = document.getElementById('bus-list');
-        if (!busList) return;
-        busList.innerHTML = '';
+        lastBusData = data;
 
-        // Tracking Status
-        const statusEl = document.getElementById('tracking-status');
-        const countSpan = document.getElementById('fw-bold');
-        if (countSpan) countSpan.textContent = Object.keys(data).length > 0 ? Object.keys(data).length : "Zero";
-        if (statusEl) statusEl.classList.remove('hidden');
-
-        if (Object.keys(data).length === 0) {
-            busList.innerHTML = '<p class="text-xs text-slate-500 text-center py-4 italic">No active buses found.</p>';
-            return;
-        }
-
-        // Update Markers & Sidebar
+        // 1. Update Map Markers (Always show all on map)
+        const activeIds = new Set();
         Object.entries(data).forEach(([busId, info]) => {
             updateBusMarker(busId, info);
-
-            // Sidebar Item
-            const item = document.createElement('div');
-            item.className = "flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
-            item.onclick = () => {
-                map.flyTo([info.lat, info.lng], 16);
-                startTrackingRoute(busId);
-                // Also close sidebar on mobile if needed? No, user might want to see info.
-            };
-            item.innerHTML = `
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-xs">${busId}</div>
-                <div>
-                   <p class="text-slate-200 font-bold text-sm">Bus ${busId}</p>
-                   <p class="text-[10px] text-slate-400 flex items-center gap-1">
-                      <span class="w-1.5 h-1.5 rounded-full ${info.offline ? 'bg-slate-500' : 'bg-green-500'}"></span>
-                      ${info.offline ? 'Offline' : 'Live'}
-                   </p>
-                </div>
-            </div>
-            `;
-            busList.appendChild(item);
+            activeIds.add(busId);
         });
 
-        // Cleanup removed buses
+        // 2. Remove Stale Markers
         for (let id in markers) {
-            if (!data[id]) {
+            if (!activeIds.has(id)) {
                 map.removeLayer(markers[id]);
                 delete markers[id];
             }
         }
+
+        // 3. Render Sidebar List
+        renderBusList();
+    });
+}
+
+export function setBusFilter(filter) {
+    currentBusFilter = filter.toLowerCase();
+    renderBusList();
+}
+
+function renderBusList() {
+    const data = lastBusData;
+    const busList = document.getElementById('bus-list');
+    if (!busList) return;
+
+    busList.innerHTML = '';
+
+    // Filter Logic
+    const filteredEntries = Object.entries(data).filter(([busId]) =>
+        busId.toLowerCase().includes(currentBusFilter)
+    );
+
+    // Update Counts (Optional: Update 'Tracking: All' text if needed, but keeping it simple)
+    const statusEl = document.getElementById('tracking-status');
+    const countSpan = document.getElementById('fw-bold');
+    if (countSpan) countSpan.textContent = filteredEntries.length > 0 ? filteredEntries.length : "0";
+    if (statusEl) statusEl.classList.remove('hidden');
+
+    if (filteredEntries.length === 0) {
+        busList.innerHTML = '<p class="text-xs text-slate-500 text-center py-4 italic">No matching buses found.</p>';
+        return;
+    }
+
+    filteredEntries.forEach(([busId, info]) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
+        item.onclick = () => {
+            map.flyTo([info.lat, info.lng], 16);
+            startTrackingRoute(busId);
+        };
+        item.innerHTML = `
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-xs">${busId}</div>
+            <div>
+               <p class="text-slate-200 font-bold text-sm">Bus ${busId}</p>
+               <p class="text-[10px] text-slate-400 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full ${info.offline ? 'bg-slate-500' : 'bg-green-500'}"></span>
+                  ${info.offline ? 'Offline' : 'Live'}
+               </p>
+            </div>
+        </div>
+        `;
+        busList.appendChild(item);
     });
 }
 

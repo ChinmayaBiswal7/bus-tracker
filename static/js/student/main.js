@@ -1,6 +1,6 @@
 import { auth } from '../firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { initMap, stopTrackingRoute } from './map.js';
+import { initMap, stopTrackingRoute, setBusFilter } from './map.js';
 import { openSchedule, closeSchedule, initSchedule } from './schedule.js?v=3';
 import { openAnnouncements, closeAnnouncements, initAnnouncements } from './announcements.js';
 import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-directory.js';
@@ -19,6 +19,17 @@ window.closeDrivers = closeDrivers;
 window.closeProfile = closeProfile;
 window.showProfile = showProfile;
 window.stopTrackingRoute = stopTrackingRoute;
+window.setFilter = function () {
+    const input = document.getElementById('trackInput');
+    if (input) setBusFilter(input.value);
+};
+window.quickSearch = function (busId) {
+    const input = document.getElementById('trackInput');
+    if (input) {
+        input.value = busId;
+        setBusFilter(busId);
+    }
+};
 window.logout = function () {
     auth.signOut().then(() => window.location.href = '/').catch(console.error);
 };
