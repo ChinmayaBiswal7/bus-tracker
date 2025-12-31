@@ -27,6 +27,12 @@ messaging.onBackgroundMessage((payload) => {
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
+
 const CACHE_NAME = 'bus-tracker-v6'; // Bump version
 
 // Handle Notification Click (Opens App)
