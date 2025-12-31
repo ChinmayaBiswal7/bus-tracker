@@ -19,7 +19,9 @@ from server.extensions import init_firebase, f_db # Import f_db for usage in oth
 init_firebase()
 
 from routes.schedule import schedule_bp
+from routes.contact import contact_bp
 app.register_blueprint(schedule_bp)
+app.register_blueprint(contact_bp)
 
 # --- AI & Other Imports ---
 import os
