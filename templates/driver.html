@@ -497,7 +497,7 @@
 
 
     <!-- PANEL 4: SCHEDULE EDITOR -->
-    <div id="panel-schedule" class="pop-panel glass-card p-5 overflow-y-auto">
+    <div id="panel-schedule" class="pop-panel glass-card p-4 overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-white font-bold text-sm flex items-center gap-2">
                 <span>📅</span> Manage Schedule
@@ -510,7 +510,7 @@
             </button>
         </div>
 
-        <div class="space-y-4">
+        <div class="space-y-4 pb-6">
             <!-- Date Selection -->
             <div>
                 <label class="text-[10px] text-slate-400 font-bold uppercase mb-1 block">Select Date</label>
@@ -871,11 +871,11 @@
 
         window.addTimeSlot = function () {
             const div = document.createElement('div');
-            div.className = "flex gap-2 items-center animate-[fadeIn_0.3s_ease-out]";
+            div.className = "flex gap-2 items-center animate-[fadeIn_0.3s_ease-out] w-full";
             div.innerHTML = `
-                <input type="time" class="sched-time bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:border-blue-500 outline-none flex-1">
-                <input type="text" placeholder="Route / Gate" class="sched-note bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:border-blue-500 outline-none flex-[2]">
-                <button onclick="this.closest('.flex').remove()" class="p-2 text-red-400 hover:bg-slate-800 rounded-lg" title="Remove">
+                <input type="time" class="sched-time bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:border-blue-500 outline-none w-24 flex-shrink-0">
+                <input type="text" placeholder="Route / Gate" class="sched-note bg-slate-900 border border-slate-700 rounded-lg px-2 py-2 text-white text-sm focus:border-blue-500 outline-none flex-1 min-w-0">
+                <button onclick="this.closest('.flex').remove()" class="p-2 text-red-400 hover:bg-slate-800 rounded-lg flex-shrink-0" title="Remove">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
             `;
