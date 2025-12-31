@@ -26,7 +26,7 @@ import google.generativeai as genai
 genai_client = None
 if os.environ.get("GEMINI_API_KEY"):
     genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-    genai_client = genai.GenerativeModel('gemini-pro')
+    genai_client = genai.GenerativeModel('gemini-1.5-flash')
 else:
     print("[WARN] GEMINI_API_KEY not found. Driver AI Assist will be disabled.")
 
