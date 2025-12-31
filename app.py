@@ -20,6 +20,16 @@ from firebase_admin import credentials, firestore, messaging
 from firebase_admin import _apps 
 from groq import Groq
 import os
+import google.generativeai as genai
+
+# Initialize Google Gemini (AI Assist for Drivers)
+genai_client = None
+if os.environ.get("GEMINI_API_KEY"):
+    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+    genai_client = genai.GenerativeModel('gemini-pro')
+else:
+    print("[WARN] GEMINI_API_KEY not found. Driver AI Assist will be disabled.")
+
 
 # Initialize Groq Client (Llama 3)
 groq_client = None
@@ -203,6 +213,39 @@ def chat_with_ai():
         error_msg = str(e)
         print(f"[ERROR] Groq API Error: {error_msg}")
         return {"response": f"I'm having trouble connecting to my brain. Details: {error_msg}"}
+
+@app.route('/api/driver/ai-assist', methods=['POST'])
+def driver_ai_assist():
+    data = request.json
+    raw_text = data.get('text', '')
+    
+    if not raw_text:
+        return {"response": ""}
+
+    if not genai_client:
+        return {"response": "AI Error: GEMINI_API_KEY not set on server."}
+
+    prompt = f"""
+    You are an AI assistant for a Bus Driver. 
+    The driver has typed a raw, hasty message: "{raw_text}"
+    
+    Task: specific task is to polish this into a professional, clear, and reassuring one-sentence announcement for university students. 
+    Add a relevant emoji at the start.
+    
+    Examples:
+    Input: "traffic jam late" -> Output: "⚠️ Notice: We are stuck in heavy traffic and will be roughly 10-15 minutes late."
+    Input: "breakdown" -> Output: "🔧 Alert: The bus has a minor mechanical issue; a replacement is on the way."
+    
+    Only return the polished string.
+    """
+
+    try:
+        response = genai_client.generate_content(prompt)
+        return {"response": response.text.strip()}
+    except Exception as e:
+        print(f"[ERROR] Gemini API Error: {e}")
+        return {"response": f"Error: {str(e)}"}
+
 
 @app.route('/subscribe', methods=['POST'])
 def subscribe_to_topic():
