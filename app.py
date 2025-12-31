@@ -22,11 +22,23 @@ from groq import Groq
 import os
 import google.generativeai as genai
 
+
 # Initialize Google Gemini (AI Assist for Drivers)
 genai_client = None
 if os.environ.get("GEMINI_API_KEY"):
-    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-    genai_client = genai.GenerativeModel('gemini-1.5-flash')
+    try:
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+        genai_client = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # DEBUG: List available models to logs
+        print("--- AVAILABLE GEMINI MODELS ---")
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                print(m.name)
+        print("-------------------------------")
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to configure Gemini: {e}")
 else:
     print("[WARN] GEMINI_API_KEY not found. Driver AI Assist will be disabled.")
 
