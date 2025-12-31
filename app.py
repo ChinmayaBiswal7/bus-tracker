@@ -23,19 +23,41 @@ import os
 import google.generativeai as genai
 
 
+
 # Initialize Google Gemini (AI Assist for Drivers)
 genai_client = None
 if os.environ.get("GEMINI_API_KEY"):
     try:
         genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-        genai_client = genai.GenerativeModel('gemini-1.5-flash')
         
-        # DEBUG: List available models to logs
-        print("--- AVAILABLE GEMINI MODELS ---")
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                print(m.name)
-        print("-------------------------------")
+        # Dynamic Model Selection
+        # We search for a model that supports 'generateContent'
+        # Priority: gemini-1.5-flash -> gemini-pro -> any other valid model
+        available_models = []
+        try:
+            for m in genai.list_models():
+                if 'generateContent' in m.supported_generation_methods:
+                    available_models.append(m.name)
+        except Exception as e:
+            print(f"[WARN] Could not list models: {e}")
+
+        selected_model_name = None
+        if available_models:
+            # Check for preferred models
+            for preferred in ['models/gemini-1.5-flash', 'models/gemini-pro', 'models/gemini-1.0-pro']:
+                if preferred in available_models:
+                    selected_model_name = preferred
+                    break
+            # Fallback to first available if preference not found
+            if not selected_model_name:
+                selected_model_name = available_models[0]
+        else:
+            # Fallback if list_models fails or returns empty (e.g. permission issues)
+            # We try the user's suggestion as a hard fallback
+            selected_model_name = 'gemini-pro'
+
+        print(f"[INFO] Selected Gemini Model: {selected_model_name}")
+        genai_client = genai.GenerativeModel(selected_model_name)
         
     except Exception as e:
         print(f"[ERROR] Failed to configure Gemini: {e}")
