@@ -93,19 +93,10 @@ if (form) {
             let isValidRole = false;
 
             if (role === 'driver') {
-                const docSnap = await getDoc(doc(db, "drivers", user.uid)); // Check by UID? Or email? 
-                // Wait, registration usually creates doc with UID?
-                // Actually existing driver registration creates doc in 'drivers'.
-                // If doc exists, they are a driver.
-                // However, previous code might have used email or something else.
-                // Let's assume standard auth.
-
-                // Existing code check:
-                // "const docRef = doc(db, role === 'driver' ? 'drivers' : 'users', user.uid);"
+                // Check if user exists in 'drivers' collection
                 const docRef = doc(db, 'drivers', user.uid);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) isValidRole = true;
-
             } else {
                 const docRef = doc(db, 'users', user.uid);
                 const docSnap = await getDoc(docRef);
