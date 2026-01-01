@@ -5,11 +5,13 @@ import { openSchedule, closeSchedule, initSchedule } from './schedule.js?v=3';
 import { openAnnouncements, closeAnnouncements, initAnnouncements } from './announcements.js';
 import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-directory.js';
 import { toggleSidebar, requestNotificationPermission } from './ui.js';
-import { initFCM } from './fcm.js'; // I need to create fcm.js too!
+import { initFCM } from './fcm.js';
+import { initChat, toggleChat } from './chat.js';
 
 // Attach Globals for HTML onclick attributes
 window.toggleSidebar = toggleSidebar;
 window.requestNotificationPermission = requestNotificationPermission;
+window.toggleChat = toggleChat;
 window.openSchedule = openSchedule;
 window.closeSchedule = closeSchedule;
 window.openAnnouncements = openAnnouncements;
@@ -46,7 +48,9 @@ onAuthStateChanged(auth, (user) => {
         initMap();
         initAnnouncements();
         initSchedule();
+        initSchedule();
         initFCM();
+        initChat();
 
         // Resize Map Fallback
         setTimeout(() => { if (window.map) window.map.invalidateSize(); }, 500);
