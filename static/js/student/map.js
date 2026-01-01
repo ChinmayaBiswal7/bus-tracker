@@ -327,7 +327,8 @@ function updateRoute() {
                     } else {
                         // City Trip
                         finalTimeMin = Math.ceil((distanceKm / FALLBACK_CITY_SPEED) * 60);
-                        statusMsg = " (Heavy Traffic)";
+                        // If speed is literally 0, explicitly say "Halted"
+                        statusMsg = currentSpeedKmph <= 0 ? " (Halted)" : " (Heavy Traffic)";
                     }
                 }
 
