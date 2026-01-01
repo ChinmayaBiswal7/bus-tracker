@@ -128,10 +128,6 @@ def driver():
 def student():
     return render_template('student.html', recommendations=[])
 
-
-
-
-
 @app.route('/api/chat', methods=['POST'])
 def chat_with_ai():
     data = request.json
@@ -166,7 +162,8 @@ def chat_with_ai():
     *   **Real-time:** Socket.IO for sub-second location updates (latency < 200ms).
     *   **AI Models:** 
         - Student Chat: Llama 3 via Groq API.
-        - Driver Assist: Gemini 1.5 Flash via Google AI Studio (for polishing announcements).
+        - Driver Assist: Llama 3 via Groq API (for polishing announcements).
+        - Driver Chat: Llama 3 via Groq API.
 
     --- USER ROLES & FEATURES ---
 
@@ -192,7 +189,7 @@ def chat_with_ai():
         - **Power Saver:** Uses Cell/WiFi triangulation.
     *   **Features:**
         - **"Publish Schedule":** A form to add route timings (saved to Firestore).
-        - **"Make Announcement":** A specific tool where they type raw text (e.g., "tyre burst"). The AI (Gemini) auto-polishes it to "⚠️ Alert: We have a flat tire..." before sending.
+        - **"Make Announcement":** A specific tool where they type raw text (e.g., "tyre burst"). The AI (Llama 3) auto-polishes it to "⚠️ Alert: We have a flat tire..." before sending.
         - **Chat with AI:** A dedicated assistant to help drivers with operational questions.
 
     --- UI/UX "SECRETS" (How it looks) ---
