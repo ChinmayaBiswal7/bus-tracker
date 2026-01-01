@@ -18,13 +18,25 @@ export function toggleChat() {
     if (overlay) {
         if (overlay.classList.contains('hidden')) {
             overlay.classList.remove('hidden');
+            // Small delay to allow display:block to apply before animating opacity/scale
+            requestAnimationFrame(() => {
+                overlay.classList.remove('scale-90', 'opacity-0');
+                overlay.classList.add('scale-100', 'opacity-100');
+            });
+
             // Focus input
             setTimeout(() => {
                 const input = document.getElementById('student-chat-input');
                 if (input) input.focus();
             }, 300);
         } else {
-            overlay.classList.add('hidden');
+            overlay.classList.remove('scale-100', 'opacity-100');
+            overlay.classList.add('scale-90', 'opacity-0');
+
+            // Wait for transition to finish before hiding
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
         }
     }
 }
