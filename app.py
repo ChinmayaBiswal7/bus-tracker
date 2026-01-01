@@ -36,24 +36,47 @@ def call_gemini(prompt):
     if not GEMINI_API_KEY:
         raise Exception("GEMINI_API_KEY not set")
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "contents": [{
-            "role": "user",
-            "parts": [{"text": prompt}]
-        }]
-    }
+    # List of models to try in order of preference
+    # Note: 'gemini-1.5-flash' is the preferred fast model.
+    # 'gemini-pro' is the fall-back standard model.
+    candidate_models = [
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-001",
+        "gemini-pro"
+    ]
     
-    response = requests.post(url, headers=headers, json=payload)
-    if response.status_code != 200:
-        raise Exception(f"API Error {response.status_code}: {response.text}")
+    last_error = None
     
-    data = response.json()
-    try:
-        return data['candidates'][0]['content']['parts'][0]['text']
-    except (KeyError, IndexError):
-        return "Thinking..."
+    for model in candidate_models:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+            headers = {"Content-Type": "application/json"}
+            payload = {
+                "contents": [{
+                    "role": "user",
+                    "parts": [{"text": prompt}]
+                }]
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            
+            # If 404, it implies model not found; try next.
+            # If 200, success!
+            if response.status_code == 200:
+                data = response.json()
+                return data['candidates'][0]['content']['parts'][0]['text']
+            else:
+                print(f"[WARN] Model {model} failed with {response.status_code}: {response.text}")
+                last_error = f"Model {model} error: {response.text}"
+                
+        except Exception as e:
+            print(f"[WARN] Exception with model {model}: {e}")
+            last_error = str(e)
+            continue
+            
+    # If we get here, all models failed
+    raise Exception(f"All Gemini models failed. Last error: {last_error}")
 
 # Initialize Groq (Llama 3)
 groq_client = None
