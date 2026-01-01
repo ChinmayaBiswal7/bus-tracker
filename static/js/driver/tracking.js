@@ -158,6 +158,9 @@ function attemptGPS(stage, busNo) {
     );
 }
 
+// State
+let hasCentered = false;
+
 function handleGPS(pos, busNo, stage) {
     const btnMain = document.getElementById('btnMain');
     const serverStatus = document.getElementById('serverStatus');
@@ -188,7 +191,13 @@ function handleGPS(pos, busNo, stage) {
 
     if (map && userMarker) {
         userMarker.setLatLng([latitude, longitude]);
-        map.setView([latitude, longitude], 18);
+
+        // Fix: Only center map ONCE on first lock.
+        // This allows the driver to pan around to see students without fighting the auto-center.
+        if (!hasCentered) {
+            map.setView([latitude, longitude], 18);
+            hasCentered = true;
+        }
     }
 
     if (socket.connected) {
@@ -219,6 +228,7 @@ function handleGPSError(err) {
 export function stopSession() {
     if (watchId) navigator.geolocation.clearWatch(watchId);
     watchId = null; isSharing = false;
+    hasCentered = false; // Reset for next session logic
     socket.emit('driver_update', null);
 
     // Reset UI
