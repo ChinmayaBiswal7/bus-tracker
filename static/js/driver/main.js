@@ -1,6 +1,6 @@
 import { auth } from '../firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { initMap, toggleSession, stopSession, setMode } from './tracking.js?v=7';
+import { initMap, toggleSession, stopSession, setMode } from './tracking.js?v=8';
 import { initAnnouncements } from './announcements.js';
 import { initSchedule, addTimeSlot, saveSchedule } from './schedule.js';
 import { initChat } from './chat.js';
