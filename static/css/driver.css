@@ -92,16 +92,21 @@ input[type="time"] {
 }
 
 .nav-icon {
-    width: 3rem;
-    height: 3rem;
     border-radius: 1.5rem;
     display: flex;
     align-items: center;
-    justify-content: center;
     color: #94a3b8;
     transition: all 0.2s;
     cursor: pointer;
     margin-bottom: 1rem;
+}
+
+@media (min-width: 768px) {
+    .nav-icon {
+        width: 3rem;
+        height: 3rem;
+        justify-content: center;
+    }
 }
 
 .nav-icon.active {
