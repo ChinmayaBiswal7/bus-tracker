@@ -128,94 +128,9 @@ def driver():
 def student():
     return render_template('student.html', recommendations=[])
 
-@app.route('/api/chat', methods=['POST'])
-def chat_with_ai():
-    data = request.json
-    user_msg = data.get('message', '')
-    
-    if not groq_client:
-        return {
-            "response": "I see you want to chat! To enable my full Llama 3 brain, please set the 'GROQ_API_KEY' environment variable. For now, I'm just a simple bot: " + user_msg
-        }
-
-    system_prompt = """
-    You are the 'Campus Assistant', the intelligent and omniscient brain of the Campus Ride app. 
-    You have COMPLETE, low-level knowledge of this project's code, architecture, and features.
-    (See full system prompt in previous versions)
-    """
-    
-    # We can reuse call_groq here or keep the bespoke call
-    # Keeping bespoke call to update system prompt fully later if needed, 
-    # but for now reusing the logic you had would be cleaner.
-    # To minimize diff, I'll keep your existing implementation for student chat
-    # but using the Helper would be better. For now, leaving Student Chat logic AS IS.
-    
-    try:
-        # Re-using your existing student chat logic block
-        # ... (omitted for brevity in replacement chunk instructions, will use exact target content match)
-        pass 
-    except:
-        pass
-
-    # Actually, I need to replace the WHOLE top section to remove Gemini imports.
-    # But for this tool I must target a specific block.
-    # Strategy: Replace from Line 1 to the end of driver_chat function.
-    
-    return {"response": "Error in replacement logic - see next step"}
-
-# RETHINKING REPLACEMENT STRATEGY:
-# I will do this in 2 chunks to be safe.
-# Chunk 1: Top of file (Imports & Init)
-# Chunk 2: AI Endpoints (driver_ai_assist & driver_chat)
 
 
 
-
-# --- Helper Functions ---
-def get_recommendations(user_id):
-    # Placeholder - Recommendations temporarily disabled during migration
-    return []
-
-# --- Routes ---
-@app.route('/')
-def index():
-    return render_template('home.html')
-
-@app.route('/signup')
-def signup():
-    role = request.args.get('role', 'student')
-    return render_template('signup.html', role=role)
-
-@app.route('/login')
-def login():
-    role = request.args.get('role', 'student')
-    return render_template('login.html', role=role)
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('index'))
-
-# --- PWA Static Routes (Critical for Service Worker Scope) ---
-@app.route('/manifest.json')
-def serve_manifest():
-    return app.send_static_file('manifest.json')
-
-@app.route('/sw.js')
-def serve_sw():
-    return app.send_static_file('sw.js')
-
-@app.route('/firebase-messaging-sw.js')
-def serve_fcm_sw():
-    return app.send_static_file('firebase-messaging-sw.js')
-
-@app.route('/driver')
-def driver():
-    return render_template('driver.html')
-
-@app.route('/student')
-def student():
-    return render_template('student.html', recommendations=[])
 
 @app.route('/api/chat', methods=['POST'])
 def chat_with_ai():
