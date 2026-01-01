@@ -33,10 +33,10 @@ socket.on('student_location_update', (data) => {
             <div class="relative w-12 h-12 flex items-center justify-center">
                 <!-- Pulse -->
                 <div class="absolute inset-0 bg-yellow-400 rounded-full opacity-40 animate-ping"></div>
-                <!-- Icon container -->
-                <div class="relative w-8 h-8 bg-yellow-400 rounded-full shadow-md flex items-center justify-center border-2 border-white z-10">
-                    <!-- Simple vector person -->
-                    <svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24">
+                <!-- Black Circle Background -->
+                <div class="relative w-9 h-9 bg-black rounded-full shadow-md flex items-center justify-center border-2 border-black z-10">
+                    <!-- Neon Yellow Person -->
+                    <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>
                 </div>

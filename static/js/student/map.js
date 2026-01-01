@@ -32,8 +32,10 @@ export function initMap() {
         html: `
         <div class="relative w-12 h-12 flex items-center justify-center">
              <div class="absolute inset-0 bg-yellow-400 rounded-full opacity-40 animate-ping"></div>
-             <div class="relative w-8 h-8 bg-yellow-400 rounded-full shadow-md flex items-center justify-center border-2 border-white z-10">
-                <svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24">
+             <!-- Black Circle Bg -->
+             <div class="relative w-9 h-9 bg-black rounded-full shadow-md flex items-center justify-center border-2 border-black z-10">
+                <!-- Neon Yellow -->
+                <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                 </svg>
              </div>
@@ -154,48 +156,38 @@ function updateBusMarker(busId, info) {
     let iconInnerHtml;
 
     if (isEV) {
-        // EV ICON (Inline SVG - White Golf Cart)
+        // EV ICON (Black Dot Style)
         iconInnerHtml = `
             <div class="relative w-12 h-12 flex items-center justify-center">
                 <div class="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
-                <div class="relative z-10">
-                    <svg width="40" height="40" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Black Bg -->
+                <div class="relative w-9 h-9 bg-black rounded-full border-2 border-black shadow-lg flex items-center justify-center z-10">
+                    <svg width="20" height="20" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M48,256 L464,256 C477.255,256 488,266.745 488,280 L488,360 L24,360 L24,280 C24,266.745 34.745,256 48,256 Z" fill="white"/>
-                        <path d="M40,120 L472,120 L440,256 L72,256 L40,120 Z" fill="none" stroke="white" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M40,120 L472,120" stroke="#10B981" stroke-width="20" stroke-linecap="round"/>
-                        <path d="M120,120 L120,256" stroke="#10B981" stroke-width="12"/>
-                        <path d="M256,120 L256,256" stroke="#10B981" stroke-width="12"/>
-                        <path d="M392,120 L392,256" stroke="#10B981" stroke-width="12"/>
-                        <circle cx="120" cy="360" r="28" fill="#333"/>
-                        <circle cx="392" cy="360" r="28" fill="#333"/>
+                         <path d="M40,120 L472,120 L440,256 L72,256 L40,120 Z" fill="none" stroke="white" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>
                          <path d="M250,290 L230,320 H250 L240,350 L270,310 H250 L260,290 Z" fill="#FACC15"/>
                     </svg>
                 </div>
                 <!-- Badge -->
-                <div class="absolute -top-1 -right-1 bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm z-20">
+                <div class="absolute -top-2 -right-2 bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm z-20">
                     ${info.bus_no}
                 </div>
             </div>
         `;
     } else {
-        // BUS ICON (Inline SVG - Standard)
+        // BUS ICON (Black Dot Style)
         iconInnerHtml = `
             <div class="relative w-12 h-12 flex items-center justify-center">
                 <div class="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20"></div>
-                <div class="relative z-10">
-                    <svg width="40" height="40" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="32" y="112" width="448" height="256" rx="32" fill="white"/>
-                        <rect x="32" y="240" width="448" height="48" fill="#3B82F6"/>
-                        <rect x="64" y="144" width="80" height="80" rx="8" fill="#93C5FD"/>
-                        <rect x="168" y="144" width="80" height="80" rx="8" fill="#93C5FD"/>
-                        <rect x="272" y="144" width="80" height="80" rx="8" fill="#93C5FD"/>
-                        <rect x="376" y="144" width="70" height="80" rx="8" fill="#93C5FD"/>
-                        <circle cx="128" cy="368" r="32" fill="#333"/>
-                        <circle cx="384" cy="368" r="32" fill="#333"/>
+                <!-- Black Bg -->
+                <div class="relative w-9 h-9 bg-black rounded-full border-2 border-black shadow-lg flex items-center justify-center z-10">
+                    <svg width="20" height="20" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M32 112 H480 V368 H32 V112 Z" fill="white"/>
+                        <rect x="32" y="240" width="448" height="32" fill="#3B82F6"/>
                     </svg>
                 </div>
                 <!-- Badge -->
-                <div class="absolute -top-1 -right-1 bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm z-20">
+                <div class="absolute -top-2 -right-2 bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm z-20">
                     ${info.bus_no}
                 </div>
             </div>
