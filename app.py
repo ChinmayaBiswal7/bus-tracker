@@ -1,5 +1,20 @@
 import eventlet
 eventlet.monkey_patch()
+import sys
+
+print("PYTHON VERSION:", sys.version)
+
+try:
+    import google.generativeai as old_sdk
+    print("❌ OLD SDK STILL INSTALLED:", old_sdk)
+except Exception:
+    print("✅ OLD SDK NOT PRESENT")
+
+try:
+    from google import genai as new_sdk
+    print("✅ NEW SDK PRESENT:", new_sdk)
+except Exception as e:
+    print("❌ NEW SDK MISSING:", e)
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
