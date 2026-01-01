@@ -169,35 +169,7 @@ def chat_with_ai():
 # Chunk 2: AI Endpoints (driver_ai_assist & driver_chat)
 
 
-# --- Database Models ---
-class UserActivity(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.String(100))
-    action = db.Column(db.String(50))
-    bus_no = db.Column(db.String(20))
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-class Bus(db.Model):
-    bus_no = db.Column(db.String(20), primary_key=True)
-    sid = db.Column(db.String(50), unique=True)
-    lat = db.Column(db.Float)
-    lng = db.Column(db.Float)
-    accuracy = db.Column(db.Float)
-    speed = db.Column(db.Float)
-    heading = db.Column(db.Float)
-    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
-    is_active = db.Column(db.Boolean, default=True)
-
-class LocationHistory(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    bus_no = db.Column(db.String(20))
-    lat = db.Column(db.Float)
-    lng = db.Column(db.Float)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-
-# Ensure DB tables exist
-with app.app_context():
-    db.create_all()
 
 # --- Helper Functions ---
 def get_recommendations(user_id):
