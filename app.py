@@ -417,6 +417,7 @@ def handle_student_update(data):
     Relays student location to drivers.
     Data: { 'bus_no': '42', 'lat': ..., 'lng': ... }
     """
+    print(f"[DEBUG] Received student_update: {data}")
     # Attach the student's socket ID so the driver can track unique students
     data['id'] = request.sid
     # Broadcast to everyone (Drivers will filter by bus_no)

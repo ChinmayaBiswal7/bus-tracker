@@ -10,10 +10,18 @@ let activeBusNo = null;
 
 // Listen for student updates
 socket.on('student_location_update', (data) => {
-    if (!isSharing || !map || !activeBusNo) return;
+    console.log("[DRIVER] Received student update:", data, "Active Bus:", activeBusNo);
+    if (!isSharing || !map || !activeBusNo) {
+        console.log("[DRIVER] ignored (not sharing or no map)");
+        return;
+    }
 
     // Filter: Only show students tracking MY bus
-    if (data.bus_no !== activeBusNo) return;
+    // Weak equality check to handle string/number differences
+    if (String(data.bus_no) !== String(activeBusNo)) {
+        console.log(`[DRIVER] ignored (Bus mismatch: ${data.bus_no} != ${activeBusNo})`);
+        return;
+    }
 
     // Render Marker
     if (studentMarkers[data.id]) {

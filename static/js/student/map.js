@@ -206,6 +206,7 @@ export function startLocationTracking(highAccuracy = true) {
                 // Emit Location to Driver
                 const busInfo = lastBusData[targetBusId];
                 if (busInfo && busInfo.bus_no) {
+                    console.log("[STUDENT] Emitting location to driver for bus:", busInfo.bus_no);
                     socket.emit('student_update', {
                         bus_no: busInfo.bus_no,
                         lat: userLat,
