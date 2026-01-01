@@ -8,4 +8,4 @@ werkzeug
 firebase-admin
 groq
 requests
-google-genai
+
