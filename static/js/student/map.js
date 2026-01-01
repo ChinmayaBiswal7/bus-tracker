@@ -146,11 +146,29 @@ function updateBusMarker(busId, info) {
     let iconInnerHtml;
 
     if (isEV) {
-        // New Image-Based Icon for EV
+        // Custom "Skeleton" SVG for EV
+        // Vector Bus: Green Base, White Top, Bolt
+        const evSvg = `
+        <svg viewBox="0 0 512 512" class="w-12 h-12 drop-shadow-lg z-10" fill="none" xmlns="http://www.w3.org/2000/svg">
+             <!-- Body -->
+            <path d="M400 160H112C94.3 160 80 174.3 80 192V320C80 337.7 94.3 352 112 352H128V384C128 401.7 142.3 416 160 416H208C225.7 416 240 401.7 240 384V352H272V384C272 401.7 286.3 416 304 416H352C369.7 416 384 401.7 384 384V352H400C417.7 352 432 337.7 432 320V192C432 174.3 417.7 160 400 160Z" fill="#10B981"/>
+            <path d="M400 160H112C94.3 160 80 174.3 80 192V256H432V192C432 174.3 417.7 160 400 160Z" fill="white"/>
+            <!-- Window -->
+            <path d="M120 180H392C400.8 180 408 187.2 408 196V230C408 238.8 400.8 246 392 246H120C111.2 246 104 238.8 104 230V196C104 187.2 111.2 180 120 180Z" fill="#38BDF8"/>
+            <!-- Bolt -->
+            <path d="M245 270L220 310H245L235 340L270 295H245L260 270H245Z" fill="#F59E0B" stroke="white" stroke-width="4"/>
+            <!-- Wheels -->
+            <circle cx="168" cy="384" r="24" fill="#1F2937" stroke="#4B5563" stroke-width="4"/>
+            <circle cx="344" cy="384" r="24" fill="#1F2937" stroke="#4B5563" stroke-width="4"/>
+            <!-- Lights -->
+            <circle cx="100" cy="300" r="8" fill="#FACC15"/>
+            <circle cx="412" cy="300" r="8" fill="#FACC15"/>
+        </svg>`;
+
         iconInnerHtml = `
             <div class="relative w-12 h-12 flex items-center justify-center">
                 <div class="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
-                <img src="/static/images/ev_marker.png" class="relative w-12 h-12 drop-shadow-lg z-10" alt="EV">
+                ${evSvg}
                 <!-- Badge -->
                 <div class="absolute -top-1 -right-1 bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm z-20">
                     ${info.bus_no}
