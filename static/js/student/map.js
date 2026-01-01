@@ -178,7 +178,9 @@ function updateBusMarker(busId, info) {
                 startTrackingRoute(busId);
             });
     }
+    // Store Bus Data for Routing
     markers[busId].isOffline = isOffline;
+    markers[busId].speed = info.speed || 0; // Store real GPS speed (km/h) 
 }
 
 export function startLocationTracking(highAccuracy = true) {
@@ -297,29 +299,31 @@ function updateRoute() {
                 if (routingTimer) clearTimeout(routingTimer);
                 const summary = e.routes[0].summary;
 
-                // Smart Traffic Logic: Cap speed at 15 km/h (City Traffic)
-                // If OSRM predicts a speed faster than 15 km/h, we force it down to 15.
-                const MAX_CITY_SPEED_KMPH = 15;
                 const distanceKm = summary.totalDistance / 1000;
 
-                // Calculate OSRM's implied speed (km/h)
-                const osrmTimeHours = summary.totalTime / 3600;
-                const osrmSpeedKmph = distanceKm / osrmTimeHours;
+                // --- REAL-TIME ETA CALCULATION ---
+                // Formula: ETA = Distance / Current Bus Speed
+
+                const currentSpeedKmph = markers[targetBusId]?.speed || 0;
+                const MIN_RELIABLE_SPEED = 5; // km/h (below this, speed data is too noisy or bus is stopped)
+                const FALLBACK_CITY_SPEED = 15; // km/h (average city traffc speed)
 
                 let finalTimeMin;
+                let statusMsg = "";
 
-                if (osrmSpeedKmph > MAX_CITY_SPEED_KMPH) {
-                    // Recalculate time based on capped speed
-                    finalTimeMin = Math.ceil((distanceKm / MAX_CITY_SPEED_KMPH) * 60);
+                if (currentSpeedKmph > MIN_RELIABLE_SPEED) {
+                    // Use Real GPS Speed
+                    finalTimeMin = Math.ceil((distanceKm / currentSpeedKmph) * 60);
                 } else {
-                    // Use OSRM time if it's already slow (e.g. very winding road)
-                    finalTimeMin = Math.ceil(summary.totalTime / 60);
+                    // Fallback if bus is stopped or too slow (assume it will move at average city speed)
+                    finalTimeMin = Math.ceil((distanceKm / FALLBACK_CITY_SPEED) * 60);
+                    statusMsg = " (Heavy Traffic)";
                 }
 
-                // Add a small buffer for heavy traffic stops (2 mins fixed penalty)
+                // Buffer for stops
                 finalTimeMin += 2;
 
-                if (tripEta) tripEta.textContent = `${finalTimeMin} min`;
+                if (tripEta) tripEta.textContent = `${finalTimeMin} min${statusMsg}`;
                 if (tripDist) tripDist.textContent = `(${distanceKm.toFixed(1)} km)`;
             });
 
