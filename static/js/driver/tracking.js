@@ -31,11 +31,18 @@ socket.on('student_location_update', (data) => {
             className: 'student-marker',
             html: `
             <div class="relative w-12 h-12 flex items-center justify-center">
+                <!-- Pulse -->
                 <div class="absolute inset-0 bg-yellow-400 rounded-full opacity-40 animate-ping"></div>
-                <img src="/static/images/student_marker.svg" class="relative w-10 h-10 drop-shadow-xl z-20" alt="Student">
+                <!-- Icon container -->
+                <div class="relative w-8 h-8 bg-yellow-400 rounded-full shadow-md flex items-center justify-center border-2 border-white z-10">
+                    <!-- Simple vector person -->
+                    <svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
             </div>`,
             iconSize: [48, 48],
-            iconAnchor: [24, 24] // Center it
+            iconAnchor: [24, 24]
         });
 
         studentMarkers[data.id] = L.marker([data.lat, data.lng], { icon: studentIcon })
