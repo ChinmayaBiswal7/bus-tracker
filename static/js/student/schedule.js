@@ -124,20 +124,16 @@ function loadBusScheduleDetails(busId) {
     const content = document.getElementById(`sched-content-${busId}`);
 
     // Fetch Dates (Subcollection)
-    // Fix: Use Local Date for "today" calculation instead of UTC (toISOString)
-    const now = new Date();
-    const today = now.getFullYear() + '-' +
-        String(now.getMonth() + 1).padStart(2, '0') + '-' +
-        String(now.getDate()).padStart(2, '0');
-
     const q = query(collection(db, "schedules", busId, "dates"), orderBy("__name__"));
 
     getDocs(q).then(snapshot => {
         content.innerHTML = '';
-        const validDocs = snapshot.docs.filter(d => d.id >= today);
+
+        // Show ALL schedules as requested (No filtering)
+        const validDocs = snapshot.docs;
 
         if (validDocs.length === 0) {
-            content.innerHTML = '<p class="text-xs text-slate-500 text-center italic">No upcoming schedule.</p>';
+            content.innerHTML = '<p class="text-xs text-slate-500 text-center italic">No schedules found.</p>';
             return;
         }
 
