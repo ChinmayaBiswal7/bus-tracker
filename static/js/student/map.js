@@ -26,12 +26,16 @@ export function initMap() {
         attribution: '© OpenStreetMap'
     }).addTo(map);
 
-    // User Icon
+    // User Icon (Student Sticker)
     userIcon = L.divIcon({
         className: 'custom-user-icon',
-        html: `<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg pulse-ring"></div>`,
-        iconSize: [16, 16],
-        iconAnchor: [8, 8]
+        html: `
+        <div class="relative w-12 h-12 flex items-center justify-center">
+            <div class="absolute inset-0 bg-yellow-400 rounded-full opacity-40 animate-ping"></div>
+            <img src="/static/images/student_marker.png" class="relative w-10 h-10 drop-shadow-lg z-10" alt="Me">
+        </div>`,
+        iconSize: [48, 48],
+        iconAnchor: [24, 24]
     });
 
     // Start Geolocation
@@ -158,21 +162,15 @@ function updateBusMarker(busId, info) {
             </div>
         `;
     } else {
-        // Standard SVG Icon for Bus (Existing)
-        const busPath = `<path d="M256 0C161.896 0 85.333 76.563 85.333 170.667v128c0 47.146 38.188 85.333 85.334 85.333H341.333c47.146 0 85.333-38.188 85.333-85.333v-128C426.666 76.563 350.104 0 256 0zM128 170.667c0-70.688 57.313-128 128-128s128 57.313 128 128v42.666H128V170.667zm256 128c0 23.584-19.083 42.666-42.667 42.666H170.667c-23.584 0-42.667-19.082-42.667-42.666V256h256v42.667zM149.333 320c11.792 0 21.334 9.542 21.334 21.333s-9.542 21.333-21.334 21.333S128 353.125 128 341.333 137.542 320 149.333 320zm213.334 0c11.791 0 21.333 9.542 21.333 21.333s-9.542 21.333-21.333 21.333S341.333 353.125 341.333 341.333 350.875 320 362.667 320z"/>
-                         <path d="M106.666 426.667v21.333C106.666 459.792 116.208 469.333 128 469.333h42.667c11.791 0 21.333-9.541 21.333-21.333v-21.333h128v21.333c0 11.792 9.542 21.333 21.333 21.333H384c11.792 0 21.334-9.541 21.334-21.333v-21.333c23.583 0 42.666-19.084 42.666-42.667h-42.666v21.333H106.666V405.333H64c0 23.583 19.084 42.667 42.666 42.667v-21.333z"/>`;
-
+        // Standard Bus Icon (White/Blue Image)
         iconInnerHtml = `
-            <div class="relative w-10 h-10">
-                <div class="absolute inset-0 bg-white rounded-full shadow-md flex items-center justify-center border-2 ${borderColor}">
-                        <svg class="w-6 h-6 ${iconColor}" fill="currentColor" viewBox="0 0 512 512">
-                        ${busPath}
-                    </svg>
-                </div>
-                <div class="absolute -top-1 -right-2 bg-slate-900 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm z-10">
+            <div class="relative w-12 h-12 flex items-center justify-center">
+                <div class="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20"></div>
+                <img src="/static/images/bus_marker.svg" class="relative w-12 h-12 drop-shadow-lg z-10" alt="Bus">
+                <!-- Badge -->
+                <div class="absolute -top-1 -right-1 bg-slate-900 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm z-20">
                     ${info.bus_no}
                 </div>
-                ${!isOffline ? '<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-2 bg-black/20 blur-sm rounded-full"></div>' : ''}
             </div>
         `;
     }

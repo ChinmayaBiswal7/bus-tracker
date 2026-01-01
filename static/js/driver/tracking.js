@@ -30,16 +30,12 @@ socket.on('student_location_update', (data) => {
         const studentIcon = L.divIcon({
             className: 'student-marker',
             html: `
-            <div class="relative w-8 h-8 flex items-center justify-center">
-                <div class="absolute inset-0 bg-yellow-500 rounded-full opacity-30 animate-ping"></div>
-                <div class="relative w-6 h-6 bg-yellow-400 rounded-full border-2 border-white shadow-lg flex items-center justify-center">
-                    <svg class="w-4 h-4 text-black" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
-                    </svg>
-                </div>
+            <div class="relative w-12 h-12 flex items-center justify-center">
+                <div class="absolute inset-0 bg-yellow-400 rounded-full opacity-40 animate-ping"></div>
+                <img src="/static/images/student_marker.png" class="relative w-10 h-10 drop-shadow-lg z-10" alt="Student">
             </div>`,
-            iconSize: [32, 32],
-            iconAnchor: [16, 16] // Center it
+            iconSize: [48, 48],
+            iconAnchor: [24, 24] // Center it
         });
 
         studentMarkers[data.id] = L.marker([data.lat, data.lng], { icon: studentIcon })

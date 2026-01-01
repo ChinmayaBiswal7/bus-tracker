@@ -41,13 +41,11 @@ export function createIdleIcon() {
 export function createBusIcon() {
     return L.divIcon({
         className: 'custom-div-icon',
-        html: `<div class="relative w-12 h-12 flex items-center justify-center">
-                <div class="absolute inset-0 bg-amber-500 rounded-full animate-ping opacity-20"></div>
-                <div class="relative w-10 h-10 bg-amber-500 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-xl">
-                    🚌
-                </div>
+        html: `<div class="relative w-16 h-16 flex items-center justify-center">
+                <div class="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-20"></div>
+                <img src="/static/images/bus_marker.svg" class="relative w-14 h-14 drop-shadow-xl z-10" alt="Bus">
                </div>`,
-        iconSize: [48, 48], iconAnchor: [24, 24]
+        iconSize: [64, 64], iconAnchor: [32, 32]
     });
 }
 
