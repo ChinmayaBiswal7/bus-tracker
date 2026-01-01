@@ -30,19 +30,19 @@ socket.on('student_location_update', (data) => {
         const studentIcon = L.divIcon({
             className: 'student-marker',
             html: `
-            <div class="relative w-12 h-12 flex items-center justify-center">
-                <!-- Pulse -->
-                <div class="absolute inset-0 bg-yellow-400 rounded-full opacity-40 animate-ping"></div>
-                <!-- Black Circle Background -->
-                <div class="relative w-9 h-9 bg-black rounded-full shadow-md flex items-center justify-center border-2 border-black z-10">
-                    <!-- Neon Yellow Person -->
-                    <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                    </svg>
-                </div>
+            <div class="relative w-16 h-16 flex items-center justify-center filter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
+                 <svg width="64" height="64" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Body (Blue) -->
+                    <circle cx="50" cy="25" r="12" fill="#3B82F6" stroke="white" stroke-width="2"/>
+                    <path d="M30 45 Q30 40 35 40 H65 Q70 40 70 45 V70 H60 V90 H40 V70 H30 V45 Z" fill="#3B82F6" stroke="white" stroke-width="2"/>
+                    <!-- Backpack (Darker Blue) -->
+                    <rect x="35" y="45" width="30" height="25" rx="5" fill="#1E3A8A" fill-opacity="0.5"/>
+                </svg>
+                 <!-- Pulse -->
+                <div class="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-30 -z-10 scale-75"></div>
             </div>`,
-            iconSize: [48, 48],
-            iconAnchor: [24, 24]
+            iconSize: [64, 64],
+            iconAnchor: [32, 32]
         });
 
         studentMarkers[data.id] = L.marker([data.lat, data.lng], { icon: studentIcon })
