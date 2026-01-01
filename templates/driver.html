@@ -59,7 +59,7 @@
         class="sidebar glass-card fixed inset-y-0 left-0 z-[2001] w-64 md:w-20 bg-slate-900/95 md:bg-slate-900/90 backdrop-blur-xl border-r border-white/10 md:border md:top-6 md:left-6 md:bottom-6 md:h-auto md:rounded-3xl transition-transform duration-300 -translate-x-full md:translate-x-0 flex flex-col items-center md:items-center py-6 md:py-4 shadow-2xl md:shadow-none">
 
         <!-- Mobile Sidebar Header -->
-        <div class="md:hidden w-full flex items-center justify-between px-6 mb-6">
+        <div class="md:hidden w-full flex items-center justify-between px-4 mb-6">
             <h2 class="font-bold text-xl text-white">Menu</h2>
             <button onclick="toggleSidebar()" class="p-2 -mr-2 text-slate-400 hover:text-white">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,21 +160,21 @@
         </div>
 
         <!-- Radar Visual -->
-        <div class="relative py-8 flex justify-center items-center overflow-hidden">
+        <div class="relative py-4 md:py-8 flex justify-center items-center overflow-hidden">
             <!-- Pulsing Rings -->
             <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
                 <div
-                    class="radar-ring w-64 h-64 border border-blue-500 rounded-full absolute animate-[ping_3s_linear_infinite]">
+                    class="radar-ring w-48 h-48 md:w-64 md:h-64 border border-blue-500 rounded-full absolute animate-[ping_3s_linear_infinite]">
                 </div>
                 <div
-                    class="radar-ring w-48 h-48 border border-blue-400 rounded-full absolute animate-[ping_3s_linear_infinite_1s]">
+                    class="radar-ring w-32 h-32 md:w-48 md:h-48 border border-blue-400 rounded-full absolute animate-[ping_3s_linear_infinite_1s]">
                 </div>
             </div>
 
             <!-- Central Icon -->
             <div
-                class="relative z-10 w-24 h-24 rounded-full bg-gradient-to-b from-slate-700 to-slate-800 border-4 border-slate-600 flex items-center justify-center shadow-2xl">
-                <span class="text-4xl filter drop-shadow-lg">🚌</span>
+                class="relative z-10 w-16 h-16 md:w-24 md:h-24 rounded-full bg-gradient-to-b from-slate-700 to-slate-800 border-4 border-slate-600 flex items-center justify-center shadow-2xl">
+                <span class="text-2xl md:text-4xl filter drop-shadow-lg">🚌</span>
             </div>
         </div>
 
@@ -272,7 +272,7 @@
 
 
     <!-- PANEL 3: GENERAL CHAT -->
-    <div id="panel-ai" class="pop-panel glass-card p-0 flex flex-col h-[400px]">
+    <div id="panel-ai" class="pop-panel glass-card p-0 flex flex-col h-[60dvh] md:h-[400px]">
         <div class="p-4 border-b border-white/5 bg-slate-800/50 flex items-center justify-between">
             <h3 class="text-white font-bold text-sm flex items-center gap-2">
                 <span>🤖</span> Campus Assistant

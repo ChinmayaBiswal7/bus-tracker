@@ -57,26 +57,27 @@ input[type="time"] {
 @media (max-width: 768px) {
     #map {
         top: 4rem;
-        height: calc(100vh - 4rem);
+        height: calc(100dvh - 4rem);
     }
 
     .pop-panel {
+        position: fixed;
         top: auto;
-        bottom: 1.5rem !important;
-        /* Floating above button */
+        bottom: 1rem !important;
         left: 1rem !important;
         right: 1rem !important;
         width: auto !important;
-        max-width: 400px !important;
-        /* Prevent too wide on tablets */
-        margin: 0 auto;
-        /* Center if max-width hit */
-        border-radius: 2rem !important;
+        max-width: 100% !important;
+        /* Allow full width minus margins */
+        margin: 0;
+        border-radius: 1.5rem !important;
         border-bottom: 1px solid var(--glass-border);
         transform: translateY(120%) scale(0.95);
-        /* Slide from bottom */
-        max-height: 75vh;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        max-height: 80dvh;
+        /* Use dvh for mobile browsers */
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+        z-index: 3000 !important;
+        /* Ensure it's above the header */
     }
 
     .pop-panel.active {
@@ -86,7 +87,7 @@ input[type="time"] {
     }
 
     #panel-speed {
-        bottom: 1.5rem !important;
+        bottom: 1rem !important;
     }
 }
 
