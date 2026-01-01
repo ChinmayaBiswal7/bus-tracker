@@ -297,12 +297,30 @@ function updateRoute() {
                 if (routingTimer) clearTimeout(routingTimer);
                 const summary = e.routes[0].summary;
 
-                // Traffic Adjustment: Multiply OSRM (free flow) by 3.0 for heavy traffic
-                const TRAFFIC_FACTOR = 3.0;
-                const adjustedTime = Math.ceil((summary.totalTime / 60) * TRAFFIC_FACTOR);
+                // Smart Traffic Logic: Cap speed at 15 km/h (City Traffic)
+                // If OSRM predicts a speed faster than 15 km/h, we force it down to 15.
+                const MAX_CITY_SPEED_KMPH = 15;
+                const distanceKm = summary.totalDistance / 1000;
 
-                if (tripEta) tripEta.textContent = `${adjustedTime} min`;
-                if (tripDist) tripDist.textContent = `(${(summary.totalDistance / 1000).toFixed(1)} km)`;
+                // Calculate OSRM's implied speed (km/h)
+                const osrmTimeHours = summary.totalTime / 3600;
+                const osrmSpeedKmph = distanceKm / osrmTimeHours;
+
+                let finalTimeMin;
+
+                if (osrmSpeedKmph > MAX_CITY_SPEED_KMPH) {
+                    // Recalculate time based on capped speed
+                    finalTimeMin = Math.ceil((distanceKm / MAX_CITY_SPEED_KMPH) * 60);
+                } else {
+                    // Use OSRM time if it's already slow (e.g. very winding road)
+                    finalTimeMin = Math.ceil(summary.totalTime / 60);
+                }
+
+                // Add a small buffer for heavy traffic stops (2 mins fixed penalty)
+                finalTimeMin += 2;
+
+                if (tripEta) tripEta.textContent = `${finalTimeMin} min`;
+                if (tripDist) tripDist.textContent = `(${distanceKm.toFixed(1)} km)`;
             });
 
             routingControl.on('routingerror', () => {
@@ -316,8 +334,8 @@ function runFallbackRouting(busLatLng, etaEl, distEl) {
     const dist = map.distance([userLat, userLng], busLatLng);
     const distKm = (dist / 1000).toFixed(1);
 
-    // Fallback: Assume 18 km/h average speed for heavy traffic
-    const timeMins = Math.ceil((distKm / 18) * 60);
+    // Fallback: Assume 15 km/h average speed for heavy city traffic
+    const timeMins = Math.ceil((distKm / 15) * 60);
 
     if (distEl) distEl.textContent = `(${distKm} km)`;
     if (etaEl) etaEl.textContent = `${timeMins} min`;
