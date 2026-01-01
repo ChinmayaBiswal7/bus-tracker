@@ -41,30 +41,14 @@ def call_gemini(prompt):
     if not GEMINI_API_KEY:
         raise Exception("GEMINI_API_KEY not set")
     
-    candidate_models = [
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-latest",
-        "gemini-pro",
-        "models/gemini-1.5-flash", 
-    ]
-
-    last_error = None
-
-    for model_name in candidate_models:
-        try:
-            # Try to initialize and generate with this model
-            model = genai.GenerativeModel(model_name)
-            response = model.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            # Continue to next model if this one fails (404, 403, etc)
-            error_str = str(e)
-            print(f"[WARN] Accessing {model_name} failed: {error_str}")
-            last_error = error_str
-            continue
-
-    # If all fail
-    return f"AI Service Error: All models failed. Last error: {last_error}"
+    try:
+        # Use the FREE + STABLE model as recommended (Requires google-generativeai>=0.8.0)
+        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"[ERROR] Gemini SDK Error: {e}")
+        return f"AI Service Error: {str(e)}"
 
 # Initialize Groq (Llama 3)
 groq_client = None
