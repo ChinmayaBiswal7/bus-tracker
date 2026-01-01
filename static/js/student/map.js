@@ -254,6 +254,19 @@ export function startTrackingRoute(busId) {
     const tripCard = document.getElementById('trip-info-card');
     if (tripCard) tripCard.classList.remove('hidden');
     updateRoute();
+
+    // FORCE EMIT: Send immediate update to driver (don't wait for GPS movement)
+    if (userLat && userLng && lastBusData[busId]) {
+        const busNo = lastBusData[busId].bus_no;
+        console.log("[STUDENT] Force emitting initial location -> Driver of Bus:", busNo);
+        socket.emit('student_update', {
+            bus_no: busNo,
+            lat: userLat,
+            lng: userLng
+        });
+    } else {
+        console.warn("[STUDENT] Cannot force emit. Missing data:", { userLat, busData: !!lastBusData[busId] });
+    }
 }
 
 export function stopTrackingRoute() {
