@@ -32,7 +32,7 @@ export function initMap() {
         html: `
         <div class="relative w-12 h-12 flex items-center justify-center">
             <div class="absolute inset-0 bg-yellow-400 rounded-full opacity-40 animate-ping"></div>
-            <img src="/static/images/student_marker.png" class="relative w-10 h-10 drop-shadow-lg z-10" alt="Me">
+            <img src="/static/images/student_marker.svg" class="relative w-10 h-10 drop-shadow-xl z-20" alt="Me">
         </div>`,
         iconSize: [48, 48],
         iconAnchor: [24, 24]

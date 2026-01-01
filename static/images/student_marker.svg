@@ -1,0 +1,29 @@
+<svg width="64" height="64" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Drop Shadow -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="15" />
+        <feOffset dx="0" dy="10" result="offsetblur" />
+        <feComponentTransfer>
+            <feFuncA type="linear" slope="0.5" />
+        </feComponentTransfer>
+        <feMerge>
+            <feMergeNode in="offsetblur" />
+            <feMergeNode in="SourceGraphic" />
+        </feMerge>
+    </filter>
+
+    <g filter="url(#shadow)">
+        <!-- Body: Neon Yellow/Green -->
+        <path d="M256 448C256 448 256 448 256 448V272C256 254.3 270.3 240 288 240H320C337.7 240 352 254.3 352 272V448H400V256C400 202.1 356.1 160 304 160H208C155.9 160 112 202.1 112 256V448H160V272C160 254.3 174.3 240 192 240H224C241.7 240 256 254.3 256 272V448H256Z" fill="#EAB308"/> <!-- Yellow-500 Body -->
+        
+        <!-- Head -->
+        <circle cx="256" cy="96" r="64" fill="#EAB308"/> <!-- Yellow-500 Head -->
+        
+        <!-- Backpack (Dark Blue) -->
+        <path d="M160 256V208C160 181.5 181.5 160 208 160H304C330.5 160 352 181.5 352 208V256" stroke="#1E3A8A" stroke-width="24" stroke-linecap="round"/>
+        
+        <!-- White Border for Sticker Effect -->
+        <path d="M256 448V272C256 254.3 270.3 240 288 240H320C337.7 240 352 254.3 352 272V448H400V256C400 202.1 356.1 160 304 160H208C155.9 160 112 202.1 112 256V448H160V272C160 254.3 174.3 240 192 240H224C241.7 240 256 254.3 256 272V448" stroke="white" stroke-width="12" stroke-linejoin="round"/>
+        <circle cx="256" cy="96" r="64" stroke="white" stroke-width="12"/>
+    </g>
+</svg>
