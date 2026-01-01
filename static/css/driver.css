@@ -11,6 +11,12 @@ body {
     width: 100vw;
 }
 
+/* Force Input Icons (Calendar/Time) to be White */
+input[type="date"],
+input[type="time"] {
+    color-scheme: dark;
+}
+
 .mono {
     font-family: 'JetBrains Mono', monospace;
 }
