@@ -26,7 +26,7 @@ app.register_blueprint(contact_bp)
 # --- AI & Other Imports ---
 import os
 from groq import Groq
-import google.generativeai as genai
+
 
 import requests
 
