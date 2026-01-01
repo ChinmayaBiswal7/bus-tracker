@@ -48,7 +48,7 @@ function setupSocketListeners() {
     socket.on('connect', () => updateServerStatus(true));
     socket.on('disconnect', () => updateServerStatus(false));
 
-    socket.on('update_bus_locations', (data) => {
+    socket.on('update_buses', (data) => {
         lastBusData = data;
 
         // 1. Update Map Markers (Always show all on map)
@@ -138,7 +138,11 @@ function updateBusMarker(busId, info) {
         markers[busId].setLatLng([info.lat, info.lng]).setIcon(icon);
     } else {
         markers[busId] = L.marker([info.lat, info.lng], { icon: icon }).addTo(map)
-            .bindPopup(`<b class="text-slate-900">Bus ${busId}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`);
+            .bindPopup(`<b class="text-slate-900">Bus ${busId}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`)
+            .on('click', () => {
+                map.flyTo([info.lat, info.lng], 16);
+                startTrackingRoute(busId);
+            });
     }
     markers[busId].isOffline = isOffline;
 }
@@ -279,7 +283,7 @@ function runFallbackRouting(busLatLng, etaEl, distEl) {
 
     if (fallbackLine) map.removeLayer(fallbackLine);
     fallbackLine = L.polyline([[userLat, userLng], [busLatLng.lat, busLatLng.lng]], {
-        color: '#64748b', weight: 4, dashArray: '10, 10', opacity: 0.7
+        color: '#3b82f6', weight: 4, dashArray: '10, 10', opacity: 0.7
     }).addTo(map);
 }
 

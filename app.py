@@ -319,6 +319,21 @@ def subscribe_to_topic():
 
 # --- Socket Events ---
 
+def get_active_buses_payload():
+    active_buses = Bus.query.filter_by(is_active=True).all()
+    buses_limit = {}
+    for b in active_buses:
+        buses_limit[b.sid] = {
+            'bus_no': b.bus_no,
+            'lat': b.lat,
+            'lng': b.lng,
+            'accuracy': b.accuracy,
+            'speed': b.speed,
+            'heading': b.heading,
+            'offline': False # Explicitly mark as online
+        }
+    return buses_limit
+
 @socketio.on('search_bus')
 def handle_search(bus_no):
     # Track user activity (Disabled: Auth is now client-side only)
@@ -341,18 +356,7 @@ def handle_search(bus_no):
 
 @socketio.on('connect')
 def handle_connect():
-    active_buses = Bus.query.filter_by(is_active=True).all()
-    buses_limit = {}
-    for b in active_buses:
-        buses_limit[b.sid] = {
-            'bus_no': b.bus_no,
-            'lat': b.lat,
-            'lng': b.lng,
-            'accuracy': b.accuracy,
-            'speed': b.speed,
-            'heading': b.heading
-        }
-    emit('update_buses', buses_limit)
+    emit('update_buses', get_active_buses_payload())
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -361,11 +365,17 @@ def handle_disconnect():
         bus.is_active = False
         db.session.commit()
         emit('bus_disconnected', request.sid, broadcast=True)
+        # Optional: Broadcast full list to clear marker immediately if needed, 
+        # but bus_disconnected event is efficient for removal.
+        # Stick to existing logic or broadcast full list? 
+        # For consistency with "Offline Mode" features, let's just stick to disconnect event 
+        # unless user reports issues.
 
 @socketio.on('driver_update')
 def handle_driver_update(data):
     sid = request.sid
     if data is None:
+        # Driver stopped session manually
         bus = Bus.query.filter_by(sid=sid).first()
         if bus:
             bus.is_active = False
@@ -398,7 +408,8 @@ def handle_driver_update(data):
     
     db.session.commit()
 
-    emit('update_bus', {'id': sid, 'data': data}, broadcast=True)
+    # BROADCAST FULL STATE
+    emit('update_buses', get_active_buses_payload(), broadcast=True)
 
 # --- Background Listener for Announcements ---
 def listen_for_announcements():
