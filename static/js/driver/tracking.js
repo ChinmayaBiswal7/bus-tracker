@@ -5,6 +5,31 @@ let userMarker = null;
 let watchId = null;
 let isSharing = false;
 const socket = io(); // Singleton
+let studentMarkers = {};
+let activeBusNo = null;
+
+// Listen for student updates
+socket.on('student_location_update', (data) => {
+    if (!isSharing || !map || !activeBusNo) return;
+
+    // Filter: Only show students tracking MY bus
+    if (data.bus_no !== activeBusNo) return;
+
+    // Render Marker
+    if (studentMarkers[data.id]) {
+        studentMarkers[data.id].setLatLng([data.lat, data.lng]);
+    } else {
+        const studentIcon = L.divIcon({
+            className: 'student-dot',
+            html: `<div class="w-3 h-3 bg-cyan-400 rounded-full border border-white shadow-sm pulse-ring"></div>`,
+            iconSize: [12, 12]
+        });
+
+        studentMarkers[data.id] = L.marker([data.lat, data.lng], { icon: studentIcon })
+            .addTo(map)
+            .bindPopup("Student Waiting");
+    }
+});
 
 export function initMap() {
     if (map) return;
@@ -54,6 +79,7 @@ export function toggleSession() {
         // START
         if (!busNo) return alert("Enter Bus Number");
         isSharing = true;
+        activeBusNo = busNo; // Store active bus number
         busInput.disabled = true;
 
         btnMain.innerHTML = `<span class="animate-pulse">⏳</span> INITIALIZING...`;
@@ -211,6 +237,11 @@ export function stopSession() {
 
     updateSpeed(0);
     if (userMarker) userMarker.setIcon(createIdleIcon());
+
+    // Clear Student Markers
+    activeBusNo = null;
+    Object.values(studentMarkers).forEach(marker => map.removeLayer(marker));
+    studentMarkers = {};
 
     // Reset Stats
     if (statAcc) { statAcc.textContent = "--"; statAcc.className = "block text-white font-bold text-xs"; }

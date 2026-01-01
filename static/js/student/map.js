@@ -200,7 +200,19 @@ export function startLocationTracking(highAccuracy = true) {
             userLng = pos.coords.longitude;
             updateUserMarker(userLat, userLng);
             updateGpsStatus('active', 'GPS: Active');
-            if (targetBusId) updateRoute();
+
+            if (targetBusId) {
+                updateRoute();
+                // Emit Location to Driver
+                const busInfo = lastBusData[targetBusId];
+                if (busInfo && busInfo.bus_no) {
+                    socket.emit('student_update', {
+                        bus_no: busInfo.bus_no,
+                        lat: userLat,
+                        lng: userLng
+                    });
+                }
+            }
 
             const tripDist = document.getElementById('trip-dist');
             if (tripDist && tripDist.textContent.includes("GPS")) {

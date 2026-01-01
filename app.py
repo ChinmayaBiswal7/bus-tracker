@@ -411,6 +411,17 @@ def handle_driver_update(data):
     # BROADCAST FULL STATE
     emit('update_buses', get_active_buses_payload(), broadcast=True)
 
+@socketio.on('student_update')
+def handle_student_update(data):
+    """
+    Relays student location to drivers.
+    Data: { 'bus_no': '42', 'lat': ..., 'lng': ... }
+    """
+    # Attach the student's socket ID so the driver can track unique students
+    data['id'] = request.sid
+    # Broadcast to everyone (Drivers will filter by bus_no)
+    emit('student_location_update', data, broadcast=True)
+
 # --- Background Listener for Announcements ---
 def listen_for_announcements():
     """
