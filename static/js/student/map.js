@@ -126,29 +126,50 @@ function renderBusList() {
     });
 }
 
-function updateBusMarker(busId, info) {
-    const isOffline = info.offline || false;
-    const iconHtml = `
-        <div class="relative">
-            <div class="w-8 h-8 rounded-full ${isOffline ? 'bg-slate-600' : 'bg-blue-600'} flex items-center justify-center border-2 border-slate-900 shadow-xl transform transition-transform hover:scale-110">
-                <span class="text-[10px] font-bold text-white">${info.bus_no}</span>
+const isOffline = info.offline || false;
+const isEV = (info.bus_no || '').toLowerCase().includes('ev') || (info.bus_no || '').toLowerCase().includes('shuttle');
+
+// Colors
+let borderColor = 'border-blue-600';
+let iconColor = 'text-blue-600';
+
+if (isOffline) {
+    borderColor = 'border-slate-500';
+    iconColor = 'text-slate-500';
+} else if (isEV) {
+    borderColor = 'border-green-500';
+    iconColor = 'text-green-500';
+}
+
+const iconHtml = `
+        <div class="relative w-10 h-10">
+            <!-- Bus Icon (SVG) -->
+            <div class="absolute inset-0 bg-white rounded-full shadow-md flex items-center justify-center border-2 ${borderColor}">
+                 <svg class="w-6 h-6 ${iconColor}" fill="currentColor" viewBox="0 0 512 512">
+                    <path d="M256 0C161.896 0 85.333 76.563 85.333 170.667v128c0 47.146 38.188 85.333 85.334 85.333H341.333c47.146 0 85.333-38.188 85.333-85.333v-128C426.666 76.563 350.104 0 256 0zM128 170.667c0-70.688 57.313-128 128-128s128 57.313 128 128v42.666H128V170.667zm256 128c0 23.584-19.083 42.666-42.667 42.666H170.667c-23.584 0-42.667-19.082-42.667-42.666V256h256v42.667zM149.333 320c11.792 0 21.334 9.542 21.334 21.333s-9.542 21.333-21.334 21.333S128 353.125 128 341.333 137.542 320 149.333 320zm213.334 0c11.791 0 21.333 9.542 21.333 21.333s-9.542 21.333-21.333 21.333S341.333 353.125 341.333 341.333 350.875 320 362.667 320z"/>
+                    <path d="M106.666 426.667v21.333C106.666 459.792 116.208 469.333 128 469.333h42.667c11.791 0 21.333-9.541 21.333-21.333v-21.333h128v21.333c0 11.792 9.542 21.333 21.333 21.333H384c11.792 0 21.334-9.541 21.334-21.333v-21.333c23.583 0 42.666-19.084 42.666-42.667h-42.666v21.333H106.666V405.333H64c0 23.583 19.084 42.667 42.666 42.667v-21.333z"/>
+                </svg>
             </div>
-             ${!isOffline ? '<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-lg"></div>' : ''}
+            <!-- Badge -->
+            <div class="absolute -top-1 -right-2 bg-slate-900 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-slate-700 shadow-sm z-10">
+                ${info.bus_no}
+            </div>
+             ${!isOffline ? '<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-2 bg-black/20 blur-sm rounded-full"></div>' : ''}
         </div>
     `;
-    const icon = L.divIcon({ className: '', html: iconHtml, iconSize: [32, 32], iconAnchor: [16, 16] });
+const icon = L.divIcon({ className: '', html: iconHtml, iconSize: [40, 40], iconAnchor: [20, 20] });
 
-    if (markers[busId]) {
-        markers[busId].setLatLng([info.lat, info.lng]).setIcon(icon);
-    } else {
-        markers[busId] = L.marker([info.lat, info.lng], { icon: icon }).addTo(map)
-            .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`)
-            .on('click', () => {
-                map.flyTo([info.lat, info.lng], 16);
-                startTrackingRoute(busId);
-            });
-    }
-    markers[busId].isOffline = isOffline;
+if (markers[busId]) {
+    markers[busId].setLatLng([info.lat, info.lng]).setIcon(icon);
+} else {
+    markers[busId] = L.marker([info.lat, info.lng], { icon: icon }).addTo(map)
+        .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`)
+        .on('click', () => {
+            map.flyTo([info.lat, info.lng], 16);
+            startTrackingRoute(busId);
+        });
+}
+markers[busId].isOffline = isOffline;
 }
 
 export function startLocationTracking(highAccuracy = true) {
