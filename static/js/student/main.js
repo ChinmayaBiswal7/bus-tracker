@@ -48,7 +48,6 @@ onAuthStateChanged(auth, (user) => {
         initMap();
         initAnnouncements();
         initSchedule();
-        initSchedule();
         initFCM();
         initChat();
 
