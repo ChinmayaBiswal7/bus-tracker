@@ -305,19 +305,30 @@ function updateRoute() {
                 // Formula: ETA = Distance / Current Bus Speed
 
                 const currentSpeedKmph = markers[targetBusId]?.speed || 0;
-                const MIN_RELIABLE_SPEED = 5; // km/h (below this, speed data is too noisy or bus is stopped)
-                const FALLBACK_CITY_SPEED = 15; // km/h (average city traffc speed)
+                const MIN_RELIABLE_SPEED = 5; // km/h
+
+                // Fallback Logic
+                const FALLBACK_CITY_SPEED = 15; // km/h
+                const FALLBACK_HIGHWAY_SPEED = 45; // km/h
+                const HIGHWAY_DISTANCE_THRESHOLD = 20; // km
 
                 let finalTimeMin;
                 let statusMsg = "";
 
                 if (currentSpeedKmph > MIN_RELIABLE_SPEED) {
-                    // Use Real GPS Speed
+                    // Scenario 1: Real GPS Speed (Best)
                     finalTimeMin = Math.ceil((distanceKm / currentSpeedKmph) * 60);
                 } else {
-                    // Fallback if bus is stopped or too slow (assume it will move at average city speed)
-                    finalTimeMin = Math.ceil((distanceKm / FALLBACK_CITY_SPEED) * 60);
-                    statusMsg = " (Heavy Traffic)";
+                    // Scenario 2: Bus Stopped/Offline (Fallback)
+                    if (distanceKm > HIGHWAY_DISTANCE_THRESHOLD) {
+                        // Highway Trip
+                        finalTimeMin = Math.ceil((distanceKm / FALLBACK_HIGHWAY_SPEED) * 60);
+                        statusMsg = " (Highway Est.)";
+                    } else {
+                        // City Trip
+                        finalTimeMin = Math.ceil((distanceKm / FALLBACK_CITY_SPEED) * 60);
+                        statusMsg = " (Heavy Traffic)";
+                    }
                 }
 
                 // Buffer for stops
@@ -338,8 +349,12 @@ function runFallbackRouting(busLatLng, etaEl, distEl) {
     const dist = map.distance([userLat, userLng], busLatLng);
     const distKm = (dist / 1000).toFixed(1);
 
-    // Fallback: Assume 15 km/h average speed for heavy city traffic
-    const timeMins = Math.ceil((distKm / 15) * 60);
+    // Fallback Calculation
+    const FALLBACK_CITY_SPEED = 15;
+    const FALLBACK_HIGHWAY_SPEED = 45;
+    const speed = distKm > 20 ? FALLBACK_HIGHWAY_SPEED : FALLBACK_CITY_SPEED;
+
+    const timeMins = Math.ceil((distKm / speed) * 60);
 
     if (distEl) distEl.textContent = `(${distKm} km)`;
     if (etaEl) etaEl.textContent = `${timeMins} min`;
