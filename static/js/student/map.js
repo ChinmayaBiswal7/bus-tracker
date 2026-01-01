@@ -101,22 +101,26 @@ function renderBusList() {
 
     filteredEntries.forEach(([busId, info]) => {
         const item = document.createElement('div');
-        item.className = "flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
+        item.className = "group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
         item.onclick = () => {
             map.flyTo([info.lat, info.lng], 16);
             startTrackingRoute(busId);
         };
         item.innerHTML = `
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-xs">${busId}</div>
+            <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-xs">${info.bus_no}</div>
             <div>
-               <p class="text-slate-200 font-bold text-sm">Bus ${busId}</p>
+               <p class="text-slate-200 font-bold text-sm">Bus ${info.bus_no}</p>
                <p class="text-[10px] text-slate-400 flex items-center gap-1">
                   <span class="w-1.5 h-1.5 rounded-full ${info.offline ? 'bg-slate-500' : 'bg-green-500'}"></span>
                   ${info.offline ? 'Offline' : 'Live'}
                </p>
             </div>
         </div>
+        <button onclick="event.stopPropagation(); map.flyTo([${info.lat}, ${info.lng}], 16); startTrackingRoute('${busId}');"
+            class="hidden group-hover:block px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-lg transition-all">
+            LOCATE
+        </button>
         `;
         busList.appendChild(item);
     });
@@ -127,7 +131,7 @@ function updateBusMarker(busId, info) {
     const iconHtml = `
         <div class="relative">
             <div class="w-8 h-8 rounded-full ${isOffline ? 'bg-slate-600' : 'bg-blue-600'} flex items-center justify-center border-2 border-slate-900 shadow-xl transform transition-transform hover:scale-110">
-                <span class="text-[10px] font-bold text-white">${busId}</span>
+                <span class="text-[10px] font-bold text-white">${info.bus_no}</span>
             </div>
              ${!isOffline ? '<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-lg"></div>' : ''}
         </div>
@@ -138,7 +142,7 @@ function updateBusMarker(busId, info) {
         markers[busId].setLatLng([info.lat, info.lng]).setIcon(icon);
     } else {
         markers[busId] = L.marker([info.lat, info.lng], { icon: icon }).addTo(map)
-            .bindPopup(`<b class="text-slate-900">Bus ${busId}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`)
+            .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`)
             .on('click', () => {
                 map.flyTo([info.lat, info.lng], 16);
                 startTrackingRoute(busId);
