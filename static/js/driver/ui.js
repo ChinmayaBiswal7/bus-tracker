@@ -54,13 +54,11 @@ export function createBusIcon() {
 export function createEvIcon() {
     return L.divIcon({
         className: 'custom-div-icon',
-        html: `<div class="relative w-12 h-12 flex items-center justify-center">
+        html: `<div class="relative w-16 h-16 flex items-center justify-center">
                 <div class="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
-                <div class="relative w-10 h-10 bg-emerald-500 rounded-full border-2 border-white shadow-xl flex items-center justify-center text-xl">
-                    ⚡
-                </div>
+                <img src="/static/images/ev_marker.png" class="relative w-14 h-14 drop-shadow-xl z-10" alt="EV">
                </div>`,
-        iconSize: [48, 48], iconAnchor: [24, 24]
+        iconSize: [64, 64], iconAnchor: [32, 32]
     });
 }
 
