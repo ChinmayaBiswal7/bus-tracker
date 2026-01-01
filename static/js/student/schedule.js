@@ -124,7 +124,12 @@ function loadBusScheduleDetails(busId) {
     const content = document.getElementById(`sched-content-${busId}`);
 
     // Fetch Dates (Subcollection)
-    const today = new Date().toISOString().split('T')[0];
+    // Fix: Use Local Date for "today" calculation instead of UTC (toISOString)
+    const now = new Date();
+    const today = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0');
+
     const q = query(collection(db, "schedules", busId, "dates"), orderBy("__name__"));
 
     getDocs(q).then(snapshot => {

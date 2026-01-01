@@ -1,7 +1,13 @@
 
 export function initSchedule() {
     const schedDate = document.getElementById('sched-date');
-    if (schedDate) schedDate.valueAsDate = new Date();
+    if (schedDate) {
+        const now = new Date();
+        const localDate = now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0');
+        schedDate.value = localDate;
+    }
     addTimeSlot(); // Add one default slot
 }
 
