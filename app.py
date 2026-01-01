@@ -28,55 +28,28 @@ import os
 from groq import Groq
 
 
-import requests
+import requests 
+import google.generativeai as genai
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+
+# Configure Gemini AI (Official SDK)
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 def call_gemini(prompt):
     if not GEMINI_API_KEY:
         raise Exception("GEMINI_API_KEY not set")
     
-    # List of models to try in order of preference
-    # Note: 'gemini-1.5-flash' is the preferred fast model.
-    # 'gemini-pro' is the fall-back standard model.
-    candidate_models = [
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-flash-001",
-        "gemini-pro"
-    ]
-    
-    last_error = None
-    
-    for model in candidate_models:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
-            headers = {"Content-Type": "application/json"}
-            payload = {
-                "contents": [{
-                    "role": "user",
-                    "parts": [{"text": prompt}]
-                }]
-            }
-            
-            response = requests.post(url, headers=headers, json=payload)
-            
-            # If 404, it implies model not found; try next.
-            # If 200, success!
-            if response.status_code == 200:
-                data = response.json()
-                return data['candidates'][0]['content']['parts'][0]['text']
-            else:
-                print(f"[WARN] Model {model} failed with {response.status_code}: {response.text}")
-                last_error = f"Model {model} error: {response.text}"
-                
-        except Exception as e:
-            print(f"[WARN] Exception with model {model}: {e}")
-            last_error = str(e)
-            continue
-            
-    # If we get here, all models failed
-    raise Exception(f"All Gemini models failed. Last error: {last_error}")
+    try:
+        # Use the FREE + STABLE model as recommended
+        model = genai.GenerativeModel("gemini-1.5-flash-latest")
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"[ERROR] Gemini SDK Error: {e}")
+        # Detailed error logging for debugging
+        return f"AI Service Error: {str(e)}"
 
 # Initialize Groq (Llama 3)
 groq_client = None
