@@ -126,22 +126,23 @@ function renderBusList() {
     });
 }
 
-const isOffline = info.offline || false;
-const isEV = (info.bus_no || '').toLowerCase().includes('ev') || (info.bus_no || '').toLowerCase().includes('shuttle');
+function updateBusMarker(busId, info) {
+    const isOffline = info.offline || false;
+    const isEV = (info.bus_no || '').toLowerCase().includes('ev') || (info.bus_no || '').toLowerCase().includes('shuttle');
 
-// Colors
-let borderColor = 'border-blue-600';
-let iconColor = 'text-blue-600';
+    // Colors
+    let borderColor = 'border-blue-600';
+    let iconColor = 'text-blue-600';
 
-if (isOffline) {
-    borderColor = 'border-slate-500';
-    iconColor = 'text-slate-500';
-} else if (isEV) {
-    borderColor = 'border-green-500';
-    iconColor = 'text-green-500';
-}
+    if (isOffline) {
+        borderColor = 'border-slate-500';
+        iconColor = 'text-slate-500';
+    } else if (isEV) {
+        borderColor = 'border-green-500';
+        iconColor = 'text-green-500';
+    }
 
-const iconHtml = `
+    const iconHtml = `
         <div class="relative w-10 h-10">
             <!-- Bus Icon (SVG) -->
             <div class="absolute inset-0 bg-white rounded-full shadow-md flex items-center justify-center border-2 ${borderColor}">
@@ -157,19 +158,19 @@ const iconHtml = `
              ${!isOffline ? '<div class="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-2 bg-black/20 blur-sm rounded-full"></div>' : ''}
         </div>
     `;
-const icon = L.divIcon({ className: '', html: iconHtml, iconSize: [40, 40], iconAnchor: [20, 20] });
+    const icon = L.divIcon({ className: '', html: iconHtml, iconSize: [40, 40], iconAnchor: [20, 20] });
 
-if (markers[busId]) {
-    markers[busId].setLatLng([info.lat, info.lng]).setIcon(icon);
-} else {
-    markers[busId] = L.marker([info.lat, info.lng], { icon: icon }).addTo(map)
-        .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`)
-        .on('click', () => {
-            map.flyTo([info.lat, info.lng], 16);
-            startTrackingRoute(busId);
-        });
-}
-markers[busId].isOffline = isOffline;
+    if (markers[busId]) {
+        markers[busId].setLatLng([info.lat, info.lng]).setIcon(icon);
+    } else {
+        markers[busId] = L.marker([info.lat, info.lng], { icon: icon }).addTo(map)
+            .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`)
+            .on('click', () => {
+                map.flyTo([info.lat, info.lng], 16);
+                startTrackingRoute(busId);
+            });
+    }
+    markers[busId].isOffline = isOffline;
 }
 
 export function startLocationTracking(highAccuracy = true) {
