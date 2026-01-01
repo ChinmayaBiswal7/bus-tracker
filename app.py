@@ -28,23 +28,30 @@ import os
 from groq import Groq
 
 
-import requests 
-import google.generativeai as genai
+from google import genai
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
-# Configure Gemini AI (Official SDK)
+# Configure Gemini AI (New Official SDK)
+client = None
 if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize Gemini Client: {e}")
 
 def call_gemini(prompt):
-    if not GEMINI_API_KEY:
-        raise Exception("GEMINI_API_KEY not set")
+    if not client:
+        if not GEMINI_API_KEY:
+            raise Exception("GEMINI_API_KEY not set")
+        return "AI Error: Gemini Client not initialized."
     
     try:
-        # Use the FREE + STABLE model as recommended (Requires google-generativeai>=0.8.0)
-        model = genai.GenerativeModel("gemini-1.5-flash-latest")
-        response = model.generate_content(prompt)
+        # Use the stable model with the new SDK
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
         return response.text
     except Exception as e:
         print(f"[ERROR] Gemini SDK Error: {e}")
