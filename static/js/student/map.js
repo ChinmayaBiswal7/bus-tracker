@@ -296,7 +296,12 @@ function updateRoute() {
                 if (fallbackLine) { map.removeLayer(fallbackLine); fallbackLine = null; }
                 if (routingTimer) clearTimeout(routingTimer);
                 const summary = e.routes[0].summary;
-                if (tripEta) tripEta.textContent = `${Math.ceil(summary.totalTime / 60)} min`;
+
+                // Traffic Adjustment: Multiply OSRM (free flow) by 3.0 for heavy traffic
+                const TRAFFIC_FACTOR = 3.0;
+                const adjustedTime = Math.ceil((summary.totalTime / 60) * TRAFFIC_FACTOR);
+
+                if (tripEta) tripEta.textContent = `${adjustedTime} min`;
                 if (tripDist) tripDist.textContent = `(${(summary.totalDistance / 1000).toFixed(1)} km)`;
             });
 
@@ -310,7 +315,9 @@ function updateRoute() {
 function runFallbackRouting(busLatLng, etaEl, distEl) {
     const dist = map.distance([userLat, userLng], busLatLng);
     const distKm = (dist / 1000).toFixed(1);
-    const timeMins = Math.ceil((distKm / 30) * 60);
+
+    // Fallback: Assume 18 km/h average speed for heavy traffic
+    const timeMins = Math.ceil((distKm / 18) * 60);
 
     if (distEl) distEl.textContent = `(${distKm} km)`;
     if (etaEl) etaEl.textContent = `${timeMins} min`;
