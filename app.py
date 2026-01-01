@@ -36,15 +36,30 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
 def call_gemini(prompt: str) -> str:
-    try:
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=prompt
-        )
-        return response.text
-    except Exception as e:
-        print(f"[ERROR] Gemini Error: {e}")
-        return f"AI Service Error: {str(e)}"
+    # List of models to try (some accounts use different aliases)
+    candidates = [
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-001",
+        "gemini-pro"
+    ]
+    
+    last_error = None
+
+    for model_name in candidates:
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt
+            )
+            return response.text
+        except Exception as e:
+            # If 404 or other error, try next model
+            print(f"[WARN] Model {model_name} failed: {e}")
+            last_error = str(e)
+            continue
+
+    return f"AI Service Error: All models failed. Last error: {last_error}"
 
 # Initialize Groq (Llama 3)
 groq_client = None
