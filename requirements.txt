@@ -7,5 +7,6 @@ gunicorn
 werkzeug
 firebase-admin
 groq
+grpcio
 requests
 

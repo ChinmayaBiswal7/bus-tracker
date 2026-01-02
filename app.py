@@ -2,8 +2,12 @@ import gevent
 from gevent import monkey
 monkey.patch_all()
 
-import grpc.experimental.gevent
-grpc.experimental.gevent.init_gevent()
+try:
+    import grpc.experimental.gevent
+    grpc.experimental.gevent.init_gevent()
+    print("[INFO] gRPC Gevent compatibility enabled.")
+except Exception as e:
+    print(f"[ERROR] Failed to init gRPC Gevent: {e}")
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
