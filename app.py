@@ -1,6 +1,5 @@
-import gevent
-from gevent import monkey
-monkey.patch_all()
+import threading
+import time
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
@@ -479,7 +478,9 @@ def send_multicast_notification(title_bus, body_text):
         print('Error sending message:', e)
 
 # Start listener in a background thread
-gevent.spawn(listen_for_announcements)
+# Start listener in a background thread
+bg_thread = threading.Thread(target=listen_for_announcements, daemon=True)
+bg_thread.start()
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=3000, allow_unsafe_werkzeug=True)
