@@ -1,5 +1,6 @@
-import threading
-import time
+import eventlet
+from eventlet import monkey
+monkey.patch_all()
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
@@ -479,8 +480,8 @@ def send_multicast_notification(title_bus, body_text):
 
 # Start listener in a background thread
 # Start listener in a background thread
-bg_thread = threading.Thread(target=listen_for_announcements, daemon=True)
-bg_thread.start()
+# Start listener in a background thread
+eventlet.spawn(listen_for_announcements)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=3000, allow_unsafe_werkzeug=True)

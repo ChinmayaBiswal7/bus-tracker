@@ -75,6 +75,8 @@ export async function saveSchedule() {
 
         if (response.ok) {
             alert("Schedule Published! 📅");
+            const btn = document.getElementById('btn-save-sched');
+            if (btn) btn.textContent = "PUBLISH SCHEDULE";
         } else {
             throw new Error(result.message || "Unknown error");
         }
