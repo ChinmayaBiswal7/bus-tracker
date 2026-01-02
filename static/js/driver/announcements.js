@@ -1,4 +1,5 @@
 import { db, collection, doc, setDoc, addDoc, serverTimestamp } from '../firebase-config.js';
+import { showToast } from './ui.js';
 
 export function initAnnouncements() {
     const btnDraft = document.getElementById('btnAiDraft');
@@ -31,7 +32,7 @@ export function initAnnouncements() {
             if (!msg) return;
 
             // Check Live Status
-            if (document.getElementById('serverStatus').textContent !== "LIVE BROADCAST") return alert("Go Live First");
+            if (document.getElementById('serverStatus').textContent !== "LIVE BROADCAST") return showToast("Go Live First", 'error');
 
             const busNo = document.getElementById('busInput').value || "EV";
 
@@ -40,7 +41,7 @@ export function initAnnouncements() {
                 await setDoc(ref, { bus_no: busNo, latest_message: msg, last_updated: serverTimestamp() }, { merge: true });
                 await addDoc(collection(ref, 'messages'), { message: msg, timestamp: serverTimestamp(), bus_no: busNo });
                 finalInput.value = "";
-                alert("Sent");
+                showToast("Announcement successfully sent");
             } catch (e) { console.error(e); }
         });
     }

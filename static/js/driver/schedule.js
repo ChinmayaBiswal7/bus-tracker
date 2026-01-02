@@ -1,3 +1,4 @@
+import { showToast } from './ui.js';
 
 export function initSchedule() {
     const schedDate = document.getElementById('sched-date');
@@ -38,7 +39,7 @@ export async function saveSchedule() {
     const date = schedDate.value;
     const busNo = schedBus.value.trim().toUpperCase();
 
-    if (!date || !busNo) return alert("Please set Date and Bus Number");
+    if (!date || !busNo) return showToast("Please set Date and Bus Number", 'error');
 
     // Collect Data
     const timings = [];
@@ -54,7 +55,7 @@ export async function saveSchedule() {
         }
     });
 
-    if (timings.length === 0) return alert("Add at least one timing");
+    if (timings.length === 0) return showToast("Add at least one timing", 'warning');
 
     const btn = document.getElementById('btn-save-sched');
     if (btn) btn.textContent = "Publishing...";
@@ -74,7 +75,7 @@ export async function saveSchedule() {
         const result = await response.json();
 
         if (response.ok) {
-            alert("Schedule Published! 📅");
+            showToast("Schedule Published! 📅");
             const btn = document.getElementById('btn-save-sched');
             if (btn) btn.textContent = "PUBLISH SCHEDULE";
         } else {

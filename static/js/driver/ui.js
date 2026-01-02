@@ -132,3 +132,29 @@ export function updateStatsUI(latitude, longitude, accuracy, stage) {
         statStatus.className = `block ${color} font-bold text-xs`;
     }
 }
+
+export function showToast(msg, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const div = document.createElement('div');
+    div.className = 'toast-msg glass-card';
+
+    // Icon based on type
+    let icon = '✅';
+    if (type === 'error') icon = '❌';
+    if (type === 'info') icon = 'ℹ️';
+
+    div.innerHTML = `
+        <span class="text-lg">${icon}</span>
+        <span class="text-sm font-bold">${msg}</span>
+    `;
+
+    container.appendChild(div);
+
+    // Remove after 3s
+    setTimeout(() => {
+        div.classList.add('toast-out');
+        div.addEventListener('animationend', () => div.remove());
+    }, 3000);
+}
