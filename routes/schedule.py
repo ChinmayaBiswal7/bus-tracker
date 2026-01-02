@@ -22,22 +22,29 @@ def publish_schedule():
 
     try:
         # Save to: schedules/{busNo}/dates/{date}
+        print(f"[DEBUG] Accessing collection: schedules/{bus_no}")
         schedule_ref = server.extensions.f_db.collection('schedules').document(bus_no)
+        print(f"[DEBUG] Accessing date doc: {date}")
         date_ref = schedule_ref.collection('dates').document(date)
 
-        date_ref.set({
+        payload = {
             "timings": timings,
             "updated_at": firestore.SERVER_TIMESTAMP
-        })
+        }
+        print(f"[DEBUG] Attempting date_ref.set()... payload size: {len(str(payload))}")
+        date_ref.set(payload)
+        print("[DEBUG] date_ref.set() COMPLETED.")
 
         # Update metadata
+        print("[DEBUG] Updating metadata...")
         schedule_ref.set({
             "last_update": firestore.SERVER_TIMESTAMP,
             "bus_no": bus_no
         }, merge=True)
+        print("[DEBUG] Metadata updated. Success!")
 
         return jsonify({"status": "success", "message": "Schedule published"}), 200
 
     except Exception as e:
-        print(f"[ERROR] Publish Schedule: {e}")
+        print(f"[ERROR] Publish Schedule Failed: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
