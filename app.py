@@ -1,5 +1,6 @@
-import eventlet
-eventlet.monkey_patch()
+import gevent
+from gevent import monkey
+monkey.patch_all()
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
@@ -480,7 +481,7 @@ def send_multicast_notification(title_bus, body_text):
 # Start listener in a background thread
 # Start listener in a background thread
 # Start listener in a background thread
-eventlet.spawn(listen_for_announcements)
+gevent.spawn(listen_for_announcements)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=3000, allow_unsafe_werkzeug=True)
