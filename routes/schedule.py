@@ -7,7 +7,9 @@ schedule_bp = Blueprint('schedule', __name__)
 
 @schedule_bp.route('/api/schedule/publish', methods=['POST'])
 def publish_schedule():
+    print(f"[DEBUG] Publish request received. f_db is: {server.extensions.f_db}")
     if not server.extensions.f_db:
+        print("[ERROR] Database not connected")
         return jsonify({"status": "error", "message": "Database not connected"}), 500
 
     data = request.json
