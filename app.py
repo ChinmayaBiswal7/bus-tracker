@@ -17,7 +17,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # --- Extensions & Blueprints ---
 import server.extensions # Import module to access f_db dynamically
-init_firebase()
+server.extensions.init_firebase()
 
 from routes.schedule import schedule_bp
 from routes.contact import contact_bp
