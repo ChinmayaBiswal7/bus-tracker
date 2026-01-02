@@ -2,6 +2,9 @@ import gevent
 from gevent import monkey
 monkey.patch_all()
 
+import grpc.experimental.gevent
+grpc.experimental.gevent.init_gevent()
+
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
