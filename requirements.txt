@@ -2,7 +2,7 @@ flask
 flask-socketio
 flask-sqlalchemy
 sqlalchemy
-eventlet
+gevent
 gunicorn
 werkzeug
 firebase-admin

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, render_template
-from server.extensions import f_db
+import server.extensions
 from firebase_admin import firestore
 import datetime
 
@@ -14,7 +14,7 @@ def contact_page():
 
 @contact_bp.route('/api/contact/submit', methods=['POST'])
 def submit_contact():
-    if not f_db:
+    if not server.extensions.f_db:
         return jsonify({"status": "error", "message": "Database not connected"}), 500
 
     data = request.json
@@ -29,7 +29,7 @@ def submit_contact():
 
     try:
         # Save to 'feedback' collection
-        doc_ref = f_db.collection('feedback').document()
+        doc_ref = server.extensions.f_db.collection('feedback').document()
         doc_ref.set({
             "name": name,
             "email": email,

@@ -1,5 +1,6 @@
-import eventlet
-eventlet.monkey_patch()
+import gevent
+from gevent import monkey
+monkey.patch_all()
 
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
@@ -15,7 +16,7 @@ db = SQLAlchemy(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # --- Extensions & Blueprints ---
-from server.extensions import init_firebase, f_db # Import f_db for usage in other routes
+import server.extensions # Import module to access f_db dynamically
 init_firebase()
 
 from routes.schedule import schedule_bp
@@ -431,7 +432,7 @@ def listen_for_announcements():
     """
     print("[INFO] Starting Announcement Listener...")
 
-    if not f_db:
+    if not server.extensions.f_db:
         print("[WARN] Firestore not initialized. Announcement listener DISABLED.")
         return
 
@@ -454,7 +455,7 @@ def listen_for_announcements():
 
     # Watch the collection group 'messages'
     # This catches announcements from ALL buses
-    col_query = f_db.collection_group('messages') 
+    col_query = server.extensions.f_db.collection_group('messages') 
     col_query.on_snapshot(on_snapshot)
 
 def send_multicast_notification(title_bus, body_text):
@@ -478,7 +479,7 @@ def send_multicast_notification(title_bus, body_text):
         print('Error sending message:', e)
 
 # Start listener in a background thread
-eventlet.spawn(listen_for_announcements)
+gevent.spawn(listen_for_announcements)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=3000, allow_unsafe_werkzeug=True)

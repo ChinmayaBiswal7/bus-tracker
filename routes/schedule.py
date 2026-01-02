@@ -1,13 +1,13 @@
 from flask import Blueprint, request, jsonify
 from firebase_admin import firestore
-from server.extensions import f_db
+import server.extensions
 from datetime import datetime
 
 schedule_bp = Blueprint('schedule', __name__)
 
 @schedule_bp.route('/api/schedule/publish', methods=['POST'])
 def publish_schedule():
-    if not f_db:
+    if not server.extensions.f_db:
         return jsonify({"status": "error", "message": "Database not connected"}), 500
 
     data = request.json
@@ -20,7 +20,7 @@ def publish_schedule():
 
     try:
         # Save to: schedules/{busNo}/dates/{date}
-        schedule_ref = f_db.collection('schedules').document(bus_no)
+        schedule_ref = server.extensions.f_db.collection('schedules').document(bus_no)
         date_ref = schedule_ref.collection('dates').document(date)
 
         date_ref.set({
