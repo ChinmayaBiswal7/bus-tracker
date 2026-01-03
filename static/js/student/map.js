@@ -337,15 +337,26 @@ async function drawBusPath(busNo) {
             router.route(waypoints.map(wp => ({ latLng: wp })), (err, routes) => {
                 if (!err && routes && routes.length > 0) {
                     const line = L.Routing.line(routes[0], {
-                        styles: [{ color: '#3b82f6', opacity: 0.8, weight: 5 }]
+                        styles: [{ color: '#f59e0b', opacity: 0.8, weight: 6, dashArray: '1, 6' }] // Amber/Orange dashed feel for "fixed route"
                     });
-                    currentRouteLayer = line; // Store as layer
-                    line.addTo(map);
+                    // Override OSRM default style preventing it from being transparent
+                    // actually L.Routing.line returns a layer that might have its own opinion.
+                    // The safest way for a solid route line:
+                    const routeCoords = routes[0].coordinates;
+                    const staticLine = L.polyline(routeCoords, {
+                        color: '#f59e0b', // Amber-500
+                        weight: 6,
+                        opacity: 0.8,
+                        lineCap: 'round'
+                    });
+
+                    currentRouteLayer = staticLine;
+                    staticLine.addTo(map);
                 } else {
-                    // Fallback to straight lines if OSRM fails
+                    // Fallback to straight lines
                     console.warn("OSRM Failed, falling back to straight lines");
                     currentRouteLayer = L.polyline(data.path, {
-                        color: '#3b82f6', weight: 5, opacity: 0.8, dashArray: '10, 10'
+                        color: '#f59e0b', weight: 6, opacity: 0.8, dashArray: '5, 10'
                     }).addTo(map);
                 }
             });
@@ -356,15 +367,16 @@ async function drawBusPath(busNo) {
             currentStopsLayer = L.layerGroup().addTo(map);
             data.stops.forEach(stop => {
                 L.circleMarker([stop.lat, stop.lng], {
-                    radius: 6,
-                    color: '#1e3a8a', // Dark Blue Border
-                    fillColor: 'white',
+                    radius: 5,
+                    color: '#b45309', // Dark Amber Border
+                    fillColor: '#fbbf24', // Amber Fill
                     fillOpacity: 1,
                     weight: 2
                 }).bindTooltip(stop.stop_name, {
                     permanent: false,
                     direction: 'top',
-                    offset: [0, -5]
+                    offset: [0, -5],
+                    className: 'text-xs font-bold text-amber-500 bg-slate-900/90 border-0 rounded px-2 py-1'
                 }).addTo(currentStopsLayer);
             });
         }
