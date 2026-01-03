@@ -12,9 +12,10 @@ except Exception as e:
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import difflib
+import pandas as pd
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -144,7 +145,7 @@ def student():
 
     
 # --- Route Loading Logic (Excel) ---
-import pandas as pd
+# (pandas imported at top)
 from server.bus_search import BusStopSearchEngine
 
 # Initialize Module
