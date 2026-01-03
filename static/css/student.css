@@ -8,7 +8,8 @@ body {
     width: 100%;
     z-index: 1;
     /* Dark Mode Map Filter */
-    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+    /* Dark Mode Map Filter (Commented out for testing White Mode) */
+    /* filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); */
 }
 
 .glass-panel {
@@ -62,9 +63,11 @@ body {
 .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
 }
+
 .custom-scrollbar::-webkit-scrollbar-track {
     background: rgba(15, 23, 42, 0.5);
 }
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background: rgba(59, 130, 246, 0.5);
     border-radius: 4px;
