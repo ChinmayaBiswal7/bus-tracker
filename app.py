@@ -161,6 +161,8 @@ def build_routes():
         
         routes = {}
         for bus_no, group in df.groupby("bus_no"):
+            # Force stop_order to be int for correct sorting (1, 2, 10 not 1, 10, 2)
+            group['stop_order'] = pd.to_numeric(group['stop_order'], errors='coerce')
             group = group.sort_values("stop_order")
             
             routes[bus_no] = {
@@ -173,7 +175,7 @@ def build_routes():
     except Exception as e:
         print(f"[ERROR] Failed to load routes: {e}")
 
-# Load on startup (Reloads when file changes)      
+# Load on startup (Reloads when file changes)       
 build_routes()
 
 @app.route('/api/routes/<bus_no>')
