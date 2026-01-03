@@ -296,14 +296,14 @@ export function startTrackingRoute(busId) {
 
     if (mapContainer && routePanel) {
         routePanel.classList.remove('hidden');
-        routePanel.classList.add('flex');
-        fullscreenToggle.classList.remove('hidden');
+        // routePanel.classList.add('flex'); // No longer needed with fixed overlay
 
-        // Show floating card in split mode (restored by user request)
+        if (fullscreenToggle) fullscreenToggle.classList.remove('hidden');
+
+        // Show floating card (always visible in overlay mode)
         if (tripCard) tripCard.classList.remove('hidden');
 
-        // Trigger resize
-        setTimeout(() => map.invalidateSize(), 300);
+        // Note: No need to resize map as panel is now an overlay
     }
 
     // Draw Route from Excel Data
@@ -326,27 +326,7 @@ export function startTrackingRoute(busId) {
 }
 
 // --- NEW: Toggle Full Screen ---
-window.toggleFullScreenMap = function () {
-    const routePanel = document.getElementById('route-panel');
-    const fullscreenToggle = document.getElementById('fullscreen-toggle');
-    const tripCard = document.getElementById('trip-info-card');
-
-    if (routePanel.classList.contains('hidden')) {
-        // Switch to Split
-        routePanel.classList.remove('hidden');
-        routePanel.classList.add('flex');
-        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>`;
-        if (tripCard) tripCard.classList.add('hidden');
-    } else {
-        // Switch to Full Screen
-        routePanel.classList.add('hidden');
-        routePanel.classList.remove('flex');
-        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`; // Down arrow or Minimize
-        // Show floating card in full screen
-        if (tripCard) tripCard.classList.remove('hidden');
-    }
-    setTimeout(() => map.invalidateSize(), 300);
-}
+// --- NEW: Toggle Full Screen ---\nwindow.toggleFullScreenMap = function () {\n    const routePanel = document.getElementById('route-panel');\n    const fullscreenToggle = document.getElementById('fullscreen-toggle');\n    const tripCard = document.getElementById('trip-info-card');\n\n    if (routePanel.classList.contains('hidden')) {\n        // Show Overlay\n        routePanel.classList.remove('hidden');\n        /* routePanel.classList.add('flex'); */\n        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`;\n    } else {\n        // Hide Overlay (Full Map)\n        routePanel.classList.add('hidden');\n        /* routePanel.classList.remove('flex'); */\n        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>`;\n    }\n}
 
 // --- NEW: Render Timeline ---
 let cachedStops = [];
