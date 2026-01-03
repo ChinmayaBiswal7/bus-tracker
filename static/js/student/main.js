@@ -23,21 +23,10 @@ window.showProfile = showProfile;
 window.stopTrackingRoute = stopTrackingRoute;
 window.startTrackingRoute = startTrackingRoute;
 window.setFilter = async function () {
-    const input = document.getElementById('trackInput');
-    if (!input) return;
-
-    const val = input.value.trim();
-    if (!val) {
-        setBusFilter('');
-        return;
-    }
-
-    // Simple Search Logic (Reverted)
-    console.log("Searching for:", val);
-    // Simplified Search (Reverted)
-    setBusFilter(val);
-
-    // End of Reverted Search Logic
+    // Legacy Search Disabled - Handled by StopSearchUI (search.js)
+    // const input = document.getElementById('trackInput');
+    // if (!input) return;
+    // ...
 };
 window.quickSearch = function (busId) {
     const input = document.getElementById('trackInput');
@@ -50,6 +39,14 @@ window.logout = function () {
     auth.signOut().then(() => window.location.href = '/').catch(console.error);
 };
 
+import { StopSearchUI } from './search.js'; // Import Search Module
+
+// ... (existing imports)
+
+// Initialize Map & Search
+const map = initMap();
+const searchUI = new StopSearchUI(map);
+
 // Auth Guard & Init
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -58,23 +55,29 @@ onAuthStateChanged(auth, (user) => {
         const nameEl = document.getElementById('user-display-name');
         if (nameEl) nameEl.textContent = user.displayName || user.email.split('@')[0];
 
-        // Initialize Components
-        initMap();
-        initAnnouncements();
-        initSchedule();
-        initFCM();
-        initChat();
-        initTheme();
-        initSearch();
-
-        // Socket Status Listeners (Removed UI, but keeping connection alive)
-        const socket = io(); // Connect/Get global instance
-
-        // Resize Map Fallback
-        setTimeout(() => { if (window.map) window.map.invalidateSize(); }, 500);
+        // Re-init search if needed or just trust it's bound
     } else {
-        window.location.href = '/login?role=student';
+        window.location.href = '/login';
     }
+});
+
+// Initialize Components
+initMap();
+initAnnouncements();
+initSchedule();
+initFCM();
+initChat();
+initTheme();
+initSearch();
+
+// Socket Status Listeners (Removed UI, but keeping connection alive)
+const socket = io(); // Connect/Get global instance
+
+// Resize Map Fallback
+setTimeout(() => { if (window.map) window.map.invalidateSize(); }, 500);
+    } else {
+    window.location.href = '/login?role=student';
+}
 });
 
 // --- Search Logic ---
