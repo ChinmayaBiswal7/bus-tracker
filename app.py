@@ -147,72 +147,16 @@ def student():
 # --- Route Loading Logic (Excel) ---
 # (pandas imported at top)
 from server.bus_search import BusStopSearchEngine
+from routes.search import search_bp, init_search_engine
 
 # Initialize Module
-search_engine = BusStopSearchEngine('data/bus_routes.xlsx')
-
-# --- New API Routes for Fuzzy Search ---
-@app.route('/api/search-stop', methods=['GET'])
-def search_stop():
-    """Search for bus stops with fuzzy matching (Module Based)"""
-    query = request.args.get('q', '').strip()
-    threshold = float(request.args.get('threshold', 0.4)) 
-    
-    if not query: return jsonify({'success': False, 'error': 'Query required'}), 400
-    
-    try:
-        results = search_engine.fuzzy_search(query, threshold)
-        return jsonify({
-            'success': True,
-            'query': query,
-            'results': results,
-            'count': len(results)
-        })
-    except Exception as e:
-        print(f"[ERROR] Search API: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/api/stop-status/<stop_name>', methods=['GET'])
-def get_stop_status(stop_name):
-    """Get live status of buses at a stop"""
-    try:
-        if stop_name not in search_engine.stop_to_buses:
-            return jsonify({'success': False, 'error': 'Stop not found'}), 404
-        
-        buses = list(search_engine.stop_to_buses[stop_name])
-        
-        # Query Active Buses (STALENESS CHECK enforced)
-        threshold = datetime.utcnow() - timedelta(minutes=10)
-        active_buses = Bus.query.filter(Bus.is_active==True, Bus.last_updated >= threshold).all()
-        active_map = {b.bus_no: b for b in active_buses}
-        
-        live_buses = []
-        for bus_no in buses:
-            bus_no_str = str(bus_no)
-            if bus_no_str in active_map:
-                b = active_map[bus_no_str]
-                live_buses.append({
-                    'bus_no': bus_no_str,
-                    'lat': b.lat,
-                    'lng': b.lng,
-                    'speed': b.speed,
-                    'heading': b.heading,
-                    'crowd': b.crowd_status,
-                    'is_online': True
-                })
-            else:
-                live_buses.append({
-                    'bus_no': bus_no_str,
-                    'is_online': False
-                })
-        
-        return jsonify({
-            'success': True,
-            'stop_name': stop_name,
-            'buses': live_buses
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
+try:
+    search_engine = BusStopSearchEngine('data/bus_routes.xlsx')
+    init_search_engine(search_engine)
+    app.register_blueprint(search_bp)
+    print(f"[INFO] Search Engine initialized and Blueprint registered.")
+except Exception as e:
+    print(f"[ERROR] Failed to init Search Engine: {e}")
 
 ROUTES_CACHE = {}
 
