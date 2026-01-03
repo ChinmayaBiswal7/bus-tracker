@@ -208,45 +208,50 @@ def search_stops():
 
     # 1. Gather all unique stops and their buses
     stop_map = {} # "Stop Name" -> Set(Bus Numbers)
+    # 1. Gather all unique stop names
+    all_stops = set()
+    for route in ROUTES_CACHE.values():
+        for stop in route['stops']:
+            all_stops.add(stop['stop_name'])
     
-    # DEBUG: Check Cache
-    print(f"[DEBUG] SEARCH: Query='{query}' | CacheKeys={list(ROUTES_CACHE.keys())}")
-
-    for bus_no, data in ROUTES_CACHE.items():
-        if not data.get('stops'): continue
-        for stop in data['stops']:
-            s_name = stop.get('stop_name', '').strip()
-            if s_name:
-                if s_name not in stop_map:
-                    stop_map[s_name] = set()
-                stop_map[s_name].add(str(bus_no))
-
-    unique_stops = list(stop_map.keys())
-    print(f"[DEBUG] SEARCH: Found {len(unique_stops)} unique stops.")
+    unique_stops = list(all_stops)
     
-    # 2. Fuzzy Match
-    # cutoff=0.4 allows for loose matches (e.g. "raily" matches "Railway")
-    matches = difflib.get_close_matches(query, unique_stops, n=5, cutoff=0.4)
-    
-    # If exact substring match exists but wasn't top fuzzy result, add it
-    for s in unique_stops:
-        if query in s.lower() and s not in matches:
-            matches.append(s)
+    # 2. Find matches
+    # PRIORITY A: Direct Substring (e.g. "kiit" in "KIIT Campus 6")
+    matches = [s for s in unique_stops if query in s.lower()]
 
-    print(f"[DEBUG] SEARCH: Matches: {matches}")
+    # PRIORITY B: Fuzzy Match (only if specific enough)
+    if len(query) > 3:
+        fuzzy_matches = difflib.get_close_matches(query, unique_stops, n=5, cutoff=0.5)
+        # Add fuzzy matches if not already in substring matches
+        for m in fuzzy_matches:
+            if m not in matches:
+                matches.append(m)
 
-    # 3. Format Result
+    print(f"[DEBUG] Search '{query}' -> Found Stops: {matches}")
+
+    # 3. Map Stops -> Buses
     results = []
-    # Deduplicate and limit
-    seen = set()
-    for m in matches[:8]: # Limit to 8 suggestions
-        if m in seen: continue
-        seen.add(m)
-        results.append({
-            "stop_name": m,
-            "buses": sorted(list(stop_map[m]))
-        })
+    seen_stops = set()
+
+    for stop_name in matches:
+        if stop_name in seen_stops: continue
+        seen_stops.add(stop_name)
         
+        relevant_buses = []
+        for bus_no, route in ROUTES_CACHE.items():
+            # Check if this bus stops here
+            if any(s['stop_name'] == stop_name for s in route['stops']):
+                relevant_buses.append(str(bus_no)) # Ensure string for frontend
+        
+        # Sort buses numerically if possible
+        relevant_buses.sort(key=lambda x: int(x) if x.isdigit() else 999)
+
+        results.append({
+            "stop_name": stop_name,
+            "buses": relevant_buses
+        })
+    
     return jsonify(results)
 
 
