@@ -94,34 +94,78 @@ function renderBusList() {
     // Filter Logic
     // Filter Logic
     // Filter Logic
-    const filteredEntries = Object.entries(data).filter(([busId, info]) => {
-        const busNo = String(info.bus_no || '').trim().toLowerCase();
+    // ---------------------------------------------------------
+    // UNIFIED DATA SOURCE: Merge Live Socket Data + Filter Results
+    // ---------------------------------------------------------
+    const mergedBuses = new Map();
 
-        if (Array.isArray(currentBusFilter)) {
-            // Robust check: Does the filter array INCLUDE this bus number?
-            return currentBusFilter.includes(busNo);
-        }
-        // Fallback for string filter
-        return busNo.includes(currentBusFilter);
+    // 1. Add known live buses (Socket)
+    Object.entries(lastBusData).forEach(([id, info]) => {
+        const busNo = String(info.bus_no).trim().toLowerCase();
+        mergedBuses.set(busNo, { id, info });
     });
 
-    // Update Counts (Optional: Update 'Tracking: All' text if needed, but keeping it simple)
+    // 2. Inject "Offline" placeholders from Filter
+    // If the search says "Bus 66 goes here", but socket doesn't know "Bus 66",
+    // we MUST show it anyway so the student can see the route.
+    if (Array.isArray(currentBusFilter)) {
+        currentBusFilter.forEach(filterRaw => {
+            const busNo = String(filterRaw).trim().toLowerCase();
+            if (!mergedBuses.has(busNo)) {
+                // Not in socket -> Create Offline Placeholder
+                mergedBuses.set(busNo, {
+                    id: `OFFLINE_${busNo}`,
+                    info: {
+                        bus_no: busNo.toUpperCase(), // Display as clean string
+                        offline: true,
+                        lat: 20.2961, // Default fallback (centered)
+                        lng: 85.8245,
+                        crowd: 'OFFLINE'
+                    }
+                });
+            }
+        });
+    }
+
+    // 3. Render List (Iterate over the Merged Map)
+    // Only show items that match the current filter
+    const activeEntries = [];
+    mergedBuses.forEach((entry, busNoKey) => {
+        const displayBusNo = String(entry.info.bus_no).trim().toLowerCase();
+
+        let isMatch = false;
+        if (Array.isArray(currentBusFilter)) {
+            isMatch = currentBusFilter.includes(displayBusNo);
+        } else {
+            isMatch = displayBusNo.includes(String(currentBusFilter).trim().toLowerCase());
+        }
+
+        if (isMatch) {
+            activeEntries.push(entry);
+        }
+    });
+
+    // Update Counts
     const statusEl = document.getElementById('tracking-status');
     const countSpan = document.getElementById('fw-bold');
-    if (countSpan) countSpan.textContent = filteredEntries.length > 0 ? filteredEntries.length : "0";
+    if (countSpan) countSpan.textContent = activeEntries.length > 0 ? activeEntries.length : "0";
     if (statusEl) statusEl.classList.remove('hidden');
 
-    if (filteredEntries.length === 0) {
+    if (activeEntries.length === 0) {
         busList.innerHTML = '<p class="text-xs text-slate-500 text-center py-4 italic">No matching buses found.</p>';
         return;
     }
 
-    filteredEntries.forEach(([busId, info]) => {
+    activeEntries.forEach(({ id: busId, info }) => {
         const item = document.createElement('div');
         item.className = "group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
         item.onclick = () => {
             // Use setView for instant/controlled snap to avoid animation glitches
-            map.setView([info.lat, info.lng], 16);
+            // If offline, default lat/lng might be 0,0 or generic.
+            const targetLat = info.lat || 20.2961;
+            const targetLng = info.lng || 85.8245;
+
+            map.setView([targetLat, targetLng], 16);
             startTrackingRouteByBusNo(String(info.bus_no));
         };
         item.innerHTML = `
@@ -135,7 +179,7 @@ function renderBusList() {
                </p>
             </div>
         </div>
-        <button onclick="event.stopPropagation(); map.setView([${info.lat}, ${info.lng}], 16); startTrackingRouteByBusNo('${info.bus_no}');"
+        <button onclick="event.stopPropagation(); map.setView([${info.lat || 20.2961}, ${info.lng || 85.8245}], 16); startTrackingRouteByBusNo('${info.bus_no}');"
             class="hidden group-hover:block px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-lg transition-all">
             LOCATE
         </button>
