@@ -7,7 +7,7 @@ import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-d
 import { toggleSidebar, requestNotificationPermission, initTheme } from './ui.js';
 import { initFCM } from './fcm.js';
 import { initChat, toggleChat } from './chat.js';
-import { StopSearchUI } from './search.js'; // Search Module
+import { StopSearchUI } from './search.js?v=4'; // Search Module (Cache Bust v4)
 
 // Attach Globals for HTML onclick attributes
 window.toggleSidebar = toggleSidebar;
