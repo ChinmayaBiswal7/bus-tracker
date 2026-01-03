@@ -340,10 +340,10 @@ export function startTrackingRouteByBusNo(busNo) {
     // Update Header Immediately
     if (busNoEl) busNoEl.textContent = busNo || "Bus";
 
-    // 2. Try to find live socket ID from local data
+    // 2. Try to find socket ID from local data (Live or Cache)
     for (const [bid, info] of Object.entries(lastBusData)) {
-        // String comparison to be safe
-        if (String(info.bus_no) === String(busNo) && !info.offline) {
+        // Match Bus Number (String safely) - Allow OFFLINE buses too so we can fly to last location
+        if (String(info.bus_no).trim() === String(busNo).trim()) {
             targetBusId = bid;
             break;
         }
