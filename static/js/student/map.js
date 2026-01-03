@@ -99,7 +99,7 @@ function renderBusList() {
 
     // Filter Logic
     const filteredEntries = Object.entries(data).filter(([busId, info]) => {
-        const busNo = (info.bus_no || '').toLowerCase();
+        const busNo = String(info.bus_no || '').toLowerCase();
         if (Array.isArray(currentBusFilter)) {
             return currentBusFilter.includes(busNo);
         }
