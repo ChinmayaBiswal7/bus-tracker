@@ -299,8 +299,8 @@ export function startTrackingRoute(busId) {
         routePanel.classList.add('flex');
         fullscreenToggle.classList.remove('hidden');
 
-        // Hide floating card in split mode (optional, can keep if needed, but clean is better)
-        if (tripCard) tripCard.classList.add('hidden');
+        // Show floating card in split mode (restored by user request)
+        if (tripCard) tripCard.classList.remove('hidden');
 
         // Trigger resize
         setTimeout(() => map.invalidateSize(), 300);
