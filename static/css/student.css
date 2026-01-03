@@ -7,9 +7,13 @@ body {
     height: 100vh;
     width: 100%;
     z-index: 1;
-    /* Dark Mode Map Filter */
-    /* Dark Mode Map Filter (Commented out for testing White Mode) */
-    /* filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); */
+    background-color: #0f172a;
+    /* Slate-900 background to avoid white flash */
+}
+
+/* Dark Mode Map Filter (Default) */
+.map-dark-mode {
+    filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
 
 .glass-panel {

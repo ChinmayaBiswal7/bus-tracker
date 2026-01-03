@@ -4,7 +4,7 @@ import { initMap, stopTrackingRoute, setBusFilter, startTrackingRoute } from './
 import { openSchedule, closeSchedule, initSchedule } from './schedule.js';
 import { openAnnouncements, closeAnnouncements, initAnnouncements } from './announcements.js';
 import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-directory.js';
-import { toggleSidebar, requestNotificationPermission } from './ui.js';
+import { toggleSidebar, requestNotificationPermission, initTheme } from './ui.js';
 import { initFCM } from './fcm.js';
 import { initChat, toggleChat } from './chat.js';
 
@@ -51,6 +51,7 @@ onAuthStateChanged(auth, (user) => {
         initSchedule();
         initFCM();
         initChat();
+        initTheme();
 
         // Resize Map Fallback
         setTimeout(() => { if (window.map) window.map.invalidateSize(); }, 500);
