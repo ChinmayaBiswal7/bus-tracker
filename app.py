@@ -391,13 +391,9 @@ def subscribe_to_topic():
 # --- Socket Events ---
 
 def get_active_buses_payload():
-    # 1. Get Live Data
     active_buses = Bus.query.filter_by(is_active=True).all()
     payload = {}
-    active_bus_ids = set()
-
     for b in active_buses:
-        active_bus_ids.add(str(b.bus_no).upper())
         payload[b.sid] = {
             'bus_no': b.bus_no,
             'lat': b.lat,
@@ -408,30 +404,6 @@ def get_active_buses_payload():
             'crowd': b.crowd_status or 'LOW',
             'offline': False
         }
-
-    # 2. Add Offline Buses (From Excel Cache)
-    # We loop through all known routes. If a bus isn't in the active set, we add it as offline.
-    for bus_no, route_data in ROUTES_CACHE.items():
-        if str(bus_no).upper() not in active_bus_ids:
-            # Use First Stop as default "Home" location
-            start_lat = 20.2961
-            start_lng = 85.8245
-            if route_data['stops'] and len(route_data['stops']) > 0:
-                start_lat = route_data['stops'][0]['lat']
-                start_lng = route_data['stops'][0]['lng']
-            
-            # Create a virtual SID for offline rendering
-            payload[f"OFFLINE_{bus_no}"] = {
-                'bus_no': bus_no,
-                'lat': start_lat,
-                'lng': start_lng,
-                'accuracy': 0,
-                'speed': 0,
-                'heading': 0,
-                'crowd': 'Offline',
-                'offline': True
-            }
-            
     return payload
 
 @socketio.on('search_bus')
