@@ -7,7 +7,8 @@ import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-d
 import { toggleSidebar, requestNotificationPermission, initTheme } from './ui.js';
 import { initFCM } from './fcm.js';
 import { initChat, toggleChat } from './chat.js';
-import { StopSearchUI } from './search.js'; // Search Module
+import { BusStopSearch } from './search.js'; // Search Module
+
 
 // Attach Globals for HTML onclick attributes
 window.toggleSidebar = toggleSidebar;
@@ -60,7 +61,13 @@ let searchUI;
 function initializeAppComponents() {
     console.log("[Main] Initializing Components...");
     map = initMap();
-    searchUI = new StopSearchUI(map);
+    // NEW: Initialize search (User's Module)
+    if (typeof BusStopSearch !== 'undefined') {
+        window.searchUI = new BusStopSearch(map);
+    } else {
+        // Fallback if import worked but name check behaves oddly in modules
+        window.searchUI = new BusStopSearch(map);
+    }
 
     initAnnouncements();
     initSchedule();

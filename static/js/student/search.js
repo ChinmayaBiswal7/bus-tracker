@@ -1,179 +1,299 @@
 /**
- * Stop Search Module (Adapted for Existing UI)
+ * FIXED: Bus Stop Search with Working Click Handler
+ * Adapted for 'trackInput' ID
  */
-export class StopSearchUI {
+
+export class BusStopSearch {
     constructor(mapInstance) {
         this.map = mapInstance;
-        this.input = document.getElementById('trackInput'); // Existing Search Bar
-        this.resultsDiv = document.getElementById('search-suggestions') || this.createResultsDiv();
         this.markers = [];
+        this.searchTimeout = null;
         this.init();
     }
 
-    createResultsDiv() {
-        const div = document.createElement('div');
-        div.id = 'search-suggestions';
-        // In-Flow Layout (Accordion Style) - Pushes content down
-        div.className = "w-full mt-2 bg-slate-900 border border-slate-600 rounded-xl shadow-inner max-h-60 overflow-y-auto hidden transition-all";
-        // Append DIRECTLY after the input wrapper (search container)
-        this.input.parentElement.appendChild(div);
-        return div;
-    }
-
-    updateDropdownPosition() {
-        // No-op: In-flow elements position themselves automatically
-    }
-
     init() {
-        if (!this.input) {
-            console.warn("Search Input not found!");
+        console.log('🔍 Search initialized');
+        this.attachSearchListener();
+        this.attachResultsListener();
+    }
+
+    attachSearchListener() {
+        // CHANGED: Adapted to our ID 'trackInput'
+        const searchInput = document.getElementById('trackInput');
+
+        // Find GO button (sibling or nearby button)
+        // In our HTML, the button is next to input with onclick="setFilter()" originally.
+        // We will try to find it.
+        const searchButton = searchInput ? searchInput.parentElement.querySelector('button') : null;
+
+        if (!searchInput) {
+            console.error('❌ Search input (trackInput) not found');
             return;
         }
 
-        // Attach Debounced Listener
-        let searchTimeout;
-        this.input.addEventListener('input', (e) => {
-            clearTimeout(searchTimeout);
-            const query = e.target.value.trim();
+        console.log('✓ Search input found');
 
-            if (query.length < 2) {
-                this.hideResults();
-                return;
-            }
-
-            searchTimeout = setTimeout(() => {
-                this.performSearch(query);
-            }, 300);
+        // Handle input typing
+        searchInput.addEventListener('input', (e) => {
+            this.handleSearch(e.target.value);
         });
 
-        // Hide on outside click
-        document.addEventListener('click', (e) => {
-            if (!this.input.contains(e.target) && !this.resultsDiv.contains(e.target)) {
-                this.hideResults();
+        // Handle Enter key
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.handleSearch(e.target.value);
             }
         });
 
-        // Update position on scroll/resize
-        window.addEventListener('resize', () => this.updateDropdownPosition());
-        window.addEventListener('scroll', () => this.updateDropdownPosition(), true); // true for capture (sidebar scroll)
+        // Handle GO button click
+        if (searchButton) {
+            searchButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                const query = searchInput.value;
+                this.handleSearch(query);
+            });
+        }
+    }
+
+    attachResultsListener() {
+        // Listen for clicks on the results sidebar or body (delegation)
+        const sidebar = document.querySelector('.sidebar') || document.body;
+
+        sidebar.addEventListener('click', (e) => {
+            // Find if clicked element is a stop result
+            const stopItem = e.target.closest('[data-stop-name]');
+
+            if (stopItem) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const stopName = stopItem.dataset.stopName;
+                const lat = parseFloat(stopItem.dataset.lat);
+                const lng = parseFloat(stopItem.dataset.lng);
+
+                console.log('📍 Clicked stop:', stopName);
+
+                // Navigate to stop
+                this.selectStop({ name: stopName, lat, lng });
+            }
+        });
+    }
+
+    handleSearch(query) {
+        clearTimeout(this.searchTimeout);
+
+        const trimmedQuery = query.trim();
+
+        if (trimmedQuery.length < 2) {
+            this.hideResults();
+            return;
+        }
+
+        console.log('🔍 Searching:', trimmedQuery);
+
+        this.searchTimeout = setTimeout(() => {
+            this.performSearch(trimmedQuery);
+        }, 300);
     }
 
     async performSearch(query) {
         try {
-            console.log(`[Search] Querying: ${query}`);
+            console.log('📡 Fetching results...');
+
             const response = await fetch(`/api/search-stop?q=${encodeURIComponent(query)}&threshold=0.4`);
             const data = await response.json();
 
+            console.log('📦 Response:', data);
+
             if (data.success && data.results.length > 0) {
                 this.displayResults(data.results);
-                // Hide Legacy List to prevent "No buses found" confusion
-                const busList = document.getElementById('bus-list');
-                if (busList) busList.classList.add('hidden');
             } else {
                 this.displayNoResults(query);
             }
+
         } catch (error) {
-            console.error('[Search] Failed:', error);
+            console.error('❌ Search error:', error);
+            this.displayError(error.message);
         }
     }
 
     displayResults(results) {
-        this.updateDropdownPosition(); // Recalculate position
-        this.resultsDiv.innerHTML = '';
-        this.resultsDiv.classList.remove('hidden');
+        console.log('✓ Displaying', results.length, 'results');
 
-        results.forEach(result => {
-            const item = document.createElement('div');
-            item.className = "p-3 hover:bg-slate-700 cursor-pointer border-b border-slate-700 last:border-b-0 transition-colors";
+        // Find or create results container
+        // Using our class .search-results-container
+        let resultsContainer = document.querySelector('.search-results-container');
 
-            // Generate Bus Badges
-            const busesHtml = result.buses.map(bus => `
-                <span class="px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded text-[10px] font-bold">
-                    ${bus}
-                </span>
-            `).join('');
+        if (!resultsContainer) {
+            // Create new container after the search input
+            const searchInput = document.getElementById('trackInput');
+            if (searchInput) {
+                const searchDiv = searchInput.parentElement;
+                resultsContainer = document.createElement('div');
+                resultsContainer.className = 'search-results-container';
+                searchDiv.parentElement.insertBefore(resultsContainer, searchDiv.nextSibling);
+            }
+        }
 
-            item.innerHTML = `
-                <div class="flex items-start justify-between">
-                    <div>
-                        <h3 class="font-bold text-slate-200 text-sm">${result.stop_name}</h3>
-                        <div class="flex items-center gap-2 mt-1 flex-wrap">
-                            ${busesHtml}
+        if (!resultsContainer) return;
+
+        // Build HTML with data attributes for click handling
+        const html = results.map(result => `
+            <div class="stop-result-item p-3 hover:bg-blue-900/30 cursor-pointer border-b border-slate-700 transition-colors"
+                 data-stop-name="${result.stop_name}"
+                 data-lat="${result.lat}"
+                 data-lng="${result.lng}">
+                
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <div class="font-medium text-white">${result.stop_name}</div>
+                        <div class="flex items-center gap-2 mt-1 text-sm">
+                            <span class="text-slate-300">${result.bus_count} bus${result.bus_count > 1 ? 'es' : ''}</span>
+                            <div class="flex gap-1 flex-wrap">
+                                ${result.buses.map(bus => `
+                                    <span class="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs font-medium border border-blue-500/30">
+                                        ${bus}
+                                    </span>
+                                `).join('')}
+                            </div>
                         </div>
                     </div>
-                    <svg class="w-4 h-4 text-slate-500 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </div>
-            `;
+            </div>
+        `).join('');
 
-            item.onclick = () => {
-                this.onStopSelected(result);
-            };
-
-            this.resultsDiv.appendChild(item);
-        });
+        resultsContainer.innerHTML = html;
+        resultsContainer.style.display = 'block';
     }
 
     displayNoResults(query) {
-        this.resultsDiv.innerHTML = `
-            <div class="p-4 text-center text-slate-500 text-xs italic">
-                No stops found for "${query}"
+        let resultsContainer = document.querySelector('.search-results-container');
+
+        if (!resultsContainer) {
+            const searchInput = document.getElementById('trackInput');
+            if (searchInput) {
+                const searchDiv = searchInput.parentElement;
+                resultsContainer = document.createElement('div');
+                resultsContainer.className = 'search-results-container';
+                searchDiv.parentElement.insertBefore(resultsContainer, searchDiv.nextSibling);
+            }
+        }
+
+        if (!resultsContainer) return;
+
+        resultsContainer.innerHTML = `
+            <div class="p-6 text-center text-slate-400">
+                <svg class="w-12 h-12 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p>No stops found for "<strong class="text-white">${query}</strong>"</p>
+                <p class="text-sm mt-1">Try a different search term</p>
             </div>
         `;
-        this.resultsDiv.classList.remove('hidden');
+        resultsContainer.style.display = 'block';
     }
 
-    hideResults() {
-        this.resultsDiv.classList.add('hidden');
-        const busList = document.getElementById('bus-list');
-        if (busList) busList.classList.remove('hidden');
+    displayError(message) {
+        let resultsContainer = document.querySelector('.search-results-container');
+
+        if (!resultsContainer) {
+            const searchInput = document.getElementById('trackInput');
+            if (searchInput) {
+                const searchDiv = searchInput.parentElement;
+                resultsContainer = document.createElement('div');
+                resultsContainer.className = 'search-results-container';
+                searchDiv.parentElement.insertBefore(resultsContainer, searchDiv.nextSibling);
+            }
+        }
+
+        if (!resultsContainer) return;
+
+        resultsContainer.innerHTML = `
+            <div class="p-4 text-center text-red-400 bg-red-900/20 border border-red-500/30 rounded-lg m-2">
+                <p>⚠️ Search failed</p>
+                <p class="text-sm mt-1">${message}</p>
+            </div>
+        `;
+        resultsContainer.style.display = 'block';
     }
 
-    onStopSelected(stop) {
-        // 1. Clear previous markers
-        this.clearMarkers();
+    selectStop(stop) {
+        console.log('📍 Navigating to:', stop.name);
 
-        // 2. Add Stop Marker
-        const marker = L.marker([stop.lat, stop.lng], {
-            icon: L.divIcon({
+        try {
+            // Clear previous markers
+            this.clearMarkers();
+
+            // Create custom marker
+            const markerIcon = L.divIcon({
                 className: 'custom-stop-marker',
                 html: `
-                    <div class="w-4 h-4 rounded-full bg-red-500 border-2 border-white shadow-lg animate-pulse"></div>
+                    <div style="
+                        background: #ef4444; 
+                        color: white; 
+                        width: 40px; 
+                        height: 40px; 
+                        border-radius: 50%; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+                        border: 3px solid white;
+                        font-size: 20px;
+                        font-weight: bold;
+                    ">📍</div>
                 `,
-                iconSize: [16, 16]
-            })
-        }).addTo(this.map);
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            });
 
-        marker.bindPopup(`<strong class="text-slate-800">${stop.stop_name}</strong>`).openPopup();
-        this.markers.push(marker);
+            // Add marker
+            const marker = L.marker([stop.lat, stop.lng], {
+                icon: markerIcon
+            }).addTo(this.map);
 
-        // 3. Fly to Stop
-        this.map.setView([stop.lat, stop.lng], 16);
+            // Add popup
+            marker.bindPopup(`
+                <div style="text-align: center; min-width: 150px;">
+                    <strong style="font-size: 16px; display: block; margin-bottom: 8px;">${stop.name}</strong>
+                </div>
+            `).openPopup();
 
-        // 4. Update Input & Close Dropdown
-        this.input.value = stop.stop_name;
-        this.hideResults();
+            this.markers.push(marker);
 
-        // 5. Fetch Real-time Status of Buses at this Stop
-        this.fetchStopStatus(stop.stop_name);
-    }
+            // Fly to location
+            this.map.flyTo([stop.lat, stop.lng], 16, {
+                duration: 1.5,
+                easeLinearity: 0.5
+            });
 
-    async fetchStopStatus(stopName) {
-        // Trigger generic filter update if needed or just show a toast
-        try {
-            const res = await fetch(`/api/stop-status/${encodeURIComponent(stopName)}`);
-            const data = await res.json();
-            if (data.success) {
-                console.log("Live Bus Status at Stop:", data.buses);
-                // Optionally: Highlight these buses on the map or filter the list
-                // For now, we just let the map be the visual guide.
-            }
-        } catch (e) { console.error(e); }
+            console.log('✓ Navigation successful');
+
+        } catch (error) {
+            console.error('❌ Navigation error:', error);
+        }
     }
 
     clearMarkers() {
-        this.markers.forEach(m => this.map.removeLayer(m));
+        this.markers.forEach(marker => {
+            try {
+                this.map.removeLayer(marker);
+            } catch (e) {
+                console.warn('Could not remove marker:', e);
+            }
+        });
         this.markers = [];
+    }
+
+    hideResults() {
+        const resultsContainer = document.querySelector('.search-results-container');
+        if (resultsContainer) {
+            resultsContainer.style.display = 'none';
+        }
     }
 }

@@ -81,3 +81,74 @@ body {
 .leaflet-routing-container {
     display: none !important;
 }
+
+/* =========================================
+   Bus Stop Search Module Styles
+   ========================================= */
+
+/* Search Results Container */
+.search-results-container {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 12px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Individual Stop Result */
+.stop-result-item {
+    transition: all 0.2s ease;
+}
+
+.stop-result-item:hover {
+    background: rgba(59, 130, 246, 0.2) !important;
+    padding-left: 16px !important;
+    /* Slight shift effect */
+}
+
+/* Custom Scrollbar for Results */
+.search-results-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.search-results-container::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.5);
+    border-radius: 3px;
+}
+
+.search-results-container::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.5);
+    border-radius: 3px;
+}
+
+/* Custom Stop Marker Animation */
+.custom-stop-marker {
+    animation: marker-drop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes marker-drop {
+    0% {
+        transform: translateY(-50px) scale(0);
+        opacity: 0;
+    }
+
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Bus Number Badges */
+.bus-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
