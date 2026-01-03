@@ -48,16 +48,23 @@ window.setFilter = async function () {
         console.log("Search Results:", results);
 
         if (results.length > 0) {
-            // Found a stop match!
-            // Pick the best match (first one)
-            const best = results[0];
-            console.log("Smart Search: Mapped", val, "->", best.stop_name);
+            // Found stop matches!
+            // Aggregate ALL buses from ALL matching stops
+            const allBuses = new Set();
+            results.forEach(r => {
+                if (Array.isArray(r.buses)) {
+                    r.buses.forEach(b => allBuses.add(String(b)));
+                }
+            });
 
-            // Update Input
-            input.value = best.stop_name;
+            const uniqueBuses = Array.from(allBuses);
+            console.log("Smart Search: Aggregated Buses from", results.length, "stops ->", uniqueBuses);
 
-            // Filter by Buses
-            setBusFilter(best.buses);
+            // Update Input to match the query (or keep as is to show broad search)
+            // input.value = results[0].stop_name; // Optional: Snapping to first result might be confusing if searching "KIIT"
+
+            // Filter by ALL relevant buses
+            setBusFilter(uniqueBuses);
         } else {
             // No stop found, fallback to standard bus filter (string match)
             console.log("Smart Search: No stop found, filtering by text:", val);
