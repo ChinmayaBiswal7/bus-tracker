@@ -139,10 +139,7 @@ def driver():
 def student():
     return render_template('student.html', recommendations=[])
 
-@app.route('/api/chat', methods=['POST'])
-def chat_with_ai():
-    data = request.json
-    user_msg = data.get('message', '')
+
     
 # --- Route Loading Logic (Excel) ---
 import pandas as pd
