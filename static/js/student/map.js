@@ -361,13 +361,26 @@ export function startTrackingRouteByBusNo(busNo) {
     updateRoute();
 
     // 5. Force Emit if we found a live bus
-    if (targetBusId && userLat && userLng && lastBusData[targetBusId]) {
+    if (targetBusId && lastBusData[targetBusId]) {
         console.log("[STUDENT] Force emitting initial location -> Driver of Bus:", busNo);
-        socket.emit('student_update', {
-            bus_no: busNo,
-            lat: userLat,
-            lng: userLng
-        });
+
+        // --- NEW: Fly to Bus Location (Locate Behavior) ---
+        const b = lastBusData[targetBusId];
+        if (map && b.lat && b.lng) {
+            console.log("📍 Flying to Bus Location:", b.lat, b.lng);
+            map.flyTo([b.lat, b.lng], 16, { duration: 1.5 });
+        }
+
+        if (userLat && userLng) {
+            socket.emit('student_update', {
+                bus_no: busNo,
+                lat: userLat,
+                lng: userLng
+            });
+        }
+    } else {
+        // Bus is offline or not found
+        console.warn(`Bus ${busNo} is not live in local data.`);
     }
 }
 
