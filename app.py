@@ -201,11 +201,10 @@ def get_route(bus_no):
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
-    try:
-        data = request.json
-        user_msg = data.get('message', '')
-        if not user_msg:
-            return {"error": "Empty message"}, 400
+    data = request.json
+    user_msg = data.get('message', '')
+    if not user_msg:
+        return {"error": "Empty message"}, 400
 
         # 1. Fallback if no Key
     if not groq_client:
