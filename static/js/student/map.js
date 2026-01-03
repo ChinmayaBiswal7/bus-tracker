@@ -92,56 +92,21 @@ function renderBusList() {
     busList.innerHTML = '';
 
     // Filter Logic
-    // Filter Logic
-    // Filter Logic
-    // ---------------------------------------------------------
-    // UNIFIED DATA SOURCE: Merge Live Socket Data + Filter Results
-    // ---------------------------------------------------------
-    const mergedBuses = new Map();
-
-    // 1. Add known live buses (Socket)
-    Object.entries(lastBusData).forEach(([id, info]) => {
-        const busNo = String(info.bus_no).trim().toLowerCase();
-        mergedBuses.set(busNo, { id, info });
-    });
-
-    // 2. Inject "Offline" placeholders from Filter
-    // If the search says "Bus 66 goes here", but socket doesn't know "Bus 66",
-    // we MUST show it anyway so the student can see the route.
-    if (Array.isArray(currentBusFilter)) {
-        currentBusFilter.forEach(filterRaw => {
-            const busNo = String(filterRaw).trim().toLowerCase();
-            if (!mergedBuses.has(busNo)) {
-                // Not in socket -> Create Offline Placeholder
-                mergedBuses.set(busNo, {
-                    id: `OFFLINE_${busNo}`,
-                    info: {
-                        bus_no: busNo.toUpperCase(), // Display as clean string
-                        offline: true,
-                        lat: 20.2961, // Default fallback (centered)
-                        lng: 85.8245,
-                        crowd: 'OFFLINE'
-                    }
-                });
-            }
-        });
-    }
-
-    // 3. Render List (Iterate over the Merged Map)
-    // Only show items that match the current filter
     const activeEntries = [];
-    mergedBuses.forEach((entry, busNoKey) => {
-        const displayBusNo = String(entry.info.bus_no).trim().toLowerCase();
-
+    Object.entries(lastBusData).forEach(([id, info]) => {
+        const displayBusNo = String(info.bus_no).trim().toLowerCase();
         let isMatch = false;
+
         if (Array.isArray(currentBusFilter)) {
             isMatch = currentBusFilter.includes(displayBusNo);
+        } else if (currentBusFilter) {
+            isMatch = displayBusNo.includes(currentBusFilter);
         } else {
-            isMatch = displayBusNo.includes(String(currentBusFilter).trim().toLowerCase());
+            isMatch = true; // No filter = Show all
         }
 
         if (isMatch) {
-            activeEntries.push(entry);
+            activeEntries.push({ id, info });
         }
     });
 

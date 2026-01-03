@@ -32,50 +32,26 @@ window.setFilter = async function () {
         return;
     }
 
-    // 1. Try treating it as a Bus Number/Filter directly
-    // Check if any bus matches locally first to avoid unnecessary API calls
-    // (We need access to bus data, but 'map.js' holds it. 
-    //  Actually relying on setBusFilter's internal logic is trickier if we want to fallback.
-    //  Let's just try the Search API if it looks like text.)
+    // Simple Search Logic (Reverted)
+    console.log("Searching for:", val);
+    setBusFilter(val); console.log("Smart Search: Aggregated Buses from", results.length, "stops ->", uniqueBuses);
 
-    // Call Search API to see if it's a stop
-    try {
-        // ALERT LOGIC
-        // alert(`Searching for: ${val}`); 
-        const res = await fetch(`/api/search_stops?q=${encodeURIComponent(val)}`);
-        const results = await res.json();
+    if (uniqueBuses.length === 0) console.warn("Smart Search: Found stops but NO buses?", results);
 
-        console.log("Search Results:", results);
+    // Update Input to match the query (or keep as is to show broad search)
+    // input.value = results[0].stop_name; // Optional: Snapping to first result might be confusing if searching "KIIT"
 
-        if (results.length > 0) {
-            // Found stop matches!
-            // Aggregate ALL buses from ALL matching stops
-            const allBuses = new Set();
-            results.forEach(r => {
-                if (Array.isArray(r.buses)) {
-                    r.buses.forEach(b => allBuses.add(String(b)));
-                }
-            });
-
-            const uniqueBuses = Array.from(allBuses);
-            console.log("Smart Search: Aggregated Buses from", results.length, "stops ->", uniqueBuses);
-
-            if (uniqueBuses.length === 0) console.warn("Smart Search: Found stops but NO buses?", results);
-
-            // Update Input to match the query (or keep as is to show broad search)
-            // input.value = results[0].stop_name; // Optional: Snapping to first result might be confusing if searching "KIIT"
-
-            // Filter by ALL relevant buses
-            setBusFilter(uniqueBuses);
-        } else {
-            // No stop found, fallback to standard bus filter (string match)
-            console.log("Smart Search: No stop found, filtering by text:", val);
-            setBusFilter(val);
-        }
+    // Filter by ALL relevant buses
+    setBusFilter(uniqueBuses);
+} else {
+    // No stop found, fallback to standard bus filter (string match)
+    console.log("Smart Search: No stop found, filtering by text:", val);
+    setBusFilter(val);
+}
     } catch (e) {
-        console.error("Smart Search Error:", e);
-        setBusFilter(val);
-    }
+    console.error("Smart Search Error:", e);
+    setBusFilter(val);
+}
 };
 window.quickSearch = function (busId) {
     const input = document.getElementById('trackInput');
