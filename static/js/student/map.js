@@ -213,146 +213,161 @@ function updateBusMarker(busId, info) {
             });
     }
     // Store Bus Data for Routing
-    markers[busId].isOffline = isOffline;
     markers[busId].speed = info.speed || 0; // Store real GPS speed (km/h) 
     markers[busId].crowd = info.crowd || 'LOW';
-}
 
-export function startLocationTracking(highAccuracy = true) {
-    if (watchId) navigator.geolocation.clearWatch(watchId);
+    // Update Popup Content (Density instead of Time)
+    if (markers[busId] && markers[busId].getPopup()) {
+        markers[busId].setPopupContent(`
+            <div class="flex items-center justify-between gap-2 min-w-[80px]">
+                <b class="text-slate-900 text-sm">Bus ${info.bus_no}</b>
+                ${generateDensityIcons(markers[busId].crowd)}
+            </div>
+        `);
+    } else if (markers[busId]) {
+        markers[busId].bindPopup(`
+            <div class="flex items-center justify-between gap-2 min-w-[80px]">
+                <b class="text-slate-900 text-sm">Bus ${info.bus_no}</b>
+                ${generateDensityIcons(markers[busId].crowd)}
+            </div>
+        `);
+    }
 
-    const gpsTimeout = highAccuracy ? 5000 : 30000;
-    const maxAge = highAccuracy ? 0 : Infinity;
+    export function startLocationTracking(highAccuracy = true) {
+        if (watchId) navigator.geolocation.clearWatch(watchId);
 
-    const options = { enableHighAccuracy: highAccuracy, timeout: gpsTimeout, maximumAge: maxAge };
+        const gpsTimeout = highAccuracy ? 5000 : 30000;
+        const maxAge = highAccuracy ? 0 : Infinity;
 
-    console.log(`Starting GPS (High Acc: ${highAccuracy})...`);
-    updateGpsStatus('searching', `GPS: Locating (${highAccuracy ? 'High' : 'Low'})...`);
+        const options = { enableHighAccuracy: highAccuracy, timeout: gpsTimeout, maximumAge: maxAge };
 
-    watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-            userLat = pos.coords.latitude;
-            userLng = pos.coords.longitude;
-            updateUserMarker(userLat, userLng);
-            updateGpsStatus('active', 'GPS: Active');
+        console.log(`Starting GPS (High Acc: ${highAccuracy})...`);
+        updateGpsStatus('searching', `GPS: Locating (${highAccuracy ? 'High' : 'Low'})...`);
 
-            if (targetBusId) {
-                updateRoute();
-                // Emit Location to Driver
-                const busInfo = lastBusData[targetBusId];
-                if (busInfo && busInfo.bus_no) {
-                    console.log("[STUDENT] Emitting location to driver for bus:", busInfo.bus_no);
-                    socket.emit('student_update', {
-                        bus_no: busInfo.bus_no,
-                        lat: userLat,
-                        lng: userLng
-                    });
+        watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+                userLat = pos.coords.latitude;
+                userLng = pos.coords.longitude;
+                updateUserMarker(userLat, userLng);
+                updateGpsStatus('active', 'GPS: Active');
+
+                if (targetBusId) {
+                    updateRoute();
+                    // Emit Location to Driver
+                    const busInfo = lastBusData[targetBusId];
+                    if (busInfo && busInfo.bus_no) {
+                        console.log("[STUDENT] Emitting location to driver for bus:", busInfo.bus_no);
+                        socket.emit('student_update', {
+                            bus_no: busInfo.bus_no,
+                            lat: userLat,
+                            lng: userLng
+                        });
+                    }
                 }
-            }
 
-            const tripDist = document.getElementById('trip-dist');
-            if (tripDist && tripDist.textContent.includes("GPS")) {
-                document.getElementById('trip-info-card').classList.add('hidden');
-            }
-        },
-        (err) => {
-            console.warn(`GPS Error:`, err);
-            if (highAccuracy) {
-                console.log("Switching to Low Accuracy...");
-                startLocationTracking(false);
-                return;
-            }
-            updateGpsStatus('error', 'GPS: Failed');
-            // Show error in trip card if tracking
-            const tripCard = document.getElementById('trip-info-card');
-            const tripDist = document.getElementById('trip-dist');
-            if (tripCard && tripDist) {
-                tripCard.classList.remove('hidden');
-                tripDist.textContent = "GPS Access Denied/Error";
-            }
-        },
-        options
-    );
-}
-
-function updateUserMarker(lat, lng) {
-    if (userMarker) {
-        userMarker.setLatLng([lat, lng]);
-    } else {
-        userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
-    }
-}
-
-// Routing
-// Routing
-export function startTrackingRoute(busId) {
-    targetBusId = busId;
-
-    // 1. Activate Split Screen Mode
-    const mapContainer = document.getElementById('map-container');
-    const routePanel = document.getElementById('route-panel');
-    const fullscreenToggle = document.getElementById('fullscreen-toggle');
-    const tripCard = document.getElementById('trip-info-card');
-
-    if (mapContainer && routePanel) {
-        routePanel.classList.remove('hidden');
-        // routePanel.classList.add('flex'); // No longer needed with fixed overlay
-
-        if (fullscreenToggle) fullscreenToggle.classList.remove('hidden');
-
-        // Show floating card (always visible in overlay mode)
-        if (tripCard) tripCard.classList.remove('hidden');
-
-        // Note: No need to resize map as panel is now an overlay
+                const tripDist = document.getElementById('trip-dist');
+                if (tripDist && tripDist.textContent.includes("GPS")) {
+                    document.getElementById('trip-info-card').classList.add('hidden');
+                }
+            },
+            (err) => {
+                console.warn(`GPS Error:`, err);
+                if (highAccuracy) {
+                    console.log("Switching to Low Accuracy...");
+                    startLocationTracking(false);
+                    return;
+                }
+                updateGpsStatus('error', 'GPS: Failed');
+                // Show error in trip card if tracking
+                const tripCard = document.getElementById('trip-info-card');
+                const tripDist = document.getElementById('trip-dist');
+                if (tripCard && tripDist) {
+                    tripCard.classList.remove('hidden');
+                    tripDist.textContent = "GPS Access Denied/Error";
+                }
+            },
+            options
+        );
     }
 
-    // Draw Route from Excel Data
-    if (lastBusData[busId]) {
-        drawBusPath(lastBusData[busId].bus_no);
+    function updateUserMarker(lat, lng) {
+        if (userMarker) {
+            userMarker.setLatLng([lat, lng]);
+        } else {
+            userMarker = L.marker([lat, lng], { icon: userIcon, zIndexOffset: 1000 }).addTo(map);
+        }
     }
 
-    updateRoute();
+    // Routing
+    // Routing
+    export function startTrackingRoute(busId) {
+        targetBusId = busId;
 
-    // FORCE EMIT: Send immediate update to driver (don't wait for GPS movement)
-    if (userLat && userLng && lastBusData[busId]) {
-        const busNo = lastBusData[busId].bus_no;
-        console.log("[STUDENT] Force emitting initial location -> Driver of Bus:", busNo);
-        socket.emit('student_update', {
-            bus_no: busNo,
-            lat: userLat,
-            lng: userLng
-        });
+        // 1. Activate Split Screen Mode
+        const mapContainer = document.getElementById('map-container');
+        const routePanel = document.getElementById('route-panel');
+        const fullscreenToggle = document.getElementById('fullscreen-toggle');
+        const tripCard = document.getElementById('trip-info-card');
+
+        if (mapContainer && routePanel) {
+            routePanel.classList.remove('hidden');
+            // routePanel.classList.add('flex'); // No longer needed with fixed overlay
+
+            if (fullscreenToggle) fullscreenToggle.classList.remove('hidden');
+
+            // Show floating card (always visible in overlay mode)
+            if (tripCard) tripCard.classList.remove('hidden');
+
+            // Note: No need to resize map as panel is now an overlay
+        }
+
+        // Draw Route from Excel Data
+        if (lastBusData[busId]) {
+            drawBusPath(lastBusData[busId].bus_no);
+        }
+
+        updateRoute();
+
+        // FORCE EMIT: Send immediate update to driver (don't wait for GPS movement)
+        if (userLat && userLng && lastBusData[busId]) {
+            const busNo = lastBusData[busId].bus_no;
+            console.log("[STUDENT] Force emitting initial location -> Driver of Bus:", busNo);
+            socket.emit('student_update', {
+                bus_no: busNo,
+                lat: userLat,
+                lng: userLng
+            });
+        }
     }
-}
 
-// --- NEW: Toggle Full Screen ---
-// --- NEW: Toggle Full Screen ---\nwindow.toggleFullScreenMap = function () {\n    const routePanel = document.getElementById('route-panel');\n    const fullscreenToggle = document.getElementById('fullscreen-toggle');\n    const tripCard = document.getElementById('trip-info-card');\n\n    if (routePanel.classList.contains('hidden')) {\n        // Show Overlay\n        routePanel.classList.remove('hidden');\n        /* routePanel.classList.add('flex'); */\n        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`;\n    } else {\n        // Hide Overlay (Full Map)\n        routePanel.classList.add('hidden');\n        /* routePanel.classList.remove('flex'); */\n        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>`;\n    }\n}
+    // --- NEW: Toggle Full Screen ---
+    // --- NEW: Toggle Full Screen ---\nwindow.toggleFullScreenMap = function () {\n    const routePanel = document.getElementById('route-panel');\n    const fullscreenToggle = document.getElementById('fullscreen-toggle');\n    const tripCard = document.getElementById('trip-info-card');\n\n    if (routePanel.classList.contains('hidden')) {\n        // Show Overlay\n        routePanel.classList.remove('hidden');\n        /* routePanel.classList.add('flex'); */\n        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`;\n    } else {\n        // Hide Overlay (Full Map)\n        routePanel.classList.add('hidden');\n        /* routePanel.classList.remove('flex'); */\n        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>`;\n    }\n}
 
-// --- NEW: Render Timeline ---
-let cachedStops = [];
+    // --- NEW: Render Timeline ---
+    let cachedStops = [];
 
-function renderRouteTimeline(stops) {
-    cachedStops = stops;
-    const container = document.getElementById('route-timeline');
-    const busNoEl = document.getElementById('rp-bus-no');
+    function renderRouteTimeline(stops) {
+        cachedStops = stops;
+        const container = document.getElementById('route-timeline');
+        const busNoEl = document.getElementById('rp-bus-no');
 
-    if (!container) return;
+        if (!container) return;
 
-    // Update Header
-    if (busNoEl) busNoEl.textContent = lastBusData[targetBusId]?.bus_no || "Bus";
+        // Update Header
+        if (busNoEl) busNoEl.textContent = lastBusData[targetBusId]?.bus_no || "Bus";
 
-    // Clear list (keep the vertical line div)
-    // We recreate stricture: Line + items
-    container.innerHTML = `<div class="absolute left-[27px] top-6 bottom-0 w-0.5 bg-slate-700 z-0"></div>`;
+        // Clear list (keep the vertical line div)
+        // We recreate stricture: Line + items
+        container.innerHTML = `<div class="absolute left-[27px] top-6 bottom-0 w-0.5 bg-slate-700 z-0"></div>`;
 
-    stops.forEach((stop, index) => {
-        const div = document.createElement('div');
-        div.className = "relative flex items-start gap-4 mb-6 z-10 stop-item";
-        div.dataset.lat = stop.lat;
-        div.dataset.lng = stop.lng;
-        div.id = `stop-${index}`;
+        stops.forEach((stop, index) => {
+            const div = document.createElement('div');
+            div.className = "relative flex items-start gap-4 mb-6 z-10 stop-item";
+            div.dataset.lat = stop.lat;
+            div.dataset.lng = stop.lng;
+            div.id = `stop-${index}`;
 
-        div.innerHTML = `
+            div.innerHTML = `
             <div class="w-4 h-4 rounded-full bg-slate-900 border-2 border-slate-500 shrink-0 mt-1 transition-colors" id="dot-${index}"></div>
             <div>
                 <p class="text-slate-200 font-bold text-sm leading-tight">${stop.stop_name}</p>
@@ -368,318 +383,318 @@ function renderRouteTimeline(stops) {
                 </div>
             </div>
         `;
-        container.appendChild(div);
-    });
-}
-
-// Route Visuals
-let currentRouteLayer = null;
-let currentStopsLayer = null;
-
-async function drawBusPath(busNo) {
-    // Clear previous
-    if (currentRouteLayer) map.removeLayer(currentRouteLayer);
-    if (currentStopsLayer) map.removeLayer(currentStopsLayer);
-
-    try {
-        const res = await fetch(`/api/routes/${busNo}`);
-        if (!res.ok) return; // No route found
-
-        const data = await res.json();
-
-        // 1. Draw Polyline (Road Snapped using OSRM)
-        if (data.path && data.path.length > 0) {
-            // Convert simple path points to LatLng waypoints for OSRM
-            const waypoints = data.stops.map(s => L.latLng(s.lat, s.lng));
-
-            // Use the existing routing engine or creating a temporary one
-            const router = L.Routing.osrmv1({
-                serviceUrl: 'https://router.project-osrm.org/route/v1',
-                profile: 'driving'
-            });
-
-            router.route(waypoints.map(wp => ({ latLng: wp })), (err, routes) => {
-                if (!err && routes && routes.length > 0) {
-                    const line = L.Routing.line(routes[0], {
-                        styles: [{ color: '#d946ef', opacity: 0.9, weight: 6, dashArray: '1, 6' }] // Neon Purple dashed
-                    });
-                    // Override OSRM default style preventing it from being transparent
-                    // actually L.Routing.line returns a layer that might have its own opinion.
-                    // The safest way for a solid route line:
-                    const routeCoords = routes[0].coordinates;
-                    const staticLine = L.polyline(routeCoords, {
-                        color: '#d946ef', // Fuchsia-500
-                        weight: 6,
-                        opacity: 0.9,
-                        lineCap: 'round'
-                    });
-
-                    currentRouteLayer = staticLine;
-                    staticLine.addTo(map);
-                } else {
-                    // Fallback to straight lines
-                    console.warn("OSRM Failed, falling back to straight lines");
-                    currentRouteLayer = L.polyline(data.path, {
-                        color: '#d946ef', weight: 6, opacity: 0.9, dashArray: '5, 10'
-                    }).addTo(map);
-                }
-            });
-        }
-
-        // 2. Draw Stops
-        if (data.stops && data.stops.length > 0) {
-            currentStopsLayer = L.layerGroup().addTo(map);
-            data.stops.forEach(stop => {
-                L.circleMarker([stop.lat, stop.lng], {
-                    radius: 5,
-                    color: '#86198f', // Dark Fuchsia Border
-                    fillColor: '#f0abfc', // Light Fuchsia Fill
-                    fillOpacity: 1,
-                    weight: 2
-                }).bindTooltip(stop.stop_name, {
-                    permanent: false,
-                    direction: 'top',
-                    offset: [0, -5],
-                    className: 'text-xs font-bold text-fuchsia-500 bg-slate-900/90 border-0 rounded px-2 py-1'
-                }).addTo(currentStopsLayer);
-            });
-
-        }
-
-        // 3. Render Timeline Panel
-        if (data.stops && data.stops.length > 0) {
-            renderRouteTimeline(data.stops);
-        }
-
-    } catch (e) {
-        console.error("Failed to load route path:", e);
-    }
-}
-
-export function stopTrackingRoute() {
-    if (targetBusId) {
-        targetBusId = null;
-    }
-    const tripCard = document.getElementById('trip-info-card');
-    if (tripCard) tripCard.classList.add('hidden');
-
-    // Reset Split Screen
-    const routePanel = document.getElementById('route-panel');
-    const fullscreenToggle = document.getElementById('fullscreen-toggle');
-    if (routePanel) {
-        routePanel.classList.add('hidden');
-        routePanel.classList.remove('flex');
-    }
-    if (fullscreenToggle) fullscreenToggle.classList.add('hidden');
-    setTimeout(() => map.invalidateSize(), 300);
-
-    // Clean up dynamic layer
-    if (dynamicRouteLayer) {
-        map.removeLayer(dynamicRouteLayer);
-        dynamicRouteLayer = null;
-    }
-
-    // Clean up router if we want (optional, but good practice to reset)
-    // dynamicRouteRouter = null; 
-
-    if (fallbackLine) {
-        map.removeLayer(fallbackLine);
-        fallbackLine = null;
-    }
-    if (currentRouteLayer) {
-        map.removeLayer(currentRouteLayer);
-        currentRouteLayer = null;
-    }
-    if (currentStopsLayer) {
-        map.removeLayer(currentStopsLayer);
-        currentStopsLayer = null;
-    }
-}
-
-function updateRoute() {
-    if (!targetBusId || !markers[targetBusId]) return;
-    const tripEta = document.getElementById('trip-eta');
-    const tripDist = document.getElementById('trip-dist');
-    const tripCard = document.getElementById('trip-info-card');
-
-    if (!userLat) {
-        if (tripEta) tripEta.textContent = "--";
-        if (tripDist) tripDist.textContent = "Locating you...";
-        return;
-    }
-
-    const busMarker = markers[targetBusId];
-    if (busMarker.isOffline && tripCard) tripCard.classList.add('grayscale');
-    else if (tripCard) tripCard.classList.remove('grayscale');
-
-    const busLatLng = busMarker.getLatLng();
-    const waypoints = [L.latLng(busLatLng.lat, busLatLng.lng), L.latLng(userLat, userLng)];
-
-    runFallbackRouting(busLatLng, tripEta, tripDist);
-
-    // DEBOUNCE: Only update OSRM every 2 seconds to prevent map jank
-    if (window.routeDebounce) clearTimeout(window.routeDebounce);
-    window.routeDebounce = setTimeout(() => {
-        executeOsrmRoute(waypoints);
-        updateTimelinePosition(busLatLng);
-    }, 2000);
-}
-
-// --- NEW: Update Timeline Position ---
-function updateTimelinePosition(busLatLng) {
-    if (!cachedStops || cachedStops.length === 0) return;
-
-    let nearestStopIndex = -1;
-    let minDist = Infinity;
-
-    // Find nearest stop
-    cachedStops.forEach((stop, index) => {
-        const dist = map.distance(busLatLng, [stop.lat, stop.lng]);
-
-        // Reset Visuals first
-        const dot = document.getElementById(`dot-${index}`);
-        const busIcon = document.getElementById(`bus-at-${index}`);
-        if (dot) {
-            dot.className = "w-4 h-4 rounded-full bg-slate-900 border-2 border-slate-500 shrink-0 mt-1 transition-colors";
-        }
-        if (busIcon) busIcon.classList.add('hidden');
-
-        if (dist < minDist) {
-            minDist = dist;
-            nearestStopIndex = index;
-        }
-    });
-
-    // Threshold: 500 meters. If bus is > 500m from ANY stop, show nothing on timeline.
-    if (minDist < 500 && nearestStopIndex !== -1) {
-        const busIcon = document.getElementById(`bus-at-${nearestStopIndex}`);
-        const dot = document.getElementById(`dot-${nearestStopIndex}`);
-
-        if (busIcon) {
-            busIcon.classList.remove('hidden');
-            // Auto scroll to this element
-            busIcon.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-        if (dot) {
-            dot.className = "w-4 h-4 rounded-full bg-green-500 border-2 border-green-300 shrink-0 mt-1 shadow-[0_0_10px_rgba(34,197,94,0.5)]";
-        }
-    }
-}
-
-let dynamicRouteRouter = null;
-let dynamicRouteLayer = null;
-
-function executeOsrmRoute(waypoints) {
-    if (!dynamicRouteRouter) {
-        dynamicRouteRouter = L.Routing.osrmv1({
-            serviceUrl: 'https://router.project-osrm.org/route/v1',
-            profile: 'driving',
-            timeout: 5000
+            container.appendChild(div);
         });
     }
 
-    dynamicRouteRouter.route(waypoints.map(wp => ({ latLng: wp })), (err, routes) => {
-        if (err) {
-            console.warn("OSRM Routing Error", err);
+    // Route Visuals
+    let currentRouteLayer = null;
+    let currentStopsLayer = null;
+
+    async function drawBusPath(busNo) {
+        // Clear previous
+        if (currentRouteLayer) map.removeLayer(currentRouteLayer);
+        if (currentStopsLayer) map.removeLayer(currentStopsLayer);
+
+        try {
+            const res = await fetch(`/api/routes/${busNo}`);
+            if (!res.ok) return; // No route found
+
+            const data = await res.json();
+
+            // 1. Draw Polyline (Road Snapped using OSRM)
+            if (data.path && data.path.length > 0) {
+                // Convert simple path points to LatLng waypoints for OSRM
+                const waypoints = data.stops.map(s => L.latLng(s.lat, s.lng));
+
+                // Use the existing routing engine or creating a temporary one
+                const router = L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1',
+                    profile: 'driving'
+                });
+
+                router.route(waypoints.map(wp => ({ latLng: wp })), (err, routes) => {
+                    if (!err && routes && routes.length > 0) {
+                        const line = L.Routing.line(routes[0], {
+                            styles: [{ color: '#d946ef', opacity: 0.9, weight: 6, dashArray: '1, 6' }] // Neon Purple dashed
+                        });
+                        // Override OSRM default style preventing it from being transparent
+                        // actually L.Routing.line returns a layer that might have its own opinion.
+                        // The safest way for a solid route line:
+                        const routeCoords = routes[0].coordinates;
+                        const staticLine = L.polyline(routeCoords, {
+                            color: '#d946ef', // Fuchsia-500
+                            weight: 6,
+                            opacity: 0.9,
+                            lineCap: 'round'
+                        });
+
+                        currentRouteLayer = staticLine;
+                        staticLine.addTo(map);
+                    } else {
+                        // Fallback to straight lines
+                        console.warn("OSRM Failed, falling back to straight lines");
+                        currentRouteLayer = L.polyline(data.path, {
+                            color: '#d946ef', weight: 6, opacity: 0.9, dashArray: '5, 10'
+                        }).addTo(map);
+                    }
+                });
+            }
+
+            // 2. Draw Stops
+            if (data.stops && data.stops.length > 0) {
+                currentStopsLayer = L.layerGroup().addTo(map);
+                data.stops.forEach(stop => {
+                    L.circleMarker([stop.lat, stop.lng], {
+                        radius: 5,
+                        color: '#86198f', // Dark Fuchsia Border
+                        fillColor: '#f0abfc', // Light Fuchsia Fill
+                        fillOpacity: 1,
+                        weight: 2
+                    }).bindTooltip(stop.stop_name, {
+                        permanent: false,
+                        direction: 'top',
+                        offset: [0, -5],
+                        className: 'text-xs font-bold text-fuchsia-500 bg-slate-900/90 border-0 rounded px-2 py-1'
+                    }).addTo(currentStopsLayer);
+                });
+
+            }
+
+            // 3. Render Timeline Panel
+            if (data.stops && data.stops.length > 0) {
+                renderRouteTimeline(data.stops);
+            }
+
+        } catch (e) {
+            console.error("Failed to load route path:", e);
+        }
+    }
+
+    export function stopTrackingRoute() {
+        if (targetBusId) {
+            targetBusId = null;
+        }
+        const tripCard = document.getElementById('trip-info-card');
+        if (tripCard) tripCard.classList.add('hidden');
+
+        // Reset Split Screen
+        const routePanel = document.getElementById('route-panel');
+        const fullscreenToggle = document.getElementById('fullscreen-toggle');
+        if (routePanel) {
+            routePanel.classList.add('hidden');
+            routePanel.classList.remove('flex');
+        }
+        if (fullscreenToggle) fullscreenToggle.classList.add('hidden');
+        setTimeout(() => map.invalidateSize(), 300);
+
+        // Clean up dynamic layer
+        if (dynamicRouteLayer) {
+            map.removeLayer(dynamicRouteLayer);
+            dynamicRouteLayer = null;
+        }
+
+        // Clean up router if we want (optional, but good practice to reset)
+        // dynamicRouteRouter = null; 
+
+        if (fallbackLine) {
+            map.removeLayer(fallbackLine);
+            fallbackLine = null;
+        }
+        if (currentRouteLayer) {
+            map.removeLayer(currentRouteLayer);
+            currentRouteLayer = null;
+        }
+        if (currentStopsLayer) {
+            map.removeLayer(currentStopsLayer);
+            currentStopsLayer = null;
+        }
+    }
+
+    function updateRoute() {
+        if (!targetBusId || !markers[targetBusId]) return;
+        const tripEta = document.getElementById('trip-eta');
+        const tripDist = document.getElementById('trip-dist');
+        const tripCard = document.getElementById('trip-info-card');
+
+        if (!userLat) {
+            if (tripEta) tripEta.textContent = "--";
+            if (tripDist) tripDist.textContent = "Locating you...";
             return;
         }
 
-        if (routes && routes.length > 0) {
-            const route = routes[0];
-            const coordinates = route.coordinates;
-            const summary = route.summary;
+        const busMarker = markers[targetBusId];
+        if (busMarker.isOffline && tripCard) tripCard.classList.add('grayscale');
+        else if (tripCard) tripCard.classList.remove('grayscale');
 
-            // 1. Draw the Blue Navigation Line manually (Guarantee NO map movement)
-            if (dynamicRouteLayer) map.removeLayer(dynamicRouteLayer);
+        const busLatLng = busMarker.getLatLng();
+        const waypoints = [L.latLng(busLatLng.lat, busLatLng.lng), L.latLng(userLat, userLng)];
 
-            dynamicRouteLayer = L.polyline(coordinates, {
-                color: '#3b82f6',
-                weight: 6,
-                opacity: 0.8,
-                lineCap: 'round',
-                lineJoin: 'round'
-            }).addTo(map);
+        runFallbackRouting(busLatLng, tripEta, tripDist);
 
-            // 2. Hide Fallback Line since we have a real road path
-            if (fallbackLine) {
-                map.removeLayer(fallbackLine);
-                fallbackLine = null;
+        // DEBOUNCE: Only update OSRM every 2 seconds to prevent map jank
+        if (window.routeDebounce) clearTimeout(window.routeDebounce);
+        window.routeDebounce = setTimeout(() => {
+            executeOsrmRoute(waypoints);
+            updateTimelinePosition(busLatLng);
+        }, 2000);
+    }
+
+    // --- NEW: Update Timeline Position ---
+    function updateTimelinePosition(busLatLng) {
+        if (!cachedStops || cachedStops.length === 0) return;
+
+        let nearestStopIndex = -1;
+        let minDist = Infinity;
+
+        // Find nearest stop
+        cachedStops.forEach((stop, index) => {
+            const dist = map.distance(busLatLng, [stop.lat, stop.lng]);
+
+            // Reset Visuals first
+            const dot = document.getElementById(`dot-${index}`);
+            const busIcon = document.getElementById(`bus-at-${index}`);
+            if (dot) {
+                dot.className = "w-4 h-4 rounded-full bg-slate-900 border-2 border-slate-500 shrink-0 mt-1 transition-colors";
+            }
+            if (busIcon) busIcon.classList.add('hidden');
+
+            if (dist < minDist) {
+                minDist = dist;
+                nearestStopIndex = index;
+            }
+        });
+
+        // Threshold: 500 meters. If bus is > 500m from ANY stop, show nothing on timeline.
+        if (minDist < 500 && nearestStopIndex !== -1) {
+            const busIcon = document.getElementById(`bus-at-${nearestStopIndex}`);
+            const dot = document.getElementById(`dot-${nearestStopIndex}`);
+
+            if (busIcon) {
+                busIcon.classList.remove('hidden');
+                // Auto scroll to this element
+                busIcon.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            if (dot) {
+                dot.className = "w-4 h-4 rounded-full bg-green-500 border-2 border-green-300 shrink-0 mt-1 shadow-[0_0_10px_rgba(34,197,94,0.5)]";
+            }
+        }
+    }
+
+    let dynamicRouteRouter = null;
+    let dynamicRouteLayer = null;
+
+    function executeOsrmRoute(waypoints) {
+        if (!dynamicRouteRouter) {
+            dynamicRouteRouter = L.Routing.osrmv1({
+                serviceUrl: 'https://router.project-osrm.org/route/v1',
+                profile: 'driving',
+                timeout: 5000
+            });
+        }
+
+        dynamicRouteRouter.route(waypoints.map(wp => ({ latLng: wp })), (err, routes) => {
+            if (err) {
+                console.warn("OSRM Routing Error", err);
+                return;
             }
 
-            // 3. Update ETA/Distance UI
-            const distanceKm = (summary.totalDistance || 0) / 1000;
-            updateTripInfoCard(distanceKm);
-        }
-    });
+            if (routes && routes.length > 0) {
+                const route = routes[0];
+                const coordinates = route.coordinates;
+                const summary = route.summary;
 
-    startRoutingTimer();
-}
+                // 1. Draw the Blue Navigation Line manually (Guarantee NO map movement)
+                if (dynamicRouteLayer) map.removeLayer(dynamicRouteLayer);
 
-function updateTripInfoCard(distanceKm) {
-    const tripEta = document.getElementById('trip-eta');
-    const tripDist = document.getElementById('trip-dist');
-    if (!targetBusId || !markers[targetBusId]) return;
+                dynamicRouteLayer = L.polyline(coordinates, {
+                    color: '#3b82f6',
+                    weight: 6,
+                    opacity: 0.8,
+                    lineCap: 'round',
+                    lineJoin: 'round'
+                }).addTo(map);
 
-    const currentSpeedKmph = markers[targetBusId]?.speed || 0;
-    const MIN_RELIABLE_SPEED = 5;
-    const FALLBACK_CITY_SPEED = 15;
-    const FALLBACK_HIGHWAY_SPEED = 45;
-    const HIGHWAY_DISTANCE_THRESHOLD = 20;
+                // 2. Hide Fallback Line since we have a real road path
+                if (fallbackLine) {
+                    map.removeLayer(fallbackLine);
+                    fallbackLine = null;
+                }
 
-    let finalTimeMin;
-    let statusMsg = "";
+                // 3. Update ETA/Distance UI
+                const distanceKm = (summary.totalDistance || 0) / 1000;
+                updateTripInfoCard(distanceKm);
+            }
+        });
 
-    if (currentSpeedKmph > MIN_RELIABLE_SPEED) {
-        finalTimeMin = Math.ceil((distanceKm / currentSpeedKmph) * 60);
-    } else {
-        if (distanceKm > HIGHWAY_DISTANCE_THRESHOLD) {
-            finalTimeMin = Math.ceil((distanceKm / FALLBACK_HIGHWAY_SPEED) * 60);
-            statusMsg = " (Highway Est.)";
+        startRoutingTimer();
+    }
+
+    function updateTripInfoCard(distanceKm) {
+        const tripEta = document.getElementById('trip-eta');
+        const tripDist = document.getElementById('trip-dist');
+        if (!targetBusId || !markers[targetBusId]) return;
+
+        const currentSpeedKmph = markers[targetBusId]?.speed || 0;
+        const MIN_RELIABLE_SPEED = 5;
+        const FALLBACK_CITY_SPEED = 15;
+        const FALLBACK_HIGHWAY_SPEED = 45;
+        const HIGHWAY_DISTANCE_THRESHOLD = 20;
+
+        let finalTimeMin;
+        let statusMsg = "";
+
+        if (currentSpeedKmph > MIN_RELIABLE_SPEED) {
+            finalTimeMin = Math.ceil((distanceKm / currentSpeedKmph) * 60);
         } else {
-            finalTimeMin = Math.ceil((distanceKm / FALLBACK_CITY_SPEED) * 60);
-            statusMsg = currentSpeedKmph <= 0 ? " (Halted)" : " (Heavy Traffic)";
+            if (distanceKm > HIGHWAY_DISTANCE_THRESHOLD) {
+                finalTimeMin = Math.ceil((distanceKm / FALLBACK_HIGHWAY_SPEED) * 60);
+                statusMsg = " (Highway Est.)";
+            } else {
+                finalTimeMin = Math.ceil((distanceKm / FALLBACK_CITY_SPEED) * 60);
+                statusMsg = currentSpeedKmph <= 0 ? " (Halted)" : " (Heavy Traffic)";
+            }
+        }
+        finalTimeMin += 2;
+
+        if (tripEta) tripEta.textContent = `${finalTimeMin} min${statusMsg}`;
+        if (tripDist) tripDist.textContent = `(${distanceKm.toFixed(1)} km)`;
+
+        const tripStatus = document.getElementById('trip-status');
+        if (tripStatus) {
+            const status = markers[targetBusId]?.crowd || 'LOW';
+            tripStatus.textContent = status;
+            tripStatus.className = "text-xs font-bold font-mono";
+            if (status === 'HIGH') tripStatus.classList.add('text-red-500');
+            else if (status === 'MED') tripStatus.classList.add('text-yellow-400');
+            else tripStatus.classList.add('text-green-400');
         }
     }
-    finalTimeMin += 2;
 
-    if (tripEta) tripEta.textContent = `${finalTimeMin} min${statusMsg}`;
-    if (tripDist) tripDist.textContent = `(${distanceKm.toFixed(1)} km)`;
 
-    const tripStatus = document.getElementById('trip-status');
-    if (tripStatus) {
-        const status = markers[targetBusId]?.crowd || 'LOW';
-        tripStatus.textContent = status;
-        tripStatus.className = "text-xs font-bold font-mono";
-        if (status === 'HIGH') tripStatus.classList.add('text-red-500');
-        else if (status === 'MED') tripStatus.classList.add('text-yellow-400');
-        else tripStatus.classList.add('text-green-400');
+    function runFallbackRouting(busLatLng, etaEl, distEl) {
+        const dist = map.distance([userLat, userLng], busLatLng);
+        const distKm = (dist / 1000).toFixed(1);
+
+        // Fallback Calculation
+        const FALLBACK_CITY_SPEED = 15;
+        const FALLBACK_HIGHWAY_SPEED = 45;
+        const speed = distKm > 20 ? FALLBACK_HIGHWAY_SPEED : FALLBACK_CITY_SPEED;
+
+        const timeMins = Math.ceil((distKm / speed) * 60);
+
+        if (distEl) distEl.textContent = `(${distKm} km)`;
+        if (etaEl) etaEl.textContent = `${timeMins} min`;
+
+        if (fallbackLine) map.removeLayer(fallbackLine);
+        fallbackLine = L.polyline([[userLat, userLng], [busLatLng.lat, busLatLng.lng]], {
+            color: '#3b82f6', weight: 4, dashArray: '10, 10', opacity: 0.7
+        }).addTo(map);
     }
-}
 
-
-function runFallbackRouting(busLatLng, etaEl, distEl) {
-    const dist = map.distance([userLat, userLng], busLatLng);
-    const distKm = (dist / 1000).toFixed(1);
-
-    // Fallback Calculation
-    const FALLBACK_CITY_SPEED = 15;
-    const FALLBACK_HIGHWAY_SPEED = 45;
-    const speed = distKm > 20 ? FALLBACK_HIGHWAY_SPEED : FALLBACK_CITY_SPEED;
-
-    const timeMins = Math.ceil((distKm / speed) * 60);
-
-    if (distEl) distEl.textContent = `(${distKm} km)`;
-    if (etaEl) etaEl.textContent = `${timeMins} min`;
-
-    if (fallbackLine) map.removeLayer(fallbackLine);
-    fallbackLine = L.polyline([[userLat, userLng], [busLatLng.lat, busLatLng.lng]], {
-        color: '#3b82f6', weight: 4, dashArray: '10, 10', opacity: 0.7
-    }).addTo(map);
-}
-
-function startRoutingTimer(busLatLng) {
-    if (routingTimer) clearTimeout(routingTimer);
-    routingTimer = setTimeout(() => {
-        console.warn("OSRM Timeout");
-    }, 5000);
-}
+    function startRoutingTimer(busLatLng) {
+        if (routingTimer) clearTimeout(routingTimer);
+        routingTimer = setTimeout(() => {
+            console.warn("OSRM Timeout");
+        }, 5000);
+    }
