@@ -26,7 +26,17 @@ window.startTrackingRoute = startTrackingRoute;
 window.startTrackingRouteByBusNo = startTrackingRoute; // Fix: Alias for legacy onclick handlers
 
 window.setFilter = async function () {
-    // Legacy Search Disabled - Handled by StopSearchUI
+    const input = document.getElementById('trackInput');
+    if (!input) return;
+    const val = input.value.trim();
+
+    // 1. Legacy: Filter Map by Bus Number (Immediate)
+    setBusFilter(val);
+
+    // 2. New: Search for Stops (if module loaded)
+    if (searchUI && val.length >= 2) {
+        searchUI.performSearch(val);
+    }
 };
 
 window.quickSearch = function (busId) {
