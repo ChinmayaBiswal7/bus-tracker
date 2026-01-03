@@ -3,7 +3,8 @@ import { updateServerStatus, updateGpsStatus } from './ui.js';
 let map;
 let userMarker = null;
 let userIcon = null;
-let routingControl = null;
+// let routingControl = null; // REPLACED by manual layer
+// let dynamicRouteRouter is defined below locally or module scope
 let routeLine = null;
 let targetBusId = null;
 let userLat = null, userLng = null;
@@ -388,14 +389,21 @@ async function drawBusPath(busNo) {
 }
 
 export function stopTrackingRoute() {
-    targetBusId = null;
+    if (targetBusId) {
+        targetBusId = null;
+    }
     const tripCard = document.getElementById('trip-info-card');
     if (tripCard) tripCard.classList.add('hidden');
 
-    if (routingControl) {
-        map.removeControl(routingControl);
-        routingControl = null;
+    // Clean up dynamic layer
+    if (dynamicRouteLayer) {
+        map.removeLayer(dynamicRouteLayer);
+        dynamicRouteLayer = null;
     }
+
+    // Clean up router if we want (optional, but good practice to reset)
+    // dynamicRouteRouter = null; 
+
     if (fallbackLine) {
         map.removeLayer(fallbackLine);
         fallbackLine = null;
@@ -438,43 +446,53 @@ function updateRoute() {
     }, 2000);
 }
 
+let dynamicRouteRouter = null;
+let dynamicRouteLayer = null;
+
 function executeOsrmRoute(waypoints) {
-    if (!routingControl) {
-        startRoutingTimer();
-        try {
-            routingControl = L.Routing.control({
-                waypoints: waypoints,
-                router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1', profile: 'driving', timeout: 5000 }),
-                lineOptions: { styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }] },
-                createMarker: function () { return null; },
-                addWaypoints: false,
-                draggableWaypoints: false,
-                fitSelectedRoutes: false, // CRITICAL: Do not move map
-                show: false
+    if (!dynamicRouteRouter) {
+        dynamicRouteRouter = L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving',
+            timeout: 5000
+        });
+    }
+
+    dynamicRouteRouter.route(waypoints.map(wp => ({ latLng: wp })), (err, routes) => {
+        if (err) {
+            console.warn("OSRM Routing Error", err);
+            return;
+        }
+
+        if (routes && routes.length > 0) {
+            const route = routes[0];
+            const coordinates = route.coordinates;
+            const summary = route.summary;
+
+            // 1. Draw the Blue Navigation Line manually (Guarantee NO map movement)
+            if (dynamicRouteLayer) map.removeLayer(dynamicRouteLayer);
+
+            dynamicRouteLayer = L.polyline(coordinates, {
+                color: '#3b82f6',
+                weight: 6,
+                opacity: 0.8,
+                lineCap: 'round',
+                lineJoin: 'round'
             }).addTo(map);
 
-            routingControl.on('routesfound', function (e) {
-                if (fallbackLine) { map.removeLayer(fallbackLine); fallbackLine = null; }
-                if (routingTimer) clearTimeout(routingTimer);
+            // 2. Hide Fallback Line since we have a real road path
+            if (fallbackLine) {
+                map.removeLayer(fallbackLine);
+                fallbackLine = null;
+            }
 
-                if (!e.routes || e.routes.length === 0) return;
-                const summary = e.routes[0].summary;
+            // 3. Update ETA/Distance UI
+            const distanceKm = (summary.totalDistance || 0) / 1000;
+            updateTripInfoCard(distanceKm);
+        }
+    });
 
-                // Safe check for distance
-                const distanceKm = (summary.totalDistance || 0) / 1000;
-
-                // ... (Update UI Logic) ...
-                updateTripInfoCard(distanceKm);
-            });
-
-            // ... (Error handling) ...
-            routingControl.on('routingerror', () => {
-                console.warn("Routing failed.");
-            });
-        } catch (e) { console.error("Routing Init Error", e); }
-    } else {
-        routingControl.setWaypoints(waypoints);
-    }
+    startRoutingTimer();
 }
 
 function updateTripInfoCard(distanceKm) {
