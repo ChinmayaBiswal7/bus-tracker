@@ -11,10 +11,10 @@ export class StopSearchUI {
     }
 
     createResultsDiv() {
-        // Fallback if no suggestion box exists
         const div = document.createElement('div');
         div.id = 'search-suggestions';
-        div.className = "absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto hidden z-50";
+        // z-[9999] matches the highest layer. Added specific bg/border colors.
+        div.className = "absolute top-full left-0 right-0 mt-2 bg-slate-900 border-2 border-slate-600 rounded-xl shadow-2xl max-h-60 overflow-y-auto hidden z-[9999]";
         this.input.parentElement.appendChild(div);
         return div;
     }
@@ -57,6 +57,9 @@ export class StopSearchUI {
 
             if (data.success && data.results.length > 0) {
                 this.displayResults(data.results);
+                // Hide Legacy List to prevent "No buses found" confusion
+                const busList = document.getElementById('bus-list');
+                if (busList) busList.classList.add('hidden');
             } else {
                 this.displayNoResults(query);
             }
@@ -113,6 +116,8 @@ export class StopSearchUI {
 
     hideResults() {
         this.resultsDiv.classList.add('hidden');
+        const busList = document.getElementById('bus-list');
+        if (busList) busList.classList.remove('hidden');
     }
 
     onStopSelected(stop) {
