@@ -284,10 +284,27 @@ function updateUserMarker(lat, lng) {
 }
 
 // Routing
+// Routing
 export function startTrackingRoute(busId) {
     targetBusId = busId;
+
+    // 1. Activate Split Screen Mode
+    const mapContainer = document.getElementById('map-container');
+    const routePanel = document.getElementById('route-panel');
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
     const tripCard = document.getElementById('trip-info-card');
-    if (tripCard) tripCard.classList.remove('hidden');
+
+    if (mapContainer && routePanel) {
+        routePanel.classList.remove('hidden');
+        routePanel.classList.add('flex');
+        fullscreenToggle.classList.remove('hidden');
+
+        // Hide floating card in split mode (optional, can keep if needed, but clean is better)
+        if (tripCard) tripCard.classList.add('hidden');
+
+        // Trigger resize
+        setTimeout(() => map.invalidateSize(), 300);
+    }
 
     // Draw Route from Excel Data
     if (lastBusData[busId]) {
@@ -305,9 +322,74 @@ export function startTrackingRoute(busId) {
             lat: userLat,
             lng: userLng
         });
-    } else {
-        console.warn("[STUDENT] Cannot force emit. Missing data:", { userLat, busData: !!lastBusData[busId] });
     }
+}
+
+// --- NEW: Toggle Full Screen ---
+window.toggleFullScreenMap = function () {
+    const routePanel = document.getElementById('route-panel');
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
+    const tripCard = document.getElementById('trip-info-card');
+
+    if (routePanel.classList.contains('hidden')) {
+        // Switch to Split
+        routePanel.classList.remove('hidden');
+        routePanel.classList.add('flex');
+        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>`;
+        if (tripCard) tripCard.classList.add('hidden');
+    } else {
+        // Switch to Full Screen
+        routePanel.classList.add('hidden');
+        routePanel.classList.remove('flex');
+        fullscreenToggle.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>`; // Down arrow or Minimize
+        // Show floating card in full screen
+        if (tripCard) tripCard.classList.remove('hidden');
+    }
+    setTimeout(() => map.invalidateSize(), 300);
+}
+
+// --- NEW: Render Timeline ---
+let cachedStops = [];
+
+function renderRouteTimeline(stops) {
+    cachedStops = stops;
+    const container = document.getElementById('route-timeline');
+    const busNoEl = document.getElementById('rp-bus-no');
+
+    if (!container) return;
+
+    // Update Header
+    if (busNoEl) busNoEl.textContent = lastBusData[targetBusId]?.bus_no || "Bus";
+
+    // Clear list (keep the vertical line div)
+    // We recreate stricture: Line + items
+    container.innerHTML = `<div class="absolute left-[27px] top-6 bottom-0 w-0.5 bg-slate-700 z-0"></div>`;
+
+    stops.forEach((stop, index) => {
+        const div = document.createElement('div');
+        div.className = "relative flex items-start gap-4 mb-6 z-10 stop-item";
+        div.dataset.lat = stop.lat;
+        div.dataset.lng = stop.lng;
+        div.id = `stop-${index}`;
+
+        div.innerHTML = `
+            <div class="w-4 h-4 rounded-full bg-slate-900 border-2 border-slate-500 shrink-0 mt-1 transition-colors" id="dot-${index}"></div>
+            <div>
+                <p class="text-slate-200 font-bold text-sm leading-tight">${stop.stop_name}</p>
+                <p class="text-[10px] text-slate-500 font-mono mt-0.5">Stop #${stop.stop_order}</p>
+                
+                <!-- Bus Icon Container (Hidden by default) -->
+                <div id="bus-at-${index}" class="hidden mt-2 bg-slate-800 p-2 rounded-lg border border-slate-700 flex items-center gap-2">
+                     <span class="text-lg">🚌</span>
+                     <div>
+                        <p class="text-[10px] text-green-400 font-bold">Current Location</p>
+                        <p class="text-[10px] text-slate-400">Arriving...</p>
+                     </div>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
 }
 
 // Route Visuals
@@ -381,11 +463,17 @@ async function drawBusPath(busNo) {
                     className: 'text-xs font-bold text-fuchsia-500 bg-slate-900/90 border-0 rounded px-2 py-1'
                 }).addTo(currentStopsLayer);
             });
-        }
-
-    } catch (e) {
-        console.error("Failed to load route path:", e);
+        });
     }
+
+        // 3. Render Timeline Panel
+        if (data.stops && data.stops.length > 0) {
+        renderRouteTimeline(data.stops);
+    }
+
+} catch (e) {
+    console.error("Failed to load route path:", e);
+}
 }
 
 export function stopTrackingRoute() {
@@ -394,6 +482,16 @@ export function stopTrackingRoute() {
     }
     const tripCard = document.getElementById('trip-info-card');
     if (tripCard) tripCard.classList.add('hidden');
+
+    // Reset Split Screen
+    const routePanel = document.getElementById('route-panel');
+    const fullscreenToggle = document.getElementById('fullscreen-toggle');
+    if (routePanel) {
+        routePanel.classList.add('hidden');
+        routePanel.classList.remove('flex');
+    }
+    if (fullscreenToggle) fullscreenToggle.classList.add('hidden');
+    setTimeout(() => map.invalidateSize(), 300);
 
     // Clean up dynamic layer
     if (dynamicRouteLayer) {
@@ -443,7 +541,49 @@ function updateRoute() {
     if (window.routeDebounce) clearTimeout(window.routeDebounce);
     window.routeDebounce = setTimeout(() => {
         executeOsrmRoute(waypoints);
+        updateTimelinePosition(busLatLng);
     }, 2000);
+}
+
+// --- NEW: Update Timeline Position ---
+function updateTimelinePosition(busLatLng) {
+    if (!cachedStops || cachedStops.length === 0) return;
+
+    let nearestStopIndex = -1;
+    let minDist = Infinity;
+
+    // Find nearest stop
+    cachedStops.forEach((stop, index) => {
+        const dist = map.distance(busLatLng, [stop.lat, stop.lng]);
+
+        // Reset Visuals first
+        const dot = document.getElementById(`dot-${index}`);
+        const busIcon = document.getElementById(`bus-at-${index}`);
+        if (dot) {
+            dot.className = "w-4 h-4 rounded-full bg-slate-900 border-2 border-slate-500 shrink-0 mt-1 transition-colors";
+        }
+        if (busIcon) busIcon.classList.add('hidden');
+
+        if (dist < minDist) {
+            minDist = dist;
+            nearestStopIndex = index;
+        }
+    });
+
+    // Threshold: 500 meters. If bus is > 500m from ANY stop, show nothing on timeline.
+    if (minDist < 500 && nearestStopIndex !== -1) {
+        const busIcon = document.getElementById(`bus-at-${nearestStopIndex}`);
+        const dot = document.getElementById(`dot-${nearestStopIndex}`);
+
+        if (busIcon) {
+            busIcon.classList.remove('hidden');
+            // Auto scroll to this element
+            busIcon.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        if (dot) {
+            dot.className = "w-4 h-4 rounded-full bg-green-500 border-2 border-green-300 shrink-0 mt-1 shadow-[0_0_10px_rgba(34,197,94,0.5)]";
+        }
+    }
 }
 
 let dynamicRouteRouter = null;
