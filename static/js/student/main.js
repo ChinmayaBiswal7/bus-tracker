@@ -34,24 +34,10 @@ window.setFilter = async function () {
 
     // Simple Search Logic (Reverted)
     console.log("Searching for:", val);
-    setBusFilter(val); console.log("Smart Search: Aggregated Buses from", results.length, "stops ->", uniqueBuses);
-
-    if (uniqueBuses.length === 0) console.warn("Smart Search: Found stops but NO buses?", results);
-
-    // Update Input to match the query (or keep as is to show broad search)
-    // input.value = results[0].stop_name; // Optional: Snapping to first result might be confusing if searching "KIIT"
-
-    // Filter by ALL relevant buses
-    setBusFilter(uniqueBuses);
-} else {
-    // No stop found, fallback to standard bus filter (string match)
-    console.log("Smart Search: No stop found, filtering by text:", val);
+    // Simplified Search (Reverted)
     setBusFilter(val);
-}
-    } catch (e) {
-    console.error("Smart Search Error:", e);
-    setBusFilter(val);
-}
+
+    // End of Reverted Search Logic
 };
 window.quickSearch = function (busId) {
     const input = document.getElementById('trackInput');
