@@ -167,7 +167,7 @@
 
     <!-- Route Timeline Panel (Bottom Overlay) -->
     <div id="route-panel"
-        class="fixed bottom-0 left-0 right-0 z-[1500] hidden flex-col bg-slate-900/95 backdrop-blur-xl border-t border-slate-700 shadow-2xl h-[45%] transition-transform duration-300 transform translate-y-0">
+        class="fixed bottom-0 left-0 right-0 z-[1500] hidden flex flex-col bg-slate-900/95 backdrop-blur-xl border-t border-slate-700 shadow-2xl h-[45%] transition-transform duration-300 transform translate-y-0 pointer-events-auto">
         <div class="p-4 border-b border-slate-700 flex items-center justify-between bg-slate-800/50">
             <div>
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -184,7 +184,8 @@
         </div>
 
         <!-- Timeline List -->
-        <div id="route-timeline" class="flex-1 overflow-y-auto p-4 custom-scrollbar relative">
+        <div id="route-timeline"
+            class="flex-1 overflow-y-auto p-4 custom-scrollbar relative overscroll-contain touch-pan-y">
             <!-- Items will be injected here -->
         </div>
     </div>

@@ -348,6 +348,8 @@ export function startTrackingRoute(busId) {
 let cachedStops = [];
 
 function renderRouteTimeline(stops) {
+    // Sort stops by order
+    stops.sort((a, b) => (a.stop_order || 0) - (b.stop_order || 0));
     cachedStops = stops;
     const container = document.getElementById('route-timeline');
     const busNoEl = document.getElementById('rp-bus-no');

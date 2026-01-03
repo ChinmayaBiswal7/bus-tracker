@@ -165,7 +165,7 @@ def build_routes():
             
             routes[bus_no] = {
                 "path": group[['lat', 'lng']].values.tolist(),
-                "stops": group[['stop_name', 'lat', 'lng']].to_dict(orient="records")
+                "stops": group[['stop_order', 'stop_name', 'lat', 'lng']].to_dict(orient="records")
             }
         
         ROUTES_CACHE = routes
