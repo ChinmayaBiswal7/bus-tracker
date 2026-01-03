@@ -60,6 +60,8 @@ window.setFilter = async function () {
             const uniqueBuses = Array.from(allBuses);
             console.log("Smart Search: Aggregated Buses from", results.length, "stops ->", uniqueBuses);
 
+            if (uniqueBuses.length === 0) console.warn("Smart Search: Found stops but NO buses?", results);
+
             // Update Input to match the query (or keep as is to show broad search)
             // input.value = results[0].stop_name; // Optional: Snapping to first result might be confusing if searching "KIIT"
 

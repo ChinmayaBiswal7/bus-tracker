@@ -145,6 +145,8 @@ function renderBusList() {
         }
     });
 
+    console.log(`[RENDER MATCHES]: Filter '${currentBusFilter}' matched ${activeEntries.length} buses.`);
+
     // Update Counts
     const statusEl = document.getElementById('tracking-status');
     const countSpan = document.getElementById('fw-bold');
@@ -811,5 +813,15 @@ export function setBusFilter(filter) {
         currentBusFilter = String(filter).trim().toLowerCase();
     }
     console.log("BUS FILTER SET:", currentBusFilter);
+    console.log("[SET_FILTER] INPUT:", filter);
+    if (Array.isArray(filter)) {
+        // Normalize array: trim + lowercase
+        currentBusFilter = filter.map(f => String(f).trim().toLowerCase());
+        console.log("[SET_FILTER] NORMALIZED ARRAY:", currentBusFilter);
+    } else {
+        // Normalize string
+        currentBusFilter = String(filter).trim().toLowerCase();
+        console.log("[SET_FILTER] NORMALIZED STRING:", currentBusFilter);
+    }
     renderBusList();
 }
