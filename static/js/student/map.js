@@ -127,12 +127,7 @@ function renderBusList() {
         const item = document.createElement('div');
         item.className = "group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
         item.onclick = () => {
-            // Use setView for instant/controlled snap to avoid animation glitches
-            // If offline, default lat/lng might be 0,0 or generic.
-            const targetLat = info.lat || 20.2961;
-            const targetLng = info.lng || 85.8245;
-
-            map.setView([targetLat, targetLng], 16);
+            // Updated to use the auto-fly logic in startTrackingRouteByBusNo
             startTrackingRouteByBusNo(String(info.bus_no));
         };
         item.innerHTML = `
@@ -146,7 +141,7 @@ function renderBusList() {
                </p>
             </div>
         </div>
-        <button onclick="event.stopPropagation(); map.setView([${info.lat || 20.2961}, ${info.lng || 85.8245}], 16); startTrackingRouteByBusNo('${info.bus_no}');"
+        <button onclick="event.stopPropagation(); startTrackingRouteByBusNo('${info.bus_no}');"
             class="hidden group-hover:block px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-lg transition-all">
             LOCATE
         </button>

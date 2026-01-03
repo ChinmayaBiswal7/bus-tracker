@@ -1,6 +1,6 @@
 import { auth } from '../firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { initMap, stopTrackingRoute, setBusFilter, startTrackingRoute } from './map.js';
+import { initMap, stopTrackingRoute, setBusFilter, startTrackingRoute, startTrackingRouteByBusNo } from './map.js';
 import { openSchedule, closeSchedule, initSchedule } from './schedule.js';
 import { openAnnouncements, closeAnnouncements, initAnnouncements } from './announcements.js';
 import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-directory.js';
@@ -24,7 +24,7 @@ window.closeProfile = closeProfile;
 window.showProfile = showProfile;
 window.stopTrackingRoute = stopTrackingRoute;
 window.startTrackingRoute = startTrackingRoute;
-window.startTrackingRouteByBusNo = startTrackingRoute; // Fix: Alias for legacy onclick handlers
+window.startTrackingRouteByBusNo = startTrackingRouteByBusNo; // Correctly mapped to BusNo function
 
 window.setFilter = async function () {
     const input = document.getElementById('trackInput');
