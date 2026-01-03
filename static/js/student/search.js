@@ -237,26 +237,13 @@ export class BusStopSearch {
     async locateBus(busNo, stopName) {
         try {
             console.log(`🔍 Looking for Bus ${busNo}...`);
-
-            // Check if bus exists in your existing bus tracking system
-            // In map.js, buses are usually rendered with IDs or data attributes.
-            // Assuming map.js uses markers with custom icons or similar.
-            // Since we can't easily find a leaflet marker by ID without a registry,
-            // we will try to use the 'startTrackingRouteByBusNo' if available (legacy alias),
-            // OR find the list item in the legacy bus list and click its 'Locate' button.
-
-            // Try Legacy "Locate" button in the bus list
-            // The legacy list is usually hidden during search, but the buttons might still exist in DOM if not cleared.
-            // Alternatively, call the global function.
-
-            if (window.startTrackingRoute) {
-                window.startTrackingRoute(busNo);
+            if (window.startTrackingRouteByBusNo) {
+                window.startTrackingRouteByBusNo(String(busNo));
                 this.showSuccessMessage(`Tracking Bus ${busNo}`);
             } else {
-                console.warn("startTrackingRoute function not found.");
+                console.warn("startTrackingRouteByBusNo function not found in window.");
                 this.showBusOfflineMessage(busNo, stopName);
             }
-
         } catch (error) {
             console.error('❌ Locate error:', error);
             this.showBusOfflineMessage(busNo, stopName);
@@ -310,13 +297,17 @@ export class BusStopSearch {
     }
 
     selectStop(stop) {
-        console.log('📍 Navigating to:', stop.name);
+        console.log('📍 Navigating to STOP:', stop.name, stop.lat, stop.lng);
+
+        if (!stop.lat || !stop.lng || isNaN(stop.lat) || isNaN(stop.lng)) {
+            console.error("Invalid Stop Coordinates:", stop);
+            alert(`Could not locate "${stop.name}" on the map. Coordinates missing.`);
+            return;
+        }
 
         try {
-            // Clear previous markers
             this.clearMarkers();
 
-            // Create custom marker
             const markerIcon = L.divIcon({
                 className: 'custom-stop-marker',
                 html: `
@@ -328,7 +319,7 @@ export class BusStopSearch {
                         border-radius: 50%; 
                         display: flex; 
                         align-items: center; 
-                        justify-content: center; 
+                        justify-content: center;
                         box-shadow: 0 4px 6px rgba(0,0,0,0.3);
                         border: 3px solid white;
                         font-size: 20px;
@@ -339,12 +330,10 @@ export class BusStopSearch {
                 iconAnchor: [20, 40]
             });
 
-            // Add marker
             const marker = L.marker([stop.lat, stop.lng], {
                 icon: markerIcon
             }).addTo(this.map);
 
-            // Add popup
             marker.bindPopup(`
                 <div style="text-align: center; min-width: 150px;">
                     <strong style="font-size: 16px; display: block; margin-bottom: 8px;">${stop.name}</strong>
@@ -353,7 +342,6 @@ export class BusStopSearch {
 
             this.markers.push(marker);
 
-            // Fly to location
             this.map.flyTo([stop.lat, stop.lng], 16, {
                 duration: 1.5,
                 easeLinearity: 0.5
@@ -363,7 +351,8 @@ export class BusStopSearch {
 
         } catch (error) {
             console.error('❌ Navigation error:', error);
-            alert('Failed to navigate to stop. Please try again.');
+            // Don't alert general errors to avoid spamming user if map is busy
+            console.warn("Failed to navigate. Map might be busy.");
         }
     }
 
