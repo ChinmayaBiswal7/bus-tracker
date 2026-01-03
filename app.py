@@ -77,7 +77,9 @@ class Bus(db.Model):
     speed = db.Column(db.Float)
     heading = db.Column(db.Float)
     last_updated = db.Column(db.DateTime, default=datetime.utcnow)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+    crowd_status = db.Column(db.String(20), default='LOW') # LOW, MED, HIGH
 
 class LocationHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -338,6 +340,9 @@ def get_active_buses_payload():
             'accuracy': b.accuracy,
             'speed': b.speed,
             'heading': b.heading,
+            'speed': b.speed,
+            'heading': b.heading,
+            'crowd': b.crowd_status or 'LOW',
             'offline': False # Explicitly mark as online
         }
     return buses_limit
@@ -403,6 +408,9 @@ def handle_driver_update(data):
     bus.accuracy = data.get('accuracy')
     bus.speed = data.get('speed')
     bus.heading = data.get('heading')
+    bus.speed = data.get('speed')
+    bus.heading = data.get('heading')
+    bus.crowd_status = data.get('crowd', 'LOW')
     bus.is_active = True
     bus.last_updated = datetime.utcnow()
 

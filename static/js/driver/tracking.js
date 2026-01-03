@@ -7,6 +7,7 @@ let isSharing = false;
 const socket = io(); // Singleton
 let studentMarkers = {};
 let activeBusNo = null;
+let currentCrowdStatus = 'LOW';
 
 // Listen for student updates
 socket.on('student_location_update', (data) => {
@@ -87,6 +88,39 @@ export function setMode(mode) {
             busInput.placeholder = "SHUTTLE ID (e.g. EV-1)";
             busInput.value = "EV-1";
         }
+    }
+}
+
+export function setCrowdStatus(status) {
+    currentCrowdStatus = status;
+    console.log("Crowd Status:", status);
+
+    // Update UI
+    const btns = {
+        'LOW': document.getElementById('btn-crowd-low'),
+        'MED': document.getElementById('btn-crowd-med'),
+        'HIGH': document.getElementById('btn-crowd-high')
+    };
+
+    // Reset all
+    Object.values(btns).forEach(btn => {
+        if (btn) {
+            btn.classList.remove('bg-slate-700', 'border-blue-500', 'text-white');
+            btn.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-400');
+        }
+    });
+
+    // Highlight selected
+    if (btns[status]) {
+        btns[status].classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-400');
+        btns[status].classList.add('bg-slate-700', 'border-blue-500', 'text-white');
+    }
+
+    // Force immediate update if sharing
+    if (isSharing && socket.connected) {
+        // We don't have lat/lng here easily without geolocation callback, 
+        // but the next GPS update will pick it up. 
+        // ideally we cache last pos.
     }
 }
 
@@ -213,7 +247,13 @@ function handleGPS(pos, busNo, stage) {
     }
 
     if (socket.connected) {
-        socket.emit('driver_update', { lat: latitude, lng: longitude, speed, bus_no: busNo });
+        socket.emit('driver_update', {
+            lat: latitude,
+            lng: longitude,
+            speed,
+            bus_no: busNo,
+            crowd: currentCrowdStatus
+        });
     } else {
         if (statStatus) {
             statStatus.textContent = "NET ERR";

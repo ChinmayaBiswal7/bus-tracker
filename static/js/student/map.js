@@ -122,7 +122,7 @@ function renderBusList() {
                <p class="text-slate-200 font-bold text-sm">Bus ${info.bus_no}</p>
                <p class="text-[10px] text-slate-400 flex items-center gap-1">
                   <span class="w-1.5 h-1.5 rounded-full ${info.offline ? 'bg-slate-500' : 'bg-green-500'}"></span>
-                  ${info.offline ? 'Offline' : 'Live'}
+                  ${info.offline ? 'Offline' : (info.crowd || 'Live')}
                </p>
             </div>
         </div>
@@ -213,6 +213,7 @@ function updateBusMarker(busId, info) {
     // Store Bus Data for Routing
     markers[busId].isOffline = isOffline;
     markers[busId].speed = info.speed || 0; // Store real GPS speed (km/h) 
+    markers[busId].crowd = info.crowd || 'LOW';
 }
 
 export function startLocationTracking(highAccuracy = true) {
@@ -395,6 +396,17 @@ function updateRoute() {
 
                 if (tripEta) tripEta.textContent = `${finalTimeMin} min${statusMsg}`;
                 if (tripDist) tripDist.textContent = `(${distanceKm.toFixed(1)} km)`;
+
+                // Update Status Color in Trip Card
+                const tripStatus = document.getElementById('trip-status');
+                if (tripStatus) {
+                    const status = markers[targetBusId]?.crowd || 'LOW';
+                    tripStatus.textContent = status;
+                    tripStatus.className = "text-xs font-bold font-mono";
+                    if (status === 'HIGH') tripStatus.classList.add('text-red-500');
+                    else if (status === 'MED') tripStatus.classList.add('text-yellow-400');
+                    else tripStatus.classList.add('text-green-400');
+                }
             });
 
             routingControl.on('routingerror', () => {

@@ -1,6 +1,6 @@
 import { auth } from '../firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { initMap, toggleSession, stopSession, setMode } from './tracking.js?v=10';
+import { initMap, toggleSession, stopSession, setMode, setCrowdStatus } from './tracking.js?v=11';
 import { initAnnouncements } from './announcements.js';
 import { initSchedule, addTimeSlot, saveSchedule } from './schedule.js';
 import { initChat } from './chat.js';
@@ -13,6 +13,7 @@ window.toggleSidebar = toggleSidebar;
 window.toggleSession = toggleSession;
 window.stopSession = stopSession;
 window.setMode = setMode;
+window.setCrowdStatus = setCrowdStatus;
 window.addTimeSlot = addTimeSlot;
 window.saveSchedule = saveSchedule;
 window.logout = function () {
