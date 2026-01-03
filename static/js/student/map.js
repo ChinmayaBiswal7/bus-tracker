@@ -84,90 +84,91 @@ function setupSocketListeners() {
 
 
 
-function renderBusList() {
-    const data = lastBusData;
+// --- NEW: Render Search Results directly from Backend (Way 2) ---
+export function renderSearchResults(buses) {
     const busList = document.getElementById('bus-list');
     if (!busList) return;
 
     busList.innerHTML = '';
 
-    // Filter Logic
-    // Filter Logic
-    // Filter Logic
-    // ---------------------------------------------------------
-    // UNIFIED DATA SOURCE: Merge Live Socket Data + Filter Results
-    // ---------------------------------------------------------
-    const mergedBuses = new Map();
-
-    // 1. Add known live buses (Socket)
-    Object.entries(lastBusData).forEach(([id, info]) => {
-        const busNo = String(info.bus_no).trim().toLowerCase();
-        mergedBuses.set(busNo, { id, info });
-    });
-
-    // 2. Inject "Offline" placeholders from Filter
-    // If the search says "Bus 66 goes here", but socket doesn't know "Bus 66",
-    // we MUST show it anyway so the student can see the route.
-    if (Array.isArray(currentBusFilter)) {
-        currentBusFilter.forEach(filterRaw => {
-            const busNo = String(filterRaw).trim().toLowerCase();
-            if (!mergedBuses.has(busNo)) {
-                // Not in socket -> Create Offline Placeholder
-                mergedBuses.set(busNo, {
-                    id: `OFFLINE_${busNo}`,
-                    info: {
-                        bus_no: busNo.toUpperCase(), // Display as clean string
-                        offline: true,
-                        lat: 20.2961, // Default fallback (centered)
-                        lng: 85.8245,
-                        crowd: 'OFFLINE'
-                    }
-                });
-            }
-        });
-    }
-
-    // 3. Render List (Iterate over the Merged Map)
-    // Only show items that match the current filter
-    const activeEntries = [];
-    mergedBuses.forEach((entry, busNoKey) => {
-        const displayBusNo = String(entry.info.bus_no).trim().toLowerCase();
-
-        let isMatch = false;
-        if (Array.isArray(currentBusFilter)) {
-            isMatch = currentBusFilter.includes(displayBusNo);
-        } else {
-            isMatch = displayBusNo.includes(String(currentBusFilter).trim().toLowerCase());
-        }
-
-        if (isMatch) {
-            activeEntries.push(entry);
-        }
-    });
-
-    console.log(`[RENDER MATCHES]: Filter '${currentBusFilter}' matched ${activeEntries.length} buses.`);
-
     // Update Counts
     const statusEl = document.getElementById('tracking-status');
     const countSpan = document.getElementById('fw-bold');
-    if (countSpan) countSpan.textContent = activeEntries.length > 0 ? activeEntries.length : "0";
+    if (countSpan) countSpan.textContent = buses.length > 0 ? buses.length : "0";
     if (statusEl) statusEl.classList.remove('hidden');
 
-    if (activeEntries.length === 0) {
+    if (buses.length === 0) {
         busList.innerHTML = '<p class="text-xs text-slate-500 text-center py-4 italic">No matching buses found.</p>';
         return;
     }
 
-    activeEntries.forEach(({ id: busId, info }) => {
+    buses.forEach(bus => {
+        // bus object structure from backend: { bus_no, live, crowd, lat, lng, stop_match }
+
         const item = document.createElement('div');
         item.className = "group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
         item.onclick = () => {
-            // Use setView for instant/controlled snap to avoid animation glitches
-            // If offline, default lat/lng might be 0,0 or generic.
-            const targetLat = info.lat || 20.2961;
-            const targetLng = info.lng || 85.8245;
+            // Logic: If live, we have lat/lng. If offline, backend provides fallback lat/lng.
+            map.setView([bus.lat, bus.lng], 16);
+            startTrackingRouteByBusNo(String(bus.bus_no));
+        };
 
-            map.setView([targetLat, targetLng], 16);
+        const statusColor = bus.live ? 'bg-green-500' : 'bg-slate-500';
+        const statusText = bus.live ? (bus.crowd || 'LIVE') : 'OFFLINE';
+
+        item.innerHTML = `
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-xs">${bus.bus_no}</div>
+            <div>
+               <p class="text-slate-200 font-bold text-sm">Bus ${bus.bus_no}</p>
+               <p class="text-[10px] text-slate-400 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full ${statusColor}"></span>
+                  ${statusText}
+               </p>
+            </div>
+        </div>
+        <button onclick="event.stopPropagation(); map.setView([${bus.lat}, ${bus.lng}], 16); startTrackingRouteByBusNo('${bus.bus_no}');"
+            class="hidden group-hover:block px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-lg transition-all">
+            LOCATE
+        </button>
+        `;
+        busList.appendChild(item);
+    });
+}
+
+function renderBusList() {
+    // OLD RENDERER - Kept for socket updates if NOT searching
+    // If user is searching, main.js calls renderSearchResults directly.
+    // If strict compliance: We should probably only use this for initial load or "Clear Search" state.
+
+    // For now, if currentBusFilter is active, we assume Search Mode and do nothing here?
+    // OR: We let socket updates refresh the list?
+
+    // Logic: If currentBusFilter is set (by search), Main.js handles rendering via API.
+    // Use this ONLY for "Default View" (All active buses)
+
+    if (currentBusFilter && currentBusFilter.length > 0) return; // Let Search API handle it
+
+    // Default: Show all active buses from socket
+    const busList = document.getElementById('bus-list');
+    if (!busList) return;
+
+    busList.innerHTML = '';
+    const entries = Object.entries(lastBusData);
+
+    // Counts
+    const statusEl = document.getElementById('tracking-status');
+    const countSpan = document.getElementById('fw-bold');
+    if (countSpan) countSpan.textContent = entries.length;
+
+    entries.forEach(([id, info]) => {
+        const item = document.createElement('div');
+        // ... (Logic for default view similar to above)
+        // Simplified for brevity in this replace block, can replicate standard item or leave empty if we only care about search.
+        // Let's replicate the standard item render for "All Active Buses" view.
+        item.className = "group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
+        item.onclick = () => {
+            map.setView([info.lat, info.lng], 16);
             startTrackingRouteByBusNo(String(info.bus_no));
         };
         item.innerHTML = `
@@ -176,12 +177,12 @@ function renderBusList() {
             <div>
                <p class="text-slate-200 font-bold text-sm">Bus ${info.bus_no}</p>
                <p class="text-[10px] text-slate-400 flex items-center gap-1">
-                  <span class="w-1.5 h-1.5 rounded-full ${info.offline ? 'bg-slate-500' : 'bg-green-500'}"></span>
-                  ${info.offline ? 'Offline' : (info.crowd || 'Live')}
+                  <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  ${info.crowd || 'LIVE'}
                </p>
             </div>
         </div>
-        <button onclick="event.stopPropagation(); map.setView([${info.lat || 20.2961}, ${info.lng || 85.8245}], 16); startTrackingRouteByBusNo('${info.bus_no}');"
+        <button onclick="event.stopPropagation(); map.setView([${info.lat}, ${info.lng}], 16); startTrackingRouteByBusNo('${info.bus_no}');"
             class="hidden group-hover:block px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-lg transition-all">
             LOCATE
         </button>

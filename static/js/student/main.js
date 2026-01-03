@@ -42,35 +42,29 @@ window.setFilter = async function () {
     try {
         // ALERT LOGIC
         // alert(`Searching for: ${val}`); 
-        const res = await fetch(`/api/search_stops?q=${encodeURIComponent(val)}`);
-        const results = await res.json();
+        // Call Backend-First Search API
+        const res = await fetch(`/api/stop_search?q=${encodeURIComponent(val)}`);
+        const data = await res.json(); // { stops: [...], buses: [...] }
 
-        console.log("Search Results:", results);
+        console.log("Backend Search Results:", data);
 
-        if (results.length > 0) {
-            // Found stop matches!
-            // Aggregate ALL buses from ALL matching stops
-            const allBuses = new Set();
-            results.forEach(r => {
-                if (Array.isArray(r.buses)) {
-                    r.buses.forEach(b => allBuses.add(String(b)));
-                }
+        if (data.buses && data.buses.length > 0) {
+            console.log(`Backend found ${data.buses.length} buses via stops:`, data.stops);
+
+            // Update Input to show the first matched stop name (optional UX)
+            // if (data.stops.length > 0) input.value = data.stops[0];
+
+            // Render directly (No more client-side filtering!)
+            import('./map.js').then(module => {
+                module.renderSearchResults(data.buses);
             });
-
-            const uniqueBuses = Array.from(allBuses);
-            console.log("Smart Search: Aggregated Buses from", results.length, "stops ->", uniqueBuses);
-
-            if (uniqueBuses.length === 0) console.warn("Smart Search: Found stops but NO buses?", results);
-
-            // Update Input to match the query (or keep as is to show broad search)
-            // input.value = results[0].stop_name; // Optional: Snapping to first result might be confusing if searching "KIIT"
-
-            // Filter by ALL relevant buses
-            setBusFilter(uniqueBuses);
         } else {
-            // No stop found, fallback to standard bus filter (string match)
-            console.log("Smart Search: No stop found, filtering by text:", val);
-            setBusFilter(val);
+            // Fallback: If backend returns nothing, try text filter? 
+            // Actually, backend is robust now. If 0 results, show 0 results.
+            console.log("No results found from backend.");
+            import('./map.js').then(module => {
+                module.renderSearchResults([]); // Clear list or show "No results"
+            });
         }
     } catch (e) {
         console.error("Smart Search Error:", e);
