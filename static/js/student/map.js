@@ -7,6 +7,7 @@ let userIcon = null;
 // let dynamicRouteRouter is defined below locally or module scope
 let routeLine = null;
 let targetBusId = null;
+let targetBusNo = null; // NEW: Single Source of Truth
 let userLat = null, userLng = null;
 let watchId = null;
 let markers = {};
@@ -125,7 +126,7 @@ function renderBusList() {
         item.onclick = () => {
             // Use setView for instant/controlled snap to avoid animation glitches
             map.setView([info.lat, info.lng], 16);
-            startTrackingRoute(busId);
+            startTrackingRouteByBusNo(String(info.bus_no));
         };
         item.innerHTML = `
         <div class="flex items-center gap-3">
@@ -138,7 +139,7 @@ function renderBusList() {
                </p>
             </div>
         </div>
-        <button onclick="event.stopPropagation(); map.setView([${info.lat}, ${info.lng}], 16); startTrackingRoute('${busId}');"
+        <button onclick="event.stopPropagation(); map.setView([${info.lat}, ${info.lng}], 16); startTrackingRouteByBusNo('${info.bus_no}');"
             class="hidden group-hover:block px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-lg transition-all">
             LOCATE
         </button>
@@ -226,7 +227,7 @@ function updateBusMarker(busId, info) {
             .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br>${generateDensityIcons(info.crowd || 'LOW')}`)
             .on('click', () => {
                 map.setView([info.lat, info.lng], 16);
-                startTrackingRoute(busId);
+                startTrackingRouteByBusNo(String(info.bus_no));
             });
     }
     // Store Bus Data for Routing
@@ -316,43 +317,57 @@ function updateUserMarker(lat, lng) {
 
 // Routing
 // Routing
-export function startTrackingRoute(busId) {
-    targetBusId = busId;
+// Routing
+export function startTrackingRouteByBusNo(busNo) {
+    targetBusNo = busNo;   // Set Truth
+    targetBusId = null;    // Reset Socket ID (will find if online)
 
     // 1. Activate Split Screen Mode
     const mapContainer = document.getElementById('map-container');
     const routePanel = document.getElementById('route-panel');
     const fullscreenToggle = document.getElementById('fullscreen-toggle');
     const tripCard = document.getElementById('trip-info-card');
+    const busNoEl = document.getElementById('rp-bus-no');
 
     if (mapContainer && routePanel) {
         routePanel.classList.remove('hidden');
-        // routePanel.classList.add('flex'); // No longer needed with fixed overlay
-
         if (fullscreenToggle) fullscreenToggle.classList.remove('hidden');
-
-        // Show floating card (always visible in overlay mode)
         if (tripCard) tripCard.classList.remove('hidden');
-
-        // Note: No need to resize map as panel is now an overlay
     }
 
-    // Draw Route from Excel Data
-    if (lastBusData[busId]) {
-        drawBusPath(lastBusData[busId].bus_no);
+    // Update Header Immediately
+    if (busNoEl) busNoEl.textContent = busNo || "Bus";
+
+    // 2. Try to find live socket ID from local data
+    for (const [bid, info] of Object.entries(lastBusData)) {
+        // String comparison to be safe
+        if (String(info.bus_no) === String(busNo) && !info.offline) {
+            targetBusId = bid;
+            break;
+        }
     }
 
+    // 3. Draw Route from Excel Data (Always works via bus_no)
+    drawBusPath(busNo);
+
+    // 4. Update Status/ETA
     updateRoute();
 
-    // FORCE EMIT: Send immediate update to driver (don't wait for GPS movement)
-    if (userLat && userLng && lastBusData[busId]) {
-        const busNo = lastBusData[busId].bus_no;
+    // 5. Force Emit if we found a live bus
+    if (targetBusId && userLat && userLng && lastBusData[targetBusId]) {
         console.log("[STUDENT] Force emitting initial location -> Driver of Bus:", busNo);
         socket.emit('student_update', {
             bus_no: busNo,
             lat: userLat,
             lng: userLng
         });
+    }
+}
+
+// Deprecated wrapper (for backward compat if needed, but we switch clicks to above)
+export function startTrackingRoute(busId) {
+    if (lastBusData[busId]) {
+        startTrackingRouteByBusNo(lastBusData[busId].bus_no);
     }
 }
 
