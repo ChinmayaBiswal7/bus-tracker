@@ -446,6 +446,8 @@ def subscribe_to_topic():
 def get_active_buses_payload():
     active_buses = Bus.query.filter_by(is_active=True).all()
     payload = {}
+    
+    # 1. Add Active Buses
     for b in active_buses:
         payload[b.sid] = {
             'bus_no': b.bus_no,
@@ -457,6 +459,33 @@ def get_active_buses_payload():
             'crowd': b.crowd_status or 'LOW',
             'offline': False
         }
+
+    # 2. Add Offline Buses (from Cache)
+    active_bus_nos = {b.bus_no for b in active_buses}
+    
+    for bus_no, route_data in ROUTES_CACHE.items():
+        if bus_no not in active_bus_nos:
+            # Use the first stop as the "location" for offline buses (or 0,0)
+            # This is needed so map.js has *something*, but we will flag it as offline
+            start_lat = 0
+            start_lng = 0
+            if route_data.get('stops'):
+                start_lat = route_data['stops'][0]['lat']
+                start_lng = route_data['stops'][0]['lng']
+            
+            # Use a dummy SID for offline buses (e.g. "OFFLINE_BUS_42")
+            dummy_sid = f"OFFLINE_{bus_no}"
+            payload[dummy_sid] = {
+                'bus_no': bus_no,
+                'lat': start_lat,
+                'lng': start_lng,
+                'accuracy': 0,
+                'speed': 0,
+                'heading': 0,
+                'crowd': 'LOW',
+                'offline': True
+            }
+            
     return payload
 
 @socketio.on('search_bus')

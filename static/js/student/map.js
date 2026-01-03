@@ -147,16 +147,23 @@ function renderBusList() {
 
 function updateBusMarker(busId, info) {
     const isOffline = info.offline || false;
+
+    // 1. If Offline, DO NOT Render Marker on Map
+    if (isOffline) {
+        if (markers[busId]) {
+            map.removeLayer(markers[busId]);
+            delete markers[busId];
+        }
+        return; // Exit early
+    }
+
     const isEV = (info.bus_no || '').toLowerCase().includes('ev') || (info.bus_no || '').toLowerCase().includes('shuttle');
 
     // Colors
     let borderColor = 'border-blue-600';
     let iconColor = 'text-blue-600';
 
-    if (isOffline) {
-        borderColor = 'border-slate-500';
-        iconColor = 'text-slate-500';
-    } else if (isEV) {
+    if (isEV) {
         borderColor = 'border-green-500';
         iconColor = 'text-green-500';
     }
@@ -214,7 +221,7 @@ function updateBusMarker(busId, info) {
         markers[busId].setLatLng([info.lat, info.lng]).setIcon(icon);
     } else {
         markers[busId] = L.marker([info.lat, info.lng], { icon: icon }).addTo(map)
-            .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`)
+            .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br>${generateDensityIcons(info.crowd || 'LOW')}`)
             .on('click', () => {
                 map.setView([info.lat, info.lng], 16);
                 startTrackingRoute(busId);
@@ -226,19 +233,17 @@ function updateBusMarker(busId, info) {
 
     // Update Popup Content (Density instead of Time)
     if (markers[busId] && markers[busId].getPopup()) {
-        markers[busId].setPopupContent(`
+        const popupContent = `
             <div class="flex items-center justify-between gap-2 min-w-[80px]">
                 <b class="text-slate-900 text-sm">Bus ${info.bus_no}</b>
                 ${generateDensityIcons(markers[busId].crowd)}
             </div>
-        `);
-    } else if (markers[busId]) {
-        markers[busId].bindPopup(`
-            <div class="flex items-center justify-between gap-2 min-w-[80px]">
-                <b class="text-slate-900 text-sm">Bus ${info.bus_no}</b>
-                ${generateDensityIcons(markers[busId].crowd)}
-            </div>
-        `);
+        `;
+        if (markers[busId].getPopup().isOpen()) {
+            markers[busId].setPopupContent(popupContent);
+        } else {
+            markers[busId].bindPopup(popupContent);
+        }
     }
 }
 
