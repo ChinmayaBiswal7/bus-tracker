@@ -13,18 +13,15 @@ export class StopSearchUI {
     createResultsDiv() {
         const div = document.createElement('div');
         div.id = 'search-suggestions';
-        // Fixed positioning relative to viewport/body
-        div.className = "fixed bg-slate-900 border-2 border-slate-600 rounded-xl shadow-2xl max-h-60 overflow-y-auto hidden z-[9999]";
-        document.body.appendChild(div);
+        // In-Flow Layout (Accordion Style) - Pushes content down
+        div.className = "w-full mt-2 bg-slate-900 border border-slate-600 rounded-xl shadow-inner max-h-60 overflow-y-auto hidden transition-all";
+        // Append DIRECTLY after the input wrapper (search container)
+        this.input.parentElement.appendChild(div);
         return div;
     }
 
     updateDropdownPosition() {
-        if (!this.input || !this.resultsDiv) return;
-        const rect = this.input.getBoundingClientRect();
-        this.resultsDiv.style.top = `${rect.bottom + 8}px`;
-        this.resultsDiv.style.left = `${rect.left}px`;
-        this.resultsDiv.style.width = `${rect.width}px`;
+        // No-op: In-flow elements position themselves automatically
     }
 
     init() {
