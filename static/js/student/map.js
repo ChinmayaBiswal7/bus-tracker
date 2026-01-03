@@ -431,83 +431,93 @@ function updateRoute() {
 
     runFallbackRouting(busLatLng, tripEta, tripDist);
 
-    if (routingControl) {
-        if (routingTimer) clearTimeout(routingTimer);
-        startRoutingTimer(busLatLng);
-        routingControl.setWaypoints(waypoints);
-    } else {
-        startRoutingTimer(busLatLng);
+    // DEBOUNCE: Only update OSRM every 2 seconds to prevent map jank
+    if (window.routeDebounce) clearTimeout(window.routeDebounce);
+    window.routeDebounce = setTimeout(() => {
+        executeOsrmRoute(waypoints);
+    }, 2000);
+}
+
+function executeOsrmRoute(waypoints) {
+    if (!routingControl) {
+        startRoutingTimer();
         try {
             routingControl = L.Routing.control({
                 waypoints: waypoints,
                 router: L.Routing.osrmv1({ serviceUrl: 'https://router.project-osrm.org/route/v1', profile: 'driving', timeout: 5000 }),
                 lineOptions: { styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }] },
                 createMarker: function () { return null; },
-                addWaypoints: false, draggableWaypoints: false, fitSelectedRoutes: false, show: false
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: false, // CRITICAL: Do not move map
+                show: false
             }).addTo(map);
 
             routingControl.on('routesfound', function (e) {
                 if (fallbackLine) { map.removeLayer(fallbackLine); fallbackLine = null; }
                 if (routingTimer) clearTimeout(routingTimer);
+
+                if (!e.routes || e.routes.length === 0) return;
                 const summary = e.routes[0].summary;
 
-                const distanceKm = summary.totalDistance / 1000;
+                // Safe check for distance
+                const distanceKm = (summary.totalDistance || 0) / 1000;
 
-                // --- REAL-TIME ETA CALCULATION ---
-                // Formula: ETA = Distance / Current Bus Speed
-
-                const currentSpeedKmph = markers[targetBusId]?.speed || 0;
-                const MIN_RELIABLE_SPEED = 5; // km/h
-
-                // Fallback Logic
-                const FALLBACK_CITY_SPEED = 15; // km/h
-                const FALLBACK_HIGHWAY_SPEED = 45; // km/h
-                const HIGHWAY_DISTANCE_THRESHOLD = 20; // km
-
-                let finalTimeMin;
-                let statusMsg = "";
-
-                if (currentSpeedKmph > MIN_RELIABLE_SPEED) {
-                    // Scenario 1: Real GPS Speed (Best)
-                    finalTimeMin = Math.ceil((distanceKm / currentSpeedKmph) * 60);
-                } else {
-                    // Scenario 2: Bus Stopped/Offline (Fallback)
-                    if (distanceKm > HIGHWAY_DISTANCE_THRESHOLD) {
-                        // Highway Trip
-                        finalTimeMin = Math.ceil((distanceKm / FALLBACK_HIGHWAY_SPEED) * 60);
-                        statusMsg = " (Highway Est.)";
-                    } else {
-                        // City Trip
-                        finalTimeMin = Math.ceil((distanceKm / FALLBACK_CITY_SPEED) * 60);
-                        // If speed is literally 0, explicitly say "Halted"
-                        statusMsg = currentSpeedKmph <= 0 ? " (Halted)" : " (Heavy Traffic)";
-                    }
-                }
-
-                // Buffer for stops
-                finalTimeMin += 2;
-
-                if (tripEta) tripEta.textContent = `${finalTimeMin} min${statusMsg}`;
-                if (tripDist) tripDist.textContent = `(${distanceKm.toFixed(1)} km)`;
-
-                // Update Status Color in Trip Card
-                const tripStatus = document.getElementById('trip-status');
-                if (tripStatus) {
-                    const status = markers[targetBusId]?.crowd || 'LOW';
-                    tripStatus.textContent = status;
-                    tripStatus.className = "text-xs font-bold font-mono";
-                    if (status === 'HIGH') tripStatus.classList.add('text-red-500');
-                    else if (status === 'MED') tripStatus.classList.add('text-yellow-400');
-                    else tripStatus.classList.add('text-green-400');
-                }
+                // ... (Update UI Logic) ...
+                updateTripInfoCard(distanceKm);
             });
 
+            // ... (Error handling) ...
             routingControl.on('routingerror', () => {
                 console.warn("Routing failed.");
             });
         } catch (e) { console.error("Routing Init Error", e); }
+    } else {
+        routingControl.setWaypoints(waypoints);
     }
 }
+
+function updateTripInfoCard(distanceKm) {
+    const tripEta = document.getElementById('trip-eta');
+    const tripDist = document.getElementById('trip-dist');
+    if (!targetBusId || !markers[targetBusId]) return;
+
+    const currentSpeedKmph = markers[targetBusId]?.speed || 0;
+    const MIN_RELIABLE_SPEED = 5;
+    const FALLBACK_CITY_SPEED = 15;
+    const FALLBACK_HIGHWAY_SPEED = 45;
+    const HIGHWAY_DISTANCE_THRESHOLD = 20;
+
+    let finalTimeMin;
+    let statusMsg = "";
+
+    if (currentSpeedKmph > MIN_RELIABLE_SPEED) {
+        finalTimeMin = Math.ceil((distanceKm / currentSpeedKmph) * 60);
+    } else {
+        if (distanceKm > HIGHWAY_DISTANCE_THRESHOLD) {
+            finalTimeMin = Math.ceil((distanceKm / FALLBACK_HIGHWAY_SPEED) * 60);
+            statusMsg = " (Highway Est.)";
+        } else {
+            finalTimeMin = Math.ceil((distanceKm / FALLBACK_CITY_SPEED) * 60);
+            statusMsg = currentSpeedKmph <= 0 ? " (Halted)" : " (Heavy Traffic)";
+        }
+    }
+    finalTimeMin += 2;
+
+    if (tripEta) tripEta.textContent = `${finalTimeMin} min${statusMsg}`;
+    if (tripDist) tripDist.textContent = `(${distanceKm.toFixed(1)} km)`;
+
+    const tripStatus = document.getElementById('trip-status');
+    if (tripStatus) {
+        const status = markers[targetBusId]?.crowd || 'LOW';
+        tripStatus.textContent = status;
+        tripStatus.className = "text-xs font-bold font-mono";
+        if (status === 'HIGH') tripStatus.classList.add('text-red-500');
+        else if (status === 'MED') tripStatus.classList.add('text-yellow-400');
+        else tripStatus.classList.add('text-green-400');
+    }
+}
+
 
 function runFallbackRouting(busLatLng, etaEl, distEl) {
     const dist = map.distance([userLat, userLng], busLatLng);
