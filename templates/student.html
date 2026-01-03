@@ -73,7 +73,8 @@
     <link rel="stylesheet" href="/static/css/student.css">
 </head>
 
-<body class="h-screen w-screen overflow-hidden relative bg-slate-900" style="display: none;" id="main-body">
+<body class="h-screen w-screen overflow-hidden relative bg-slate-900 flex flex-col" style="display: none;"
+    id="main-body">
     <!-- Global Debug Handler -->
     <script>
         window.onerror = function (msg, url, lineNo, columnNo, error) {
@@ -86,7 +87,7 @@
 
     <!-- Top Navigation Bar (Task Bar) -->
     <header
-        class="fixed top-0 left-0 w-full h-16 z-[2000] bg-slate-900/95 backdrop-blur-xl border-b border-slate-700 flex items-center justify-between px-4 shadow-lg text-white">
+        class="flex-none h-16 z-[2000] bg-slate-900/95 backdrop-blur-xl border-b border-slate-700 flex items-center justify-between px-4 shadow-lg text-white">
 
         <!-- Left: Menu & Brand -->
         <div class="flex items-center gap-3">
@@ -117,8 +118,8 @@
     </header>
 
     <!-- Main Content Area (Map) -->
-    <!-- Adjusted height to account for 4rem (h-16) header -->
-    <div class="relative flex-1 bg-slate-900 transition-all duration-300 ease-in-out" id="map-container">
+    <div class="relative flex-1 bg-slate-900 transition-all duration-300 ease-in-out overflow-hidden"
+        id="map-container">
         <div id="map" class="w-full h-full z-0"></div>
 
         <!-- Full Screen Toggle (Hidden by default) -->
