@@ -23,6 +23,7 @@ window.closeProfile = closeProfile;
 window.showProfile = showProfile;
 window.stopTrackingRoute = stopTrackingRoute;
 window.startTrackingRoute = startTrackingRoute;
+window.startTrackingRouteByBusNo = startTrackingRoute; // Fix: Alias for legacy onclick handlers
 
 window.setFilter = async function () {
     // Legacy Search Disabled - Handled by StopSearchUI
