@@ -82,7 +82,11 @@ function setupSocketListeners() {
 }
 
 export function setBusFilter(filter) {
-    currentBusFilter = filter.toLowerCase();
+    if (Array.isArray(filter)) {
+        currentBusFilter = filter.map(f => f.toLowerCase());
+    } else {
+        currentBusFilter = filter.toLowerCase();
+    }
     renderBusList();
 }
 
@@ -94,9 +98,13 @@ function renderBusList() {
     busList.innerHTML = '';
 
     // Filter Logic
-    const filteredEntries = Object.entries(data).filter(([busId, info]) =>
-        (info.bus_no || '').toLowerCase().includes(currentBusFilter)
-    );
+    const filteredEntries = Object.entries(data).filter(([busId, info]) => {
+        const busNo = (info.bus_no || '').toLowerCase();
+        if (Array.isArray(currentBusFilter)) {
+            return currentBusFilter.includes(busNo);
+        }
+        return busNo.includes(currentBusFilter);
+    });
 
     // Update Counts (Optional: Update 'Tracking: All' text if needed, but keeping it simple)
     const statusEl = document.getElementById('tracking-status');

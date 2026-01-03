@@ -13,6 +13,8 @@ from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
+import json
+import difflib
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -197,6 +199,49 @@ def get_route(bus_no):
         return {"error": "Route not found"}, 404
 
     return route
+
+@app.route('/api/search_stops')
+def search_stops():
+    query = request.args.get('q', '').lower().strip()
+    if not query:
+        return jsonify([])
+
+    # 1. Gather all unique stops and their buses
+    stop_map = {} # "Stop Name" -> Set(Bus Numbers)
+    
+    for bus_no, data in ROUTES_CACHE.items():
+        if not data.get('stops'): continue
+        for stop in data['stops']:
+            s_name = stop.get('stop_name', '').strip()
+            if s_name:
+                if s_name not in stop_map:
+                    stop_map[s_name] = set()
+                stop_map[s_name].add(str(bus_no))
+
+    unique_stops = list(stop_map.keys())
+    
+    # 2. Fuzzy Match
+    # cutoff=0.4 allows for loose matches (e.g. "raily" matches "Railway")
+    matches = difflib.get_close_matches(query, unique_stops, n=5, cutoff=0.4)
+    
+    # If exact substring match exists but wasn't top fuzzy result, add it
+    for s in unique_stops:
+        if query in s.lower() and s not in matches:
+            matches.append(s)
+
+    # 3. Format Result
+    results = []
+    # Deduplicate and limit
+    seen = set()
+    for m in matches[:8]: # Limit to 8 suggestions
+        if m in seen: continue
+        seen.add(m)
+        results.append({
+            "stop_name": m,
+            "buses": sorted(list(stop_map[m]))
+        })
+        
+    return jsonify(results)
 
 
 @app.route('/api/chat', methods=['POST'])

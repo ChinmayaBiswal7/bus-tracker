@@ -167,30 +167,7 @@
             </div>
         </div>
 
-        <!-- Route Timeline Panel (Bottom Overlay) -->
-        <div id="route-panel"
-            class="fixed bottom-0 left-0 right-0 z-[1500] hidden flex flex-col bg-slate-900/95 backdrop-blur-xl border-t border-slate-700 shadow-2xl h-[45%] transition-transform duration-300 transform translate-y-0 pointer-events-auto">
-            <div class="p-4 border-b border-slate-700 flex items-center justify-between bg-slate-800/50">
-                <div>
-                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                        <span id="rp-bus-no" class="bg-blue-600 text-xs px-2 py-1 rounded shadow-sm">--</span>
-                        <span id="rp-dest" class="text-slate-200 text-sm font-medium">Route Details</span>
-                    </h3>
-                </div>
-                <button onclick="stopTrackingRoute()"
-                    class="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-            </div>
 
-            <!-- Timeline List -->
-            <div id="route-timeline"
-                class="flex-1 overflow-y-auto p-4 custom-scrollbar relative overscroll-contain touch-pan-y">
-                <!-- Items will be injected here -->
-            </div>
-        </div>
 
         <!-- Sidebar (Off-Canvas) -->
         <div id="sidebar"
@@ -216,13 +193,20 @@
                     class="text-blue-400 font-bold">Student</span></p>
 
             <!-- Search -->
-            <div class="relative mb-6 shrink-0">
-                <input type="text" id="trackInput" placeholder="Find bus (e.g. 42)"
+            <div class="relative mb-6 shrink-0 z-50">
+                <input type="text" id="trackInput" placeholder="Find bus or stop..." autocomplete="off"
                     class="w-full bg-slate-700/50 border border-slate-600 rounded-xl py-3 pl-4 pr-12 text-sm focus:outline-none focus:border-blue-500 transition-colors uppercase placeholder-slate-500 h-11">
+
                 <button onclick="setFilter()"
                     class="absolute right-1.5 top-1.5 bottom-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 text-xs font-bold transition-colors">
                     GO
                 </button>
+
+                <!-- Search Suggestions Dropdown -->
+                <div id="search-suggestions"
+                    class="hidden absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar z-[3000]">
+                    <!-- Items injected by JS -->
+                </div>
             </div>
 
 
@@ -545,6 +529,33 @@
                 display: none !important;
             }
         </style>
+
+        <!-- Route Timeline Panel (Moved to Root for safe scrolling) -->
+        <div id="route-panel"
+            class="fixed bottom-0 left-0 right-0 z-[3000] hidden flex flex-col bg-slate-900/95 backdrop-blur-xl border-t border-slate-700 shadow-2xl h-[45%] transition-transform duration-300 transform translate-y-0 pointer-events-auto touch-pan-y overscroll-contain">
+            <div class="p-4 border-b border-slate-700 flex items-center justify-between bg-slate-800/50 shrink-0"
+                ontouchstart="event.stopPropagation();" onclick="event.stopPropagation();">
+                <div>
+                    <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span id="rp-bus-no" class="bg-blue-600 text-xs px-2 py-1 rounded shadow-sm">--</span>
+                        <span id="rp-dest" class="text-slate-200 text-sm font-medium">Route Details</span>
+                    </h3>
+                </div>
+                <button onclick="stopTrackingRoute()"
+                    class="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Timeline List -->
+            <div id="route-timeline"
+                class="flex-1 overflow-y-auto p-4 custom-scrollbar relative overscroll-contain touch-pan-y"
+                ontouchstart="event.stopPropagation();" onwheel="event.stopPropagation();">
+                <!-- Items will be injected here -->
+            </div>
+        </div>
 
         <!-- Firebase SDK & Logic -->
 

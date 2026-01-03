@@ -52,6 +52,7 @@ onAuthStateChanged(auth, (user) => {
         initFCM();
         initChat();
         initTheme();
+        initSearch();
 
         // Socket Status Listeners (Removed UI, but keeping connection alive)
         const socket = io(); // Connect/Get global instance
@@ -62,3 +63,78 @@ onAuthStateChanged(auth, (user) => {
         window.location.href = '/login?role=student';
     }
 });
+
+// --- Search Logic ---
+function initSearch() {
+    const input = document.getElementById('trackInput');
+    const suggestionsBox = document.getElementById('search-suggestions');
+    if (!input || !suggestionsBox) return;
+
+    let debounceTimer;
+
+    input.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (query.length < 2) {
+            suggestionsBox.classList.add('hidden');
+            if (query.length === 0) setBusFilter('');
+            return;
+        }
+
+        debounceTimer = setTimeout(() => {
+            fetchSuggestions(query);
+        }, 300);
+    });
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target) && !suggestionsBox.contains(e.target)) {
+            suggestionsBox.classList.add('hidden');
+        }
+    });
+}
+
+async function fetchSuggestions(query) {
+    const suggestionsBox = document.getElementById('search-suggestions');
+    try {
+        const res = await fetch(`/api/search_stops?q=${encodeURIComponent(query)}`);
+        const results = await res.json();
+
+        suggestionsBox.innerHTML = '';
+        if (results.length > 0) {
+            suggestionsBox.classList.remove('hidden');
+            results.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "p-3 border-b border-slate-700 hover:bg-slate-700/50 cursor-pointer transition-colors";
+                div.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="text-white font-bold text-sm text-left">${item.stop_name}</span>
+                        <div class="flex gap-1 mt-1 flex-wrap">
+                            ${item.buses.map(b => `<span class="bg-blue-600 text-[10px] px-1.5 py-0.5 rounded text-white font-mono">Bus ${b}</span>`).join('')}
+                        </div>
+                    </div>
+                `;
+                div.onclick = () => {
+                    selectSuggestion(item);
+                };
+                suggestionsBox.appendChild(div);
+            });
+        } else {
+            suggestionsBox.classList.add('hidden');
+        }
+    } catch (e) {
+        console.error("Search failed", e);
+    }
+}
+
+function selectSuggestion(item) {
+    const input = document.getElementById('trackInput');
+    const suggestionsBox = document.getElementById('search-suggestions');
+
+    input.value = item.stop_name;
+    suggestionsBox.classList.add('hidden');
+
+    console.log("Filtering for buses:", item.buses);
+    setBusFilter(item.buses);
+}
