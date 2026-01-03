@@ -13,10 +13,18 @@ export class StopSearchUI {
     createResultsDiv() {
         const div = document.createElement('div');
         div.id = 'search-suggestions';
-        // z-[9999] matches the highest layer. Added specific bg/border colors.
-        div.className = "absolute top-full left-0 right-0 mt-2 bg-slate-900 border-2 border-slate-600 rounded-xl shadow-2xl max-h-60 overflow-y-auto hidden z-[9999]";
-        this.input.parentElement.appendChild(div);
+        // Fixed positioning relative to viewport/body
+        div.className = "fixed bg-slate-900 border-2 border-slate-600 rounded-xl shadow-2xl max-h-60 overflow-y-auto hidden z-[9999]";
+        document.body.appendChild(div);
         return div;
+    }
+
+    updateDropdownPosition() {
+        if (!this.input || !this.resultsDiv) return;
+        const rect = this.input.getBoundingClientRect();
+        this.resultsDiv.style.top = `${rect.bottom + 8}px`;
+        this.resultsDiv.style.left = `${rect.left}px`;
+        this.resultsDiv.style.width = `${rect.width}px`;
     }
 
     init() {
@@ -47,6 +55,10 @@ export class StopSearchUI {
                 this.hideResults();
             }
         });
+
+        // Update position on scroll/resize
+        window.addEventListener('resize', () => this.updateDropdownPosition());
+        window.addEventListener('scroll', () => this.updateDropdownPosition(), true); // true for capture (sidebar scroll)
     }
 
     async performSearch(query) {
@@ -69,6 +81,7 @@ export class StopSearchUI {
     }
 
     displayResults(results) {
+        this.updateDropdownPosition(); // Recalculate position
         this.resultsDiv.innerHTML = '';
         this.resultsDiv.classList.remove('hidden');
 
