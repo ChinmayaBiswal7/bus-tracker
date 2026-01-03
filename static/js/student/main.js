@@ -1,6 +1,6 @@
 import { auth } from '../firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { initMap, stopTrackingRoute, setBusFilter, startTrackingRoute, initThemeToggle } from './map.js';
+import { initMap, stopTrackingRoute, setBusFilter, startTrackingRoute } from './map.js';
 import { openSchedule, closeSchedule, initSchedule } from './schedule.js';
 import { openAnnouncements, closeAnnouncements, initAnnouncements } from './announcements.js';
 import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-directory.js';
@@ -47,7 +47,6 @@ onAuthStateChanged(auth, (user) => {
 
         // Initialize Components
         initMap();
-        initThemeToggle();
         initAnnouncements();
         initSchedule();
         initFCM();
