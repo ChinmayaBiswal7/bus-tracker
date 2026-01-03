@@ -53,6 +53,9 @@ onAuthStateChanged(auth, (user) => {
         initChat();
         initTheme();
 
+        // Socket Status Listeners (Removed UI, but keeping connection alive)
+        const socket = io(); // Connect/Get global instance
+
         // Resize Map Fallback
         setTimeout(() => { if (window.map) window.map.invalidateSize(); }, 500);
     } else {
