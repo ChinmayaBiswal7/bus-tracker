@@ -93,8 +93,8 @@ function renderBusList() {
     busList.innerHTML = '';
 
     // Filter Logic
-    const filteredEntries = Object.entries(data).filter(([busId]) =>
-        busId.toLowerCase().includes(currentBusFilter)
+    const filteredEntries = Object.entries(data).filter(([busId, info]) =>
+        (info.bus_no || '').toLowerCase().includes(currentBusFilter)
     );
 
     // Update Counts (Optional: Update 'Tracking: All' text if needed, but keeping it simple)
