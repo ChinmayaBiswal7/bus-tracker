@@ -94,16 +94,6 @@ class LocationHistory(db.Model):
 # Ensure DB tables exist
 with app.app_context():
     db.create_all()
-    
-    # STARTUP CLEANUP: Reset all buses to offline
-    # This prevents "Zombie Buses" from persisting after a server restart.
-    # Real drivers will reconnect automatically via SocketIO.
-    try:
-        active_count = Bus.query.filter_by(is_active=True).update(dict(is_active=False))
-        db.session.commit()
-        print(f"[INFO] Startup: Reset {active_count} active buses to OFFLINE.")
-    except Exception as e:
-        print(f"[WARN] Startup Validation Failed: {e}")
 
 # --- Helper Functions ---
 def get_recommendations(user_id):
