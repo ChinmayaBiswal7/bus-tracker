@@ -366,19 +366,33 @@ export function startTrackingRouteByBusNo(busNo) {
     drawBusPath(busNo);
 
     // 4. Update Status/ETA
-    if (userLat && userLng) {
-        socket.emit('student_update', {
-            bus_no: busNo,
-            lat: userLat,
-            lng: userLng
-        });
+    updateRoute();
+
+    // 5. Logic: If we found the bus (Offline or Online), fly to it.
+    if (targetBusId && lastBusData[targetBusId]) {
+        console.log("[STUDENT] Found Bus in Data -> Locating:", busNo);
+
+        // Fly to Bus Location
+        const b = lastBusData[targetBusId];
+        if (map && b.lat && b.lng) {
+            console.log("📍 Flying to Bus Location:", b.lat, b.lng);
+            map.flyTo([b.lat, b.lng], 16, { duration: 1.5 });
+        }
+
+        // Force Emit to Driver
+        if (userLat && userLng) {
+            socket.emit('student_update', {
+                bus_no: busNo,
+                lat: userLat,
+                lng: userLng
+            });
+        }
+        return true; // Found
+    } else {
+        // Bus is completely unknown (not in our local data/cache)
+        console.warn(`Bus ${busNo} is not live in local data.`);
+        return false; // Not found
     }
-    return true; // Found and tracking
-} else {
-    // Bus is offline or not found
-    console.warn(`Bus ${busNo} is not live in local data.`);
-    return false; // Not found
-}
 }
 
 // Deprecated wrapper (for backward compat if needed, but we switch clicks to above)
