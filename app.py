@@ -173,7 +173,7 @@ def build_routes():
     except Exception as e:
         print(f"[ERROR] Failed to load routes: {e}")
 
-# Load on startup (Reloads when file changes)
+# Load on startup (Reloads when file changes) 
 build_routes()
 
 @app.route('/api/routes/<bus_no>')
