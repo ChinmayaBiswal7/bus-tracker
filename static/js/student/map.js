@@ -82,14 +82,7 @@ function setupSocketListeners() {
     });
 }
 
-export function setBusFilter(filter) {
-    if (Array.isArray(filter)) {
-        currentBusFilter = filter.map(f => f.toLowerCase());
-    } else {
-        currentBusFilter = filter.toLowerCase();
-    }
-    renderBusList();
-}
+
 
 function renderBusList() {
     const data = lastBusData;
