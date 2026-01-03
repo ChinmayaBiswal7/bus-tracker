@@ -98,12 +98,14 @@ function renderBusList() {
     busList.innerHTML = '';
 
     // Filter Logic
+    // Filter Logic
     const filteredEntries = Object.entries(data).filter(([busId, info]) => {
-        const busNo = String(info.bus_no || '').toLowerCase();
+        const busNo = String(info.bus_no || '').trim().toLowerCase();
         if (Array.isArray(currentBusFilter)) {
-            return currentBusFilter.includes(busNo);
+            // Ensure filter array is also trimmed/normalized
+            return currentBusFilter.some(f => String(f).trim().toLowerCase() === busNo);
         }
-        return busNo.includes(currentBusFilter);
+        return busNo.includes(String(currentBusFilter).trim().toLowerCase());
     });
 
     // Update Counts (Optional: Update 'Tracking: All' text if needed, but keeping it simple)
