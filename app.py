@@ -200,59 +200,84 @@ def get_route(bus_no):
 
     return route
 
-@app.route('/api/search_stops')
-def search_stops():
+@app.route('/api/stop_search')
+def stop_search():
+    """
+    Backend-First Search (Way 2):
+    Returns a fully constructed list of buses for the matching stops,
+    merged with their live status. Frontend just renders this.
+    """
     query = request.args.get('q', '').lower().strip()
     if not query:
-        return jsonify([])
+        return jsonify({"stops": [], "buses": []})
 
-    # 1. Gather all unique stops and their buses
-    stop_map = {} # "Stop Name" -> Set(Bus Numbers)
-    # 1. Gather all unique stop names
+    # 1. Logic to find matching stops (Reuse existing robust logic)
     all_stops = set()
     for route in ROUTES_CACHE.values():
         for stop in route['stops']:
             all_stops.add(stop['stop_name'])
     
     unique_stops = list(all_stops)
-    
-    # 2. Find matches
-    # PRIORITY A: Direct Substring (e.g. "kiit" in "KIIT Campus 6")
     matches = [s for s in unique_stops if query in s.lower()]
-
-    # PRIORITY B: Fuzzy Match (only if specific enough)
-    if len(query) > 3:
-        fuzzy_matches = difflib.get_close_matches(query, unique_stops, n=5, cutoff=0.5)
-        # Add fuzzy matches if not already in substring matches
-        for m in fuzzy_matches:
-            if m not in matches:
-                matches.append(m)
-
-    print(f"[DEBUG] Search '{query}' -> Found Stops: {matches}")
-
-    # 3. Map Stops -> Buses
-    results = []
-    seen_stops = set()
-
-    for stop_name in matches:
-        if stop_name in seen_stops: continue
-        seen_stops.add(stop_name)
-        
-        relevant_buses = []
-        for bus_no, route in ROUTES_CACHE.items():
-            # Check if this bus stops here
-            if any(s['stop_name'] == stop_name for s in route['stops']):
-                relevant_buses.append(str(bus_no)) # Ensure string for frontend
-        
-        # Sort buses numerically if possible
-        relevant_buses.sort(key=lambda x: int(x) if x.isdigit() else 999)
-
-        results.append({
-            "stop_name": stop_name,
-            "buses": relevant_buses
-        })
     
-    return jsonify(results)
+    if len(query) > 3:
+        fuzzy = difflib.get_close_matches(query, unique_stops, n=5, cutoff=0.5)
+        for m in fuzzy:
+            if m not in matches: matches.append(m)
+
+    # 2. Find ALL buses that visit these stops
+    relevant_bus_nos = set()
+    for stop_name in matches:
+        for bus_no, route in ROUTES_CACHE.items():
+            if any(s['stop_name'] == stop_name for s in route['stops']):
+                relevant_bus_nos.add(str(bus_no))
+
+    # 3. Get LIVE status of these buses
+    # Query DB for currently active buses
+    active_buses = Bus.query.filter_by(is_active=True).all()
+    active_map = {str(b.bus_no): b for b in active_buses}
+
+    # 4. Construct the Final List
+    final_buses = []
+    for bus_no in relevant_bus_nos:
+        # Defaults (Offline)
+        bus_data = {
+            "bus_no": bus_no,
+            "live": False,
+            "crowd": "OFFLINE",
+            "lat": 20.2961, # Default
+            "lng": 85.8245,
+            "stop_match": "Search Result"
+        }
+        
+        # If Live, override with real data
+        if bus_no in active_map:
+            live_bus = active_map[bus_no]
+            bus_data.update({
+                "live": True,
+                "crowd": live_bus.crowd_status,
+                "lat": live_bus.lat,
+                "lng": live_bus.lng,
+                "heading": live_bus.heading,
+                "speed": live_bus.speed
+            })
+        else:
+             # Enhancement: Use the *first stop* of the route as the "Offline Location"
+             # so the map can zoom somewhere relevant, not just 0,0
+             route = ROUTES_CACHE.get(bus_no)
+             if route and route['stops']:
+                 bus_data['lat'] = route['stops'][0]['lat']
+                 bus_data['lng'] = route['stops'][0]['lng']
+
+        final_buses.append(bus_data)
+
+    # Sort: Live first, then Numerical
+    final_buses.sort(key=lambda x: (not x['live'], int(x['bus_no']) if x['bus_no'].isdigit() else 999))
+
+    return jsonify({
+        "stops": matches,
+        "buses": final_buses
+    })
 
 
 @app.route('/api/chat', methods=['POST'])
