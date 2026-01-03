@@ -12,7 +12,7 @@ except Exception as e:
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import difflib
 
@@ -234,7 +234,9 @@ def stop_search():
 
     # 3. Get LIVE status of these buses
     # Query DB for currently active buses
-    active_buses = Bus.query.filter_by(is_active=True).all()
+    # STALENESS CHECK: Ignore buses that haven't updated in 10 minutes (Zombie Clean)
+    threshold = datetime.utcnow() - timedelta(minutes=10)
+    active_buses = Bus.query.filter(Bus.is_active==True, Bus.last_updated >= threshold).all()
     active_map = {str(b.bus_no): b for b in active_buses}
 
     # 4. Construct the Final List
@@ -474,7 +476,9 @@ def subscribe_to_topic():
 # --- Socket Events ---
 
 def get_active_buses_payload():
-    active_buses = Bus.query.filter_by(is_active=True).all()
+    # STALENESS CHECK: Ignore buses that haven't updated in 10 minutes
+    threshold = datetime.utcnow() - timedelta(minutes=10)
+    active_buses = Bus.query.filter(Bus.is_active==True, Bus.last_updated >= threshold).all()
     payload = {}
     
     # 1. Add Active Buses
