@@ -323,17 +323,32 @@ async function drawBusPath(busNo) {
 
         const data = await res.json();
 
-        // 1. Draw Polyline
+        // 1. Draw Polyline (Road Snapped using OSRM)
         if (data.path && data.path.length > 0) {
-            currentRouteLayer = L.polyline(data.path, {
-                color: '#3b82f6', // Blue
-                weight: 5,
-                opacity: 0.8,
-                lineJoin: 'round'
-            }).addTo(map);
+            // Convert simple path points to LatLng waypoints for OSRM
+            const waypoints = data.stops.map(s => L.latLng(s.lat, s.lng));
 
-            // Adjust view to fit route
-            map.fitBounds(currentRouteLayer.getBounds(), { padding: [50, 50] });
+            // Use the existing routing engine or creating a temporary one
+            const router = L.Routing.osrmv1({
+                serviceUrl: 'https://router.project-osrm.org/route/v1',
+                profile: 'driving'
+            });
+
+            router.route(waypoints.map(wp => ({ latLng: wp })), (err, routes) => {
+                if (!err && routes && routes.length > 0) {
+                    const line = L.Routing.line(routes[0], {
+                        styles: [{ color: '#3b82f6', opacity: 0.8, weight: 5 }]
+                    });
+                    currentRouteLayer = line; // Store as layer
+                    line.addTo(map);
+                } else {
+                    // Fallback to straight lines if OSRM fails
+                    console.warn("OSRM Failed, falling back to straight lines");
+                    currentRouteLayer = L.polyline(data.path, {
+                        color: '#3b82f6', weight: 5, opacity: 0.8, dashArray: '10, 10'
+                    }).addTo(map);
+                }
+            });
         }
 
         // 2. Draw Stops
