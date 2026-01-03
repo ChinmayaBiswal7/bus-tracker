@@ -112,7 +112,8 @@ function renderBusList() {
         const item = document.createElement('div');
         item.className = "group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
         item.onclick = () => {
-            map.flyTo([info.lat, info.lng], 16);
+            // Use setView for instant/controlled snap to avoid animation glitches
+            map.setView([info.lat, info.lng], 16);
             startTrackingRoute(busId);
         };
         item.innerHTML = `
@@ -126,7 +127,7 @@ function renderBusList() {
                </p>
             </div>
         </div>
-        <button onclick="event.stopPropagation(); map.flyTo([${info.lat}, ${info.lng}], 16); startTrackingRoute('${busId}');"
+        <button onclick="event.stopPropagation(); map.setView([${info.lat}, ${info.lng}], 16); startTrackingRoute('${busId}');"
             class="hidden group-hover:block px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-lg transition-all">
             LOCATE
         </button>
@@ -206,7 +207,7 @@ function updateBusMarker(busId, info) {
         markers[busId] = L.marker([info.lat, info.lng], { icon: icon }).addTo(map)
             .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br><span class="text-xs text-slate-500">${new Date().toLocaleTimeString()}</span>`)
             .on('click', () => {
-                map.flyTo([info.lat, info.lng], 16);
+                map.setView([info.lat, info.lng], 16);
                 startTrackingRoute(busId);
             });
     }
