@@ -126,10 +126,13 @@ function renderBusList() {
     activeEntries.forEach(({ id: busId, info }) => {
         const item = document.createElement('div');
         item.className = "group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
-        item.onclick = () => {
-            // Updated to use the auto-fly logic in startTrackingRouteByBusNo
+
+        // Row Click: Track Bus
+        item.addEventListener('click', () => {
+            console.log(`[SIDEBAR] Row clicked for Bus ${info.bus_no}`);
             startTrackingRouteByBusNo(String(info.bus_no));
-        };
+        });
+
         item.innerHTML = `
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-xs">${info.bus_no}</div>
@@ -141,11 +144,21 @@ function renderBusList() {
                </p>
             </div>
         </div>
-        <button onclick="event.stopPropagation(); startTrackingRouteByBusNo('${info.bus_no}');"
-            class="hidden group-hover:block px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-lg transition-all">
+        <button class="locate-btn hidden group-hover:block px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg shadow-lg transition-all">
             LOCATE
         </button>
         `;
+
+        // Button Click: Track Bus (Prevent Row Click Bubble)
+        const btn = item.querySelector('.locate-btn');
+        if (btn) {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Stop row click
+                console.log(`[SIDEBAR] LOCATE Button clicked for Bus ${info.bus_no}`);
+                startTrackingRouteByBusNo(String(info.bus_no));
+            });
+        }
+
         busList.appendChild(item);
     });
 }
