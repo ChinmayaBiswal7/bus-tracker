@@ -199,7 +199,15 @@ def get_route(bus_no):
     return route
 
 
-# 1. Fallback if no Key
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    try:
+        data = request.json
+        user_msg = data.get('message', '')
+        if not user_msg:
+            return {"error": "Empty message"}, 400
+
+        # 1. Fallback if no Key
     if not groq_client:
         return {
             "response": "I see you want to chat! To enable my full Llama 3 brain, please set the 'GROQ_API_KEY' environment variable. For now, I'm just a simple bot: " + user_msg
