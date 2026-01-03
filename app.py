@@ -209,6 +209,9 @@ def search_stops():
     # 1. Gather all unique stops and their buses
     stop_map = {} # "Stop Name" -> Set(Bus Numbers)
     
+    # DEBUG: Check Cache
+    print(f"[DEBUG] SEARCH: Query='{query}' | CacheKeys={list(ROUTES_CACHE.keys())}")
+
     for bus_no, data in ROUTES_CACHE.items():
         if not data.get('stops'): continue
         for stop in data['stops']:
@@ -219,6 +222,7 @@ def search_stops():
                 stop_map[s_name].add(str(bus_no))
 
     unique_stops = list(stop_map.keys())
+    print(f"[DEBUG] SEARCH: Found {len(unique_stops)} unique stops.")
     
     # 2. Fuzzy Match
     # cutoff=0.4 allows for loose matches (e.g. "raily" matches "Railway")
@@ -228,6 +232,8 @@ def search_stops():
     for s in unique_stops:
         if query in s.lower() and s not in matches:
             matches.append(s)
+
+    print(f"[DEBUG] SEARCH: Matches: {matches}")
 
     # 3. Format Result
     results = []

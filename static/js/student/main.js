@@ -22,9 +22,47 @@ window.closeProfile = closeProfile;
 window.showProfile = showProfile;
 window.stopTrackingRoute = stopTrackingRoute;
 window.startTrackingRoute = startTrackingRoute;
-window.setFilter = function () {
+window.setFilter = async function () {
     const input = document.getElementById('trackInput');
-    if (input) setBusFilter(input.value);
+    if (!input) return;
+
+    const val = input.value.trim();
+    if (!val) {
+        setBusFilter('');
+        return;
+    }
+
+    // 1. Try treating it as a Bus Number/Filter directly
+    // Check if any bus matches locally first to avoid unnecessary API calls
+    // (We need access to bus data, but 'map.js' holds it. 
+    //  Actually relying on setBusFilter's internal logic is trickier if we want to fallback.
+    //  Let's just try the Search API if it looks like text.)
+
+    // Call Search API to see if it's a stop
+    try {
+        const res = await fetch(`/api/search_stops?q=${encodeURIComponent(val)}`);
+        const results = await res.json();
+
+        if (results.length > 0) {
+            // Found a stop match!
+            // Pick the best match (first one)
+            const best = results[0];
+            console.log("Smart Search: Mapped", val, "->", best.stop_name);
+
+            // Update Input
+            input.value = best.stop_name;
+
+            // Filter by Buses
+            setBusFilter(best.buses);
+        } else {
+            // No stop found, fallback to standard bus filter (string match)
+            console.log("Smart Search: No stop found, filtering by text:", val);
+            setBusFilter(val);
+        }
+    } catch (e) {
+        console.error("Smart Search Error:", e);
+        setBusFilter(val);
+    }
 };
 window.quickSearch = function (busId) {
     const input = document.getElementById('trackInput');
