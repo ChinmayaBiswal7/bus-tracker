@@ -40,8 +40,12 @@ window.setFilter = async function () {
 
     // Call Search API to see if it's a stop
     try {
+        // ALERT LOGIC
+        // alert(`Searching for: ${val}`); 
         const res = await fetch(`/api/search_stops?q=${encodeURIComponent(val)}`);
         const results = await res.json();
+
+        console.log("Search Results:", results);
 
         if (results.length > 0) {
             // Found a stop match!
