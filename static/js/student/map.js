@@ -286,6 +286,12 @@ export function startTrackingRoute(busId) {
     targetBusId = busId;
     const tripCard = document.getElementById('trip-info-card');
     if (tripCard) tripCard.classList.remove('hidden');
+
+    // Draw Route from Excel Data
+    if (lastBusData[busId]) {
+        drawBusPath(lastBusData[busId].bus_no);
+    }
+
     updateRoute();
 
     // FORCE EMIT: Send immediate update to driver (don't wait for GPS movement)
@@ -302,6 +308,57 @@ export function startTrackingRoute(busId) {
     }
 }
 
+// Route Visuals
+let currentRouteLayer = null;
+let currentStopsLayer = null;
+
+async function drawBusPath(busNo) {
+    // Clear previous
+    if (currentRouteLayer) map.removeLayer(currentRouteLayer);
+    if (currentStopsLayer) map.removeLayer(currentStopsLayer);
+
+    try {
+        const res = await fetch(`/api/routes/${busNo}`);
+        if (!res.ok) return; // No route found
+
+        const data = await res.json();
+
+        // 1. Draw Polyline
+        if (data.path && data.path.length > 0) {
+            currentRouteLayer = L.polyline(data.path, {
+                color: '#3b82f6', // Blue
+                weight: 5,
+                opacity: 0.8,
+                lineJoin: 'round'
+            }).addTo(map);
+
+            // Adjust view to fit route
+            map.fitBounds(currentRouteLayer.getBounds(), { padding: [50, 50] });
+        }
+
+        // 2. Draw Stops
+        if (data.stops && data.stops.length > 0) {
+            currentStopsLayer = L.layerGroup().addTo(map);
+            data.stops.forEach(stop => {
+                L.circleMarker([stop.lat, stop.lng], {
+                    radius: 6,
+                    color: '#1e3a8a', // Dark Blue Border
+                    fillColor: 'white',
+                    fillOpacity: 1,
+                    weight: 2
+                }).bindTooltip(stop.stop_name, {
+                    permanent: false,
+                    direction: 'top',
+                    offset: [0, -5]
+                }).addTo(currentStopsLayer);
+            });
+        }
+
+    } catch (e) {
+        console.error("Failed to load route path:", e);
+    }
+}
+
 export function stopTrackingRoute() {
     targetBusId = null;
     const tripCard = document.getElementById('trip-info-card');
@@ -314,6 +371,14 @@ export function stopTrackingRoute() {
     if (fallbackLine) {
         map.removeLayer(fallbackLine);
         fallbackLine = null;
+    }
+    if (currentRouteLayer) {
+        map.removeLayer(currentRouteLayer);
+        currentRouteLayer = null;
+    }
+    if (currentStopsLayer) {
+        map.removeLayer(currentStopsLayer);
+        currentStopsLayer = null;
     }
 }
 

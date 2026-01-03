@@ -143,7 +143,63 @@ def chat_with_ai():
     data = request.json
     user_msg = data.get('message', '')
     
-    # 1. Fallback if no Key
+# --- Route Loading Logic (Excel) ---
+import pandas as pd
+
+ROUTES_CACHE = {}
+
+def build_routes():
+    """Reads Excel and builds a dictionary of routes."""
+    global ROUTES_CACHE
+    try:
+        excel_path = "data/bus_routes.xlsx"
+        if not os.path.exists(excel_path):
+            print(f"[WARN] Route file not found: {excel_path}")
+            return
+
+        df = pd.read_excel(excel_path)
+        # Ensure correct types
+        df['bus_no'] = df['bus_no'].astype(str)
+        
+        routes = {}
+        for bus_no, group in df.groupby("bus_no"):
+            group = group.sort_values("stop_order")
+            
+            routes[bus_no] = {
+                "path": group[['lat', 'lng']].values.tolist(),
+                "stops": group[['stop_name', 'lat', 'lng']].to_dict(orient="records")
+            }
+        
+        ROUTES_CACHE = routes
+        print(f"[INFO] Loaded {len(routes)} routes from Excel.")
+    except Exception as e:
+        print(f"[ERROR] Failed to load routes: {e}")
+
+# Load on startup
+build_routes()
+
+@app.route('/api/routes/<bus_no>')
+def get_route(bus_no):
+    # Normalize input
+    bus_no = str(bus_no).upper()
+    
+    # Try direct match
+    route = ROUTES_CACHE.get(bus_no)
+    
+    # Try case-insensitive lookup if fail
+    if not route:
+        for k, v in ROUTES_CACHE.items():
+            if k.upper() == bus_no:
+                route = v
+                break
+                
+    if not route:
+        return {"error": "Route not found"}, 404
+
+    return route
+
+
+# 1. Fallback if no Key
     if not groq_client:
         return {
             "response": "I see you want to chat! To enable my full Llama 3 brain, please set the 'GROQ_API_KEY' environment variable. For now, I'm just a simple bot: " + user_msg

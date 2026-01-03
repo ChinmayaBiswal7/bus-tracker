@@ -9,4 +9,6 @@ firebase-admin
 groq
 grpcio
 requests
+pandas
+openpyxl
 
