@@ -1,5 +1,5 @@
 /**
- * FIXED: Bus Stop Search with Working Click Handler
+ * FIXED: Bus Stop Search with Working Click Handler & Clickable Bus Numbers
  * Adapted for 'trackInput' ID
  */
 
@@ -57,14 +57,26 @@ export class BusStopSearch {
     }
 
     attachResultsListener() {
-        // Listen for clicks on the results sidebar or body (delegation)
         const sidebar = document.querySelector('.sidebar') || document.body;
 
         sidebar.addEventListener('click', (e) => {
-            // Find if clicked element is a stop result
-            const stopItem = e.target.closest('[data-stop-name]');
+            // Check if clicked on bus number badge
+            const busBadge = e.target.closest('[data-bus-no]');
+            if (busBadge) {
+                e.preventDefault();
+                e.stopPropagation();
 
-            if (stopItem) {
+                const busNo = parseInt(busBadge.dataset.busNo);
+                const stopName = busBadge.dataset.stopName;
+
+                console.log(`🚌 Locating Bus ${busNo} at ${stopName}`);
+                this.locateBus(busNo, stopName);
+                return;
+            }
+
+            // Check if clicked on stop name (to show stop location)
+            const stopItem = e.target.closest('[data-stop-name]');
+            if (stopItem && !stopItem.hasAttribute('data-bus-no')) {
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -72,9 +84,7 @@ export class BusStopSearch {
                 const lat = parseFloat(stopItem.dataset.lat);
                 const lng = parseFloat(stopItem.dataset.lng);
 
-                console.log('📍 Clicked stop:', stopName);
-
-                // Navigate to stop
+                console.log('📍 Showing stop:', stopName);
                 this.selectStop({ name: stopName, lat, lng });
             }
         });
@@ -140,28 +150,30 @@ export class BusStopSearch {
 
         // Build HTML with data attributes for click handling
         const html = results.map(result => `
-            <div class="stop-result-item p-3 hover:bg-blue-900/30 cursor-pointer border-b border-slate-700 transition-colors"
+            <div class="stop-result-item p-3 border-b border-slate-700"
                  data-stop-name="${result.stop_name}"
                  data-lat="${result.lat}"
                  data-lng="${result.lng}">
                 
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <div class="font-medium text-white">${result.stop_name}</div>
-                        <div class="flex items-center gap-2 mt-1 text-sm">
-                            <span class="text-slate-300">${result.bus_count} bus${result.bus_count > 1 ? 'es' : ''}</span>
-                            <div class="flex gap-1 flex-wrap">
-                                ${result.buses.map(bus => `
-                                    <span class="px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs font-medium border border-blue-500/30">
-                                        ${bus}
-                                    </span>
-                                `).join('')}
-                            </div>
-                        </div>
+                <div class="mb-2">
+                    <div class="font-medium text-white cursor-pointer hover:text-blue-400 transition-colors">
+                        📍 ${result.stop_name}
                     </div>
-                    <svg class="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
+                    <div class="text-xs text-slate-400 mt-1">
+                        ${result.bus_count} bus${result.bus_count > 1 ? 'es' : ''} available
+                    </div>
+                </div>
+                
+                <!-- Clickable Bus Number Buttons -->
+                <div class="flex gap-2 flex-wrap">
+                    ${result.buses.map(bus => `
+                        <button class="bus-locate-btn px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-sm transition-all hover:scale-105 active:scale-95 shadow-md"
+                                data-bus-no="${bus}"
+                                data-stop-name="${result.stop_name}"
+                                title="Click to locate Bus ${bus} on map">
+                            🚌 ${bus}
+                        </button>
+                    `).join('')}
                 </div>
             </div>
         `).join('');
@@ -222,6 +234,81 @@ export class BusStopSearch {
         resultsContainer.style.display = 'block';
     }
 
+    async locateBus(busNo, stopName) {
+        try {
+            console.log(`🔍 Looking for Bus ${busNo}...`);
+
+            // Check if bus exists in your existing bus tracking system
+            // In map.js, buses are usually rendered with IDs or data attributes.
+            // Assuming map.js uses markers with custom icons or similar.
+            // Since we can't easily find a leaflet marker by ID without a registry,
+            // we will try to use the 'startTrackingRouteByBusNo' if available (legacy alias),
+            // OR find the list item in the legacy bus list and click its 'Locate' button.
+
+            // Try Legacy "Locate" button in the bus list
+            // The legacy list is usually hidden during search, but the buttons might still exist in DOM if not cleared.
+            // Alternatively, call the global function.
+
+            if (window.startTrackingRoute) {
+                window.startTrackingRoute(busNo);
+                this.showSuccessMessage(`Tracking Bus ${busNo}`);
+            } else {
+                console.warn("startTrackingRoute function not found.");
+                this.showBusOfflineMessage(busNo, stopName);
+            }
+
+        } catch (error) {
+            console.error('❌ Locate error:', error);
+            this.showBusOfflineMessage(busNo, stopName);
+        }
+    }
+
+    showBusOfflineMessage(busNo, stopName) {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-yellow-900/90 text-yellow-200 px-6 py-3 rounded-lg shadow-xl z-[9999] animate-bounce';
+        notification.innerHTML = `
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <div>
+                    <strong>Bus ${busNo} is Offline</strong>
+                    <div class="text-xs mt-1">Not currently tracking near ${stopName}</div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.transition = 'opacity 0.5s';
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 500);
+        }, 3000);
+    }
+
+    showSuccessMessage(message) {
+        const notification = document.createElement('div');
+        notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-green-900/90 text-green-200 px-6 py-3 rounded-lg shadow-xl z-[9999]';
+        notification.innerHTML = `
+            <div class="flex items-center gap-3">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                <strong>${message}</strong>
+            </div>
+        `;
+
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.transition = 'opacity 0.5s';
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 500);
+        }, 2000);
+    }
+
     selectStop(stop) {
         console.log('📍 Navigating to:', stop.name);
 
@@ -276,6 +363,7 @@ export class BusStopSearch {
 
         } catch (error) {
             console.error('❌ Navigation error:', error);
+            alert('Failed to navigate to stop. Please try again.');
         }
     }
 
