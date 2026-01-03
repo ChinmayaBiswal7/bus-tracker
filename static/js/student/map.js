@@ -100,13 +100,16 @@ function renderBusList() {
 
     // Filter Logic
     // Filter Logic
+    // Filter Logic
     const filteredEntries = Object.entries(data).filter(([busId, info]) => {
         const busNo = String(info.bus_no || '').trim().toLowerCase();
+
         if (Array.isArray(currentBusFilter)) {
-            // Ensure filter array is also trimmed/normalized
-            return currentBusFilter.some(f => String(f).trim().toLowerCase() === busNo);
+            // Robust check: Does the filter array INCLUDE this bus number?
+            return currentBusFilter.includes(busNo);
         }
-        return busNo.includes(String(currentBusFilter).trim().toLowerCase());
+        // Fallback for string filter
+        return busNo.includes(currentBusFilter);
     });
 
     // Update Counts (Optional: Update 'Tracking: All' text if needed, but keeping it simple)
@@ -759,4 +762,17 @@ function generateDensityIcons(status) {
     }
 
     return `<div class="flex items-end gap-0.5" title="Crowd: ${status}">${bars}</div>`;
+}
+
+// Set Bus Filter (Called from Search/Main)
+export function setBusFilter(filter) {
+    if (Array.isArray(filter)) {
+        // Normalize array: trim + lowercase
+        currentBusFilter = filter.map(f => String(f).trim().toLowerCase());
+    } else {
+        // Normalize string
+        currentBusFilter = String(filter).trim().toLowerCase();
+    }
+    console.log("BUS FILTER SET:", currentBusFilter);
+    renderBusList();
 }
