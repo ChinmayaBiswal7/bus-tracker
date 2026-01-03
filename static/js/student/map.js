@@ -463,17 +463,17 @@ async function drawBusPath(busNo) {
                     className: 'text-xs font-bold text-fuchsia-500 bg-slate-900/90 border-0 rounded px-2 py-1'
                 }).addTo(currentStopsLayer);
             });
-        });
-    }
+
+        }
 
         // 3. Render Timeline Panel
         if (data.stops && data.stops.length > 0) {
-        renderRouteTimeline(data.stops);
-    }
+            renderRouteTimeline(data.stops);
+        }
 
-} catch (e) {
-    console.error("Failed to load route path:", e);
-}
+    } catch (e) {
+        console.error("Failed to load route path:", e);
+    }
 }
 
 export function stopTrackingRoute() {
