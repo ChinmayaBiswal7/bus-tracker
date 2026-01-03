@@ -238,8 +238,14 @@ export class BusStopSearch {
         try {
             console.log(`🔍 Looking for Bus ${busNo}...`);
             if (window.startTrackingRouteByBusNo) {
-                window.startTrackingRouteByBusNo(String(busNo));
-                this.showSuccessMessage(`Tracking Bus ${busNo}`);
+                const found = window.startTrackingRouteByBusNo(String(busNo));
+
+                if (found) {
+                    this.showSuccessMessage(`Tracking Bus ${busNo}`);
+                } else {
+                    // Bus is in Excel but not in our Tracking System (Offline/Unknown)
+                    this.showBusOfflineMessage(busNo, stopName);
+                }
             } else {
                 console.warn("startTrackingRouteByBusNo function not found in window.");
                 this.showBusOfflineMessage(busNo, stopName);
