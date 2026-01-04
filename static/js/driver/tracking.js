@@ -18,9 +18,12 @@ socket.on('student_location_update', (data) => {
     }
 
     // Filter: Only show students tracking MY bus
-    // Weak equality check to handle string/number differences
-    if (String(data.bus_no) !== String(activeBusNo)) {
-        console.log(`[DRIVER] ignored (Bus mismatch: ${data.bus_no} != ${activeBusNo})`);
+    // Robust comparison: Trim and Upper Case
+    const updateBus = String(data.bus_no).trim().toUpperCase();
+    const myBus = String(activeBusNo).trim().toUpperCase();
+
+    if (updateBus !== myBus) {
+        console.log(`[DRIVER] ignored (Bus mismatch: '${updateBus}' != '${myBus}')`);
         return;
     }
 
@@ -31,16 +34,14 @@ socket.on('student_location_update', (data) => {
         const studentIcon = L.divIcon({
             className: 'student-marker',
             html: `
-            <div class="relative w-16 h-16 flex items-center justify-center filter drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)]">
+            <div class="relative w-16 h-16 flex items-center justify-center filter drop-shadow-xl">
                  <svg width="64" height="64" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Body (Blue) -->
                     <circle cx="50" cy="25" r="12" fill="#3B82F6" stroke="white" stroke-width="2"/>
                     <path d="M30 45 Q30 40 35 40 H65 Q70 40 70 45 V70 H60 V90 H40 V70 H30 V45 Z" fill="#3B82F6" stroke="white" stroke-width="2"/>
-                    <!-- Backpack (Darker Blue) -->
                     <rect x="35" y="45" width="30" height="25" rx="5" fill="#1E3A8A" fill-opacity="0.5"/>
                 </svg>
                  <!-- Pulse -->
-                <div class="absolute inset-0 bg-blue-500 rounded-full animate-ping opacity-30 -z-10 scale-75"></div>
+                <div class="absolute inset-0 bg-blue-400 rounded-full animate-ping opacity-30 -z-10 scale-75"></div>
             </div>`,
             iconSize: [64, 64],
             iconAnchor: [32, 32]
