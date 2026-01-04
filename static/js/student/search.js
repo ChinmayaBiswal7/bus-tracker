@@ -284,7 +284,8 @@ export class BusStopSearch {
                 const searchDiv = searchInput.parentElement;
                 resultsContainer = document.createElement('div');
                 resultsContainer.className = 'search-results-container';
-                searchDiv.parentElement.insertBefore(resultsContainer, searchDiv.nextSibling);
+                // Appending INSIDE the relative container allows absolute positioning to work correctly
+                searchDiv.appendChild(resultsContainer);
             }
         }
 
