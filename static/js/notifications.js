@@ -75,7 +75,8 @@ class NotificationManager {
         if (this.permission !== 'granted') {
             console.warn('⚠️ Cannot show notification: permission not granted');
             // Fallback to in-app popup if permission denied/default
-            this.showPopup(title, body, 'info');
+            // Pass data as options (which may contain actions)
+            this.showPopup(title, body, 'info', data);
             return;
         }
 
@@ -147,14 +148,15 @@ class NotificationManager {
     }
 
     // Announcement notification
-    notifyAnnouncement(title, message) {
+    notifyAnnouncement(title, message, actions = []) {
         this.showNotification(
             `📢 ${title}`,
             message,
             '/static/icon-192.png',
             {
                 type: 'announcement',
-                tag: 'announcement'
+                tag: 'announcement',
+                actions: actions
             }
         );
     }
@@ -188,7 +190,18 @@ class NotificationManager {
     }
 
     // Show in-app popup notification (no permission needed)
-    showPopup(title, message, type = 'info', duration = 3000) {
+    showPopup(title, message, type = 'info', options = {}) {
+        // Handle legacy call: options might be just duration (number)
+        let duration = 3000;
+        let actions = [];
+
+        if (typeof options === 'number') {
+            duration = options;
+        } else {
+            duration = options.duration !== undefined ? options.duration : 3000;
+            actions = options.actions || [];
+        }
+
         console.log(`[Popup] ${title}: ${message}`);
         const popup = document.createElement('div');
         popup.className = `notification-popup notification-${type}`;
@@ -201,18 +214,47 @@ class NotificationManager {
             bus: '🚌'
         };
 
+        let actionsHtml = '';
+        if (actions.length > 0) {
+            actionsHtml = `<div class="notification-actions">
+                ${actions.map((action, index) => `
+                    <button class="notification-action-btn" data-index="${index}">
+                        ${action.title}
+                    </button>
+                `).join('')}
+            </div>`;
+        }
+
         popup.innerHTML = `
             <div class="notification-content">
                 <div class="notification-icon">${icons[type] || icons.info}</div>
                 <div class="notification-text">
                     <div class="notification-title">${title}</div>
                     <div class="notification-message">${message}</div>
+                    ${actionsHtml}
                 </div>
                 <button class="notification-close" aria-label="Close notification">
                     ✕
                 </button>
             </div>
         `;
+
+        // Handle Action Clicks
+        if (actions.length > 0) {
+            const actionBtns = popup.querySelectorAll('.notification-action-btn');
+            actionBtns.forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    if (actions[index] && actions[index].action) {
+                        actions[index].action(); // Execute callback
+                    }
+                    // Close popup after action? Optional. Let's close it.
+                    popup.classList.remove('show');
+                    setTimeout(() => popup.remove(), 300);
+                };
+            });
+        }
 
         // Handle close button click
         const closeBtn = popup.querySelector('.notification-close');
@@ -227,12 +269,17 @@ class NotificationManager {
         document.body.appendChild(popup);
 
         // Animate in
-        // Use requestAnimationFrame to ensure DOM is updated before adding class
         requestAnimationFrame(() => {
             popup.classList.add('show');
         });
 
-        // Auto remove
+        // Auto remove (only if no actions, or very long duration? Usually sticky if actions present)
+        // If actions are important, maybe don't auto-close?
+        // User requested: "mark as read". If they ignore it, it should vanish.
+        // But if it vanishes, they can't mark as read.
+        // Let's set a longer duration if actions exist, e.g. 10s, or keep default.
+        // User said "pops up every time", so probably auto-close is fine, they just want to stop FUTURE ones.
+
         if (duration > 0) {
             setTimeout(() => {
                 if (popup.parentElement) {

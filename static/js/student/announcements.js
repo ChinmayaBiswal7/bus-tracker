@@ -7,8 +7,9 @@ let unsubscribeMessages = {};
 import { notifications } from '../notifications.js';
 
 // Helper: Send Notification (Local)
-function sendLocalNotification(title, body) {
-    notifications.notifyAnnouncement(title, body);
+// Helper: Send Notification (Local)
+function sendLocalNotification(title, body, actions = []) {
+    notifications.notifyAnnouncement(title, body, actions);
 }
 
 export function initAnnouncements() {
@@ -20,6 +21,17 @@ export function initAnnouncements() {
 
     const appLoadTime = new Date(); // Time when this script loaded
     const notifiedIds = new Set(); // Track notified updates this session
+
+    // Load persisted read states
+    let readAnnouncementIds = new Set();
+    try {
+        const stored = localStorage.getItem('read_announcements');
+        if (stored) {
+            readAnnouncementIds = new Set(JSON.parse(stored));
+        }
+    } catch (e) {
+        console.warn("Failed to load read announcements:", e);
+    }
 
     onSnapshot(qBuses, (snapshot) => {
         activeBuses = [];
@@ -41,24 +53,41 @@ export function initAnnouncements() {
                 // 2. Must not have been notified already in this session
                 // 3. Must be relatively fresh (e.g. within last 5 mins) to avoid stale checks
                 if (change.type === "modified" || change.type === "added") {
-                    if (msgTime > appLoadTime && !notifiedIds.has(busId)) {
+
+                    // Check persistent read state AND session state
+                    if (msgTime > appLoadTime && !notifiedIds.has(busId) && !readAnnouncementIds.has(busId)) {
                         console.log("Triggering Notification for:", data.bus_no);
-                        sendLocalNotification(`📢 Bus ${data.bus_no}`, data.latest_message || "New announcement");
+
+                        sendLocalNotification(
+                            `📢 Bus ${data.bus_no}`,
+                            data.latest_message || "New announcement",
+                            [{
+                                title: "Mark as Read",
+                                action: () => {
+                                    console.log("Marking as read:", busId);
+                                    readAnnouncementIds.add(busId);
+                                    // Persist
+                                    localStorage.setItem('read_announcements', JSON.stringify([...readAnnouncementIds]));
+                                    // Also maybe show a toast? Optional.
+                                }
+                            }]
+                        );
                         notifiedIds.add(busId);
                     }
                 }
+            }
             });
-        }
+}
 
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            activeBuses.push({ id: doc.id, ...data });
-        });
-        updateBadge();
+snapshot.forEach(doc => {
+    const data = doc.data();
+    activeBuses.push({ id: doc.id, ...data });
+});
+updateBadge();
 
-        if (overlayEl && !overlayEl.classList.contains('hidden')) {
-            renderBusList();
-        }
+if (overlayEl && !overlayEl.classList.contains('hidden')) {
+    renderBusList();
+}
     });
 }
 
