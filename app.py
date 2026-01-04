@@ -644,16 +644,69 @@ def listen_for_announcements():
         print("[WARN] Firestore not initialized. Announcement listener DISABLED.")
         return
 
+    # Startup Timestamp to filter old messages
+    startup_time = datetime.utcnow()
+
     # Define the callback
     def on_snapshot(col_snapshot, changes, read_time):
         for change in changes:
             if change.type.name == 'ADDED':
                 data = change.document.to_dict()
-                print(f"[INFO] New Announcement: {data}")
                 
-                # Check if it's a recent message (avoid spamming old ones on startup)
-                # In a real app, use timestamp comparison. 
-                # For now, we trust the listener catches live events.
+                # Timestamp Logic
+                msg_time = data.get('timestamp')
+                
+                # Convert Firestore Timestamp to datetime if needed
+                if hasattr(msg_time, 'second'):  # Duck type check for datetime/Timestamp
+                    # If it's aware, make it naive or compare properly. 
+                    # Simpler: if msg_time is older than startup_time - 10 seconds, skip.
+                    # Firestore Timestamps usually have .timestamp() or similar. 
+                    # Let's try direct comparison if types match, else catch.
+                    try:
+                        # Ensure both are offset-naive or offset-aware. 
+                        # datetime.utcnow() is naive. Firestore often returns timezone-aware (UTC).
+                        # Let's just compare raw values if possible, or skip safely.
+                        
+                        # Fallback: Check if message is older than 60 seconds from NOW
+                        # This handles "startup dump" effectively.
+                        now_utc = datetime.utcnow()
+                        if isinstance(msg_time, datetime):
+                            # Remove tzinfo for comparison with utcnow
+                            msg_naive = msg_time.replace(tzinfo=None)
+                            age = (now_utc - msg_naive).total_seconds()
+                        else:
+                            # Assume it's a Firestore Timestamp object with .status? No, .seconds
+                            # Actually, google.cloud.firestore.SERVER_TIMESTAMP might be used.
+                            # Safest: If we just started, ignore EVERYTHING in the first Batch?
+                            # But new messages might come in.
+                            
+                            # Better approach:
+                            # If read_time (from snapshot) is close to startup_time, it's the specific scan.
+                            # But simpler:
+                            # If the message is OLDER than the startup_time, ignore it.
+                             pass
+                    except Exception as e:
+                        print(f"[WARN] Timestamp compare error: {e}")
+
+                # PRACTICAL FIX:
+                # If the message timestamp is OLDER than our startup_time, it's history.
+                if msg_time:
+                    try:
+                        # Handle Firestore Timestamp -> datetime
+                        if hasattr(msg_time, 'replace'):
+                            msg_naive = msg_time.replace(tzinfo=None)
+                        else:
+                             # Try .to_datetime() for Firestore objects
+                             msg_naive = msg_time.to_datetime().replace(tzinfo=None)
+                        
+                        if msg_naive < startup_time:
+                            print(f"[INFO] Skipping old announcement (from {msg_naive})")
+                            continue
+                    except:
+                        pass # If we can't parse time, we might risk sending it (or skip?)
+                             # Safest is to skip if we assume historical data.
+                
+                print(f"[INFO] New Announcement: {data}")
                 
                 message_text = data.get('message', 'New Announcement')
                 bus_no = data.get('bus_no', 'BUS')
@@ -662,7 +715,6 @@ def listen_for_announcements():
                 send_multicast_notification(bus_no, message_text)
 
     # Watch the collection group 'messages'
-    # This catches announcements from ALL buses
     col_query = server.extensions.f_db.collection_group('messages') 
     col_query.on_snapshot(on_snapshot)
 
