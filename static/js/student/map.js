@@ -126,6 +126,8 @@ function renderBusList() {
 
     activeEntries.forEach(({ id: busId, info }) => {
         const item = document.createElement('div');
+        // Add Identifying Attribute for Search Sync
+        item.setAttribute('data-bus-no', info.bus_no);
         item.className = "group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
 
         // Row Click: Track Bus
