@@ -430,6 +430,7 @@ function renderRouteTimeline(stops) {
 
     // Clear list (keep the vertical line div)
     // We recreate stricture: Line + items
+    container.scrollTop = 0; // Reset scroll position
     container.innerHTML = `<div class="absolute left-[27px] top-6 bottom-0 w-0.5 bg-slate-700 z-0"></div>`;
 
     stops.forEach((stop, index) => {
