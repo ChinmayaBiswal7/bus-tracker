@@ -15,41 +15,58 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
+// Store shown notifications to prevent duplicates
+const shownNotifications = new Set();
+const NOTIFICATION_TIMEOUT = 60000; // 1 minute
+
+// Clean up old notifications
+setInterval(() => { shownNotifications.clear(); }, NOTIFICATION_TIMEOUT);
+
 messaging.onBackgroundMessage(function (payload) {
     console.log('[sw.js] Received background message ', payload);
 
-    // 1. Check if App is Open & Focused
-    // If yes, suppress notification (let the in-app UI handle it)
+    // 1. Check if App is Open & Focused (Suppress)
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
         for (var i = 0; i < clientList.length; i++) {
             var client = clientList[i];
             if (client.url.includes('/') && 'focus' in client && client.visibilityState === 'visible') {
-                console.log('[sw.js] App is open and visible. Suppressing system notification.');
-                return; // EXIT: Do not show system notification
+                console.log('[sw.js] App open. Suppressing.');
+                return;
             }
         }
 
-        // 2. Prepare Notification
+        // 2. Prepare Data
         const data = payload.data || payload.notification;
         const title = data.title || "New Announcement";
-        const body = data.body || "Check the app for updates.";
+        const body = data.body || "Check app";
 
-        // 3. Actions (Mark as Read)
+        // UNIQUE TAG Generation (Critical for prevention)
+        // Use provided tag or generate one from content
+        const tag = data.tag || `msg-${title}-${body}`.replace(/\s+/g, '-');
+
+        // 3. DEDUPLICATION CHECK
+        if (shownNotifications.has(tag)) {
+            console.log('[sw.js] Duplicate prevented:', tag);
+            return;
+        }
+        shownNotifications.add(tag);
+
         const notificationOptions = {
             body: body,
             icon: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
             data: { url: '/' },
+            tag: tag, // Browser handles replacement if same tag
+            renotify: false, // Don't buzz again if same tag
             actions: [
                 { action: 'mark_read', title: 'Mark as Read' },
                 { action: 'view', title: 'View App' }
-            ],
-            tag: 'campus-ride-announcement', // Replace existing to prevent stack
-            renotify: true
+            ]
         };
 
         return self.registration.showNotification(title, notificationOptions);
     });
 });
+
 
 self.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {

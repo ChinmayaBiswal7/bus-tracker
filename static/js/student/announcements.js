@@ -145,6 +145,8 @@ export function initAnnouncements() {
                     if (msgTime > appLoadTime && !notifiedIds.has(busId) && !readAnnouncementIds.has(busId)) {
                         console.log("Triggering Notification for:", data.bus_no);
 
+                        /*
+                        // OLD LOGIC - REPLACED BY AnnouncementManager
                         sendLocalNotification(
                             `📢 Bus ${data.bus_no}`,
                             data.latest_message || "New announcement",
@@ -158,7 +160,8 @@ export function initAnnouncements() {
                                 }
                             }]
                         );
-                        notifiedIds.add(busId);
+                        notifiedIds.add(busId); 
+                        */
                     }
                 }
             });
@@ -345,7 +348,231 @@ function renderMessage(container, data) {
     item.className = "bg-slate-800/40 border-l-2 border-blue-500 pl-3 py-1";
     item.innerHTML = `
     <p class="text-slate-300 text-sm leading-relaxed mb-1">${data.message}</p>
-    <p class="text-[10px] text-slate-500">${dateStr}</p>
+    <p class="text-[10px] text-slate-500">${dateStr}
+
+// --- NEW ANNOUNCEMENT MANAGER (DEDUPLICATION FIX) ---
+
+class AnnouncementManager {
+    constructor() {
+        this.seenAnnouncements = new Set();
+        this.notificationQueue = new Map();
+        this.loadSeenAnnouncements();
+        this.init();
+    }
+
+    init() {
+        console.log('📢 Announcement Manager initialized');
+        this.listenForAnnouncements();
+        this.markVisibleAnnouncementsAsSeen();
+    }
+
+    loadSeenAnnouncements() {
+        try {
+            const seen = localStorage.getItem('seenAnnouncements');
+            if (seen) {
+                this.seenAnnouncements = new Set(JSON.parse(seen));
+                console.log(`✓ Loaded ${ this.seenAnnouncements.size } seen announcements`);
+            }
+        } catch (error) {
+            console.error('Error loading seen announcements:', error);
+        }
+    }
+
+    saveSeenAnnouncements() {
+        try {
+            localStorage.setItem('seenAnnouncements', 
+                JSON.stringify([...this.seenAnnouncements]));
+        } catch (error) {
+            console.error('Error saving seen announcements:', error);
+        }
+    }
+
+    createAnnouncementId(announcement) {
+        const content = announcement.message || announcement.body || '';
+        const busNo = announcement.bus_no || announcement.busNo || '';
+        // handle timestamp object or string
+        let ts = '';
+        if (announcement.timestamp && announcement.timestamp.seconds) {
+             ts = announcement.timestamp.seconds;
+        } else {
+             ts = announcement.timestamp || '';
+        }
+        
+        return `${ busNo } -${ content.substring(0, 50) } -${ ts } `.replace(/\s/g, '');
+    }
+
+    hasSeenAnnouncement(announcementId) {
+        return this.seenAnnouncements.has(announcementId);
+    }
+
+    markAnnouncementAsSeen(announcementId) {
+        this.seenAnnouncements.add(announcementId);
+        this.saveSeenAnnouncements();
+        console.log(`✓ Marked announcement as seen: ${ announcementId.substring(0, 20) }...`);
+    }
+
+    listenForAnnouncements() {
+        // Socket.io
+        if (typeof socket !== 'undefined' && socket) {
+            socket.off('new_announcement'); 
+            socket.on('new_announcement', (data) => {
+                console.log('📢 New announcement received:', data);
+                this.handleNewAnnouncement(data);
+            });
+        }
+
+        // Firebase (Modular SDK Adaptation)
+        this.listenToFirebaseAnnouncements();
+    }
+
+    listenToFirebaseAnnouncements() {
+        const q = query(
+            collection(db, 'announcements'), 
+            orderBy('last_updated', 'desc'), 
+            limit(5)
+        );
+
+        if (this.firebaseUnsub) this.firebaseUnsub();
+
+        this.firebaseUnsub = onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+                if (change.type === 'added' || change.type === "modified") {
+                    const data = change.doc.data();
+                    const announcement = {
+                        id: change.doc.id,
+                        bus_no: data.bus_no,
+                        message: data.latest_message,
+                        timestamp: data.last_updated
+                    };
+                    this.handleNewAnnouncement(announcement);
+                }
+            });
+        });
+    }
+
+    handleNewAnnouncement(announcement) {
+        if (!announcement.message) return;
+
+        const announcementId = this.createAnnouncementId(announcement);
+
+        if (this.hasSeenAnnouncement(announcementId)) {
+            console.log('⏭️ Skipping seen announcement');
+            return;
+        }
+
+        if (this.notificationQueue.has(announcementId)) {
+            console.log('⏭️ Skipping duplicate in queue');
+            return;
+        }
+
+        this.notificationQueue.set(announcementId, announcement);
+
+        setTimeout(() => {
+            if (this.notificationQueue.has(announcementId)) {
+                this.showNotification(announcement, announcementId);
+                this.notificationQueue.delete(announcementId);
+            }
+        }, 500);
+    }
+
+    showNotification(announcement, announcementId) {
+        const busNo = announcement.bus_no || announcement.busNo || '';
+        const message = announcement.message || announcement.body || 'New announcement';
+        const title = `📢 Bus ${ busNo } `;
+
+        console.log('🔔 Showing notification:', title);
+
+        if (Notification.permission === 'granted') {
+             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then((registration) => {
+                    registration.showNotification(title, {
+                        body: message,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+                        badge: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+                        tag: announcementId, 
+                        renotify: false,
+                        vibrate: [200, 100, 200],
+                        data: {
+                            announcementId: announcementId,
+                            url: '/student'
+                        }
+                    });
+                });
+             } else {
+                 new Notification(title, { body: message, tag: announcementId });
+             }
+        }
+
+        this.showInAppNotification(title, message, announcementId);
+
+        setTimeout(() => {
+            this.markAnnouncementAsSeen(announcementId);
+        }, 5000);
+    }
+
+    showInAppNotification(title, message, announcementId) {
+        if (document.querySelector(`[data - announcement - id= "${announcementId}"]`)) return;
+
+        const notification = document.createElement('div');
+        notification.setAttribute('data-announcement-id', announcementId);
+        notification.style.cssText = `
+    position: fixed; top: 80px; left: 50 %; transform: translateX(-50 %);
+    background: linear - gradient(135deg, #3b82f6 0 %, #2563eb 100 %);
+    color: white; padding: 16px 24px; border - radius: 12px;
+    box - shadow: 0 10px 40px rgba(59, 130, 246, 0.4); z - index: 9999;
+    max - width: 90 %; animation: slideDown 0.3s ease - out; cursor: pointer;
+    `;
+        notification.innerHTML = `
+        < div style = "display:flex;align-items:start;gap:12px;" >
+                <div style="font-size:24px;">📢</div>
+                <div style="flex:1;">
+                    <strong style="font-size:15px;display:block;margin-bottom:4px;">${title}</strong>
+                    <div style="font-size:13px;opacity:0.95;line-height:1.4;">
+                        ${message.substring(0, 100)}
+                    </div>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" 
+                        style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">✕</button>
+            </div >
+        `;
+        
+        notification.onclick = (e) => {
+            if (e.target.tagName !== 'BUTTON') {
+                this.markAnnouncementAsSeen(announcementId);
+                notification.remove();
+            }
+        };
+
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.style.opacity = '0';
+                setTimeout(() => notification.remove(), 500);
+            }
+        }, 8000);
+    }
+
+    markVisibleAnnouncementsAsSeen() {
+         // Placeholder for the scroll logic if needed
+    }
+}
+
+// Add CSS
+const style = document.createElement('style');
+style.textContent = `@keyframes slideDown { from { transform: translateX(-50 %) translateY(-100px); opacity: 0; } to { transform: translateX(-50 %) translateY(0); opacity: 1; } } `;
+document.head.appendChild(style);
+
+// Init
+let announcementManager;
+if (!window.announcementManager) {
+    announcementManager = new AnnouncementManager();
+    window.announcementManager = announcementManager;
+}
+
+// Clear old seen announcements daily
+setInterval(() => {
+    // cleanup logic
+}, 86400000);</p>
 `;
     container.appendChild(item);
 }
