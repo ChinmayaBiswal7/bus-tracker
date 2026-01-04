@@ -15,24 +15,40 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
+messaging.onBackgroundMessage(function (payload) {
     console.log('[sw.js] Received background message ', payload);
 
-    // Support both Data and Notification payloads (backward compat)
-    const data = payload.data || payload.notification;
-    const notificationTitle = data.title || data.title; // Handle inconsistent naming if needed
+    // 1. Check if App is Open & Focused
+    // If yes, suppress notification (let the in-app UI handle it)
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
+        for (var i = 0; i < clientList.length; i++) {
+            var client = clientList[i];
+            if (client.url.includes('/') && 'focus' in client && client.visibilityState === 'visible') {
+                console.log('[sw.js] App is open and visible. Suppressing system notification.');
+                return; // EXIT: Do not show system notification
+            }
+        }
 
-    // If it's a data message, title might be inside data
-    const title = payload.data?.title || payload.notification?.title || "New Announcement";
-    const body = payload.data?.body || payload.notification?.body || "Check the app for updates.";
+        // 2. Prepare Notification
+        const data = payload.data || payload.notification;
+        const title = data.title || "New Announcement";
+        const body = data.body || "Check the app for updates.";
 
-    const notificationOptions = {
-        body: body,
-        icon: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
-        data: { url: '/' }
-    };
+        // 3. Actions (Mark as Read)
+        const notificationOptions = {
+            body: body,
+            icon: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+            data: { url: '/' },
+            actions: [
+                { action: 'mark_read', title: 'Mark as Read' },
+                { action: 'view', title: 'View App' }
+            ],
+            tag: 'campus-ride-announcement', // Replace existing to prevent stack
+            renotify: true
+        };
 
-    self.registration.showNotification(title, notificationOptions);
+        return self.registration.showNotification(title, notificationOptions);
+    });
 });
 
 self.addEventListener('message', (event) => {
@@ -49,9 +65,12 @@ self.addEventListener('notificationclick', function (event) {
     const action = event.action;
     const notification = event.notification;
 
+    // Always close the notification first
     notification.close();
 
-    if (action === 'close') {
+    if (action === 'close' || action === 'mark_read') {
+        // Just close (already done above)
+        console.log('[sw.js] Notification closed/marked as read');
         return;
     }
 
