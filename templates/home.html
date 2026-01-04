@@ -23,6 +23,13 @@
 
 <body class="min-h-screen w-full flex flex-col items-center justify-center p-6 relative overflow-x-hidden py-10">
 
+    <!-- Static Loading Overlay (Prevents Flicker) -->
+    <div id="loading-overlay"
+        class="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-slate-400 text-sm animate-pulse">Checking session...</p>
+    </div>
+
     <!-- Background Orbs -->
     <div class="orb w-96 h-96 bg-purple-600 -top-20 -left-20 animate-pulse"></div>
     <div class="orb w-80 h-80 bg-blue-600 -bottom-20 -right-20 animate-pulse" style="animation-duration: 4s;"></div>

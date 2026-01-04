@@ -2,13 +2,7 @@ import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Show loading state
-document.body.insertAdjacentHTML('beforeend', `
-    <div id="loading-overlay" class="fixed inset-0 bg-slate-900 z-50 flex flex-col items-center justify-center transition-opacity duration-500">
-        <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p class="text-slate-400 text-sm animate-pulse">Checking session...</p>
-    </div>
-`);
+
 
 onAuthStateChanged(auth, async (user) => {
     const overlay = document.getElementById('loading-overlay');

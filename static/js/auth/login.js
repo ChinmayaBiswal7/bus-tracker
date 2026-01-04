@@ -115,8 +115,10 @@ if (form) {
                 }
             }
 
-            // Redirect
-            window.location.href = role === 'driver' ? '/driver' : '/student';
+            // Redirect with small delay for persistence
+            setTimeout(() => {
+                window.location.href = role === 'driver' ? '/driver' : '/student';
+            }, 500);
 
         } catch (error) {
             console.error(error);
