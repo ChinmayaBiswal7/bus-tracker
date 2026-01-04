@@ -401,7 +401,12 @@ class AnnouncementManager {
             ts = announcement.timestamp || '';
         }
 
-        return `${busNo} -${content.substring(0, 50)} -${ts} `.replace(/\s/g, '');
+        // Sanitize: Only allow alphanumeric and dashes
+        // fix: encode or strip emojis/special chars that break querySelector
+        const safeContent = content.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '');
+        const safeBus = String(busNo).replace(/[^a-zA-Z0-9]/g, '');
+
+        return `msg-${safeBus}-${safeContent}-${ts}`;
     }
 
     hasSeenAnnouncement(announcementId) {
