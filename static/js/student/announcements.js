@@ -573,4 +573,8 @@ if (!window.announcementManager) {
 }
 
 // Clear old seen announcements daily
+setInterval(() => {
+    if (announcementManager) {
+        announcementManager.clearOldSeenAnnouncements();
+    }
 }, 86400000);
