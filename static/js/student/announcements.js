@@ -18,21 +18,37 @@ export function initAnnouncements() {
     // Listener
     const qBuses = query(collection(db, "announcements"), orderBy("last_updated", "desc"), limit(50));
 
+    const appLoadTime = new Date(); // Time when this script loaded
+    const notifiedIds = new Set(); // Track notified updates this session
+
     onSnapshot(qBuses, (snapshot) => {
         activeBuses = [];
 
-        snapshot.docChanges().forEach((change) => {
-            if (change.type === "added" || change.type === "modified") {
+        // Skip initial "added" events (when snapshot first loads)
+        // We only want REAL-TIME updates to trigger popups.
+        if (!snapshot.metadata.hasPendingWrites) {
+            snapshot.docChanges().forEach((change) => {
                 const data = change.doc.data();
-                const now = new Date();
-                const msgTime = data.last_updated ? data.last_updated.toDate() : new Date();
+                const busId = change.doc.id;
 
-                if ((now - msgTime) < 60000) {
-                    console.log("Triggering Notification for:", data.bus_no);
-                    sendLocalNotification(`📢 Bus ${data.bus_no}`, data.latest_message || "New announcement");
+                // Ensure valid timestamp
+                if (!data.last_updated) return;
+
+                const msgTime = data.last_updated.toDate();
+
+                // Notification Logic:
+                // 1. Must be a NEW message (arrived after app loaded)
+                // 2. Must not have been notified already in this session
+                // 3. Must be relatively fresh (e.g. within last 5 mins) to avoid stale checks
+                if (change.type === "modified" || change.type === "added") {
+                    if (msgTime > appLoadTime && !notifiedIds.has(busId)) {
+                        console.log("Triggering Notification for:", data.bus_no);
+                        sendLocalNotification(`📢 Bus ${data.bus_no}`, data.latest_message || "New announcement");
+                        notifiedIds.add(busId);
+                    }
                 }
-            }
-        });
+            });
+        }
 
         snapshot.forEach(doc => {
             const data = doc.data();
