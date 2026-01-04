@@ -4,14 +4,11 @@ import { toggleSidebar } from './ui.js';
 let activeBuses = [];
 let unsubscribeMessages = {};
 
+import { notifications } from '../notifications.js';
+
 // Helper: Send Notification (Local)
 function sendLocalNotification(title, body) {
-    if (Notification.permission === 'granted') {
-        new Notification(title, {
-            body: body,
-            icon: "https://cdn-icons-png.flaticon.com/512/3233/3233914.png"
-        });
-    }
+    notifications.notifyAnnouncement(title, body);
 }
 
 export function initAnnouncements() {

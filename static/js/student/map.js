@@ -1,4 +1,5 @@
 import { updateServerStatus, updateGpsStatus } from './ui.js';
+import { notifications } from '../notifications.js';
 
 let map;
 let userMarker = null;
@@ -596,12 +597,35 @@ function updateRoute() {
 
     runFallbackRouting(busLatLng, tripEta, tripDist);
 
+    // Check Proximity for Notification
+    checkProximityAndNotify(busMarker.getLatLng(), distanceKm, finalTimeMin);
+
     // DEBOUNCE: Only update OSRM every 2 seconds to prevent map jank
     if (window.routeDebounce) clearTimeout(window.routeDebounce);
     window.routeDebounce = setTimeout(() => {
         executeOsrmRoute(waypoints);
         updateTimelinePosition(busLatLng);
     }, 2000);
+}
+
+// Proximity Notification State
+let hasNotifiedArrival = false;
+let lastNotifiedBusId = null;
+
+function checkProximityAndNotify(busLatLng, distKm, etaMin) {
+    // Reset if tracking a new bus
+    if (lastNotifiedBusId !== targetBusId) {
+        hasNotifiedArrival = false;
+        lastNotifiedBusId = targetBusId;
+    }
+
+    if (!hasNotifiedArrival && distKm < 0.8) { // 800m threshold
+        const busNo = lastBusData[targetBusId]?.bus_no || "Unknown";
+        console.log(`[NOTIFY] Bus ${busNo} is near (${distKm}km)`);
+
+        notifications.notifyBusArrival(busNo, "Your Location", etaMin);
+        hasNotifiedArrival = true;
+    }
 }
 
 // --- NEW: Update Timeline Position ---

@@ -42,12 +42,11 @@ export async function initFCM() {
     }
 }
 
+import { notifications } from '../notifications.js';
+
 onMessage(messaging, (payload) => {
-    console.log('Message received. ', payload);
-    if (Notification.permission === 'granted') {
-        new Notification(payload.notification.title, {
-            body: payload.notification.body,
-            icon: "https://cdn-icons-png.flaticon.com/512/3233/3233914.png"
-        });
-    }
+    console.log('[FCM] Message received: ', payload);
+    const { title, body, icon } = payload.notification;
+    // Use the robust manager which handles Service Worker fallback logic automatically
+    notifications.showNotification(title, body, icon);
 });

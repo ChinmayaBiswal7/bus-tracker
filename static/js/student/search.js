@@ -1,3 +1,5 @@
+import { getActiveBuses } from './map.js';
+
 /**
  * FIXED: Bus Stop Search with Working Click Handler & Clickable Bus Numbers
  * Adapted for 'trackInput' ID
@@ -60,9 +62,21 @@ export class BusStopSearch {
         const sidebar = document.querySelector('.sidebar') || document.body;
 
         sidebar.addEventListener('click', (e) => {
-            // Check if clicked on bus number badge
+            // Check if clicked using our new dedicated class for search results items
+            // 1. Bus Result Item
+            const busItem = e.target.closest('.bus-result-item');
+            if (busItem) {
+                e.preventDefault();
+                const busNo = busItem.dataset.busNo;
+                const stopName = "Search Result"; // Context
+                console.log(`🚌 Clicking Bus Result: ${busNo}`);
+                this.locateBus(busNo, stopName);
+                return;
+            }
+
+            // 2. Existing Logic: Bus Number Badge inside Stop Item
             const busBadge = e.target.closest('[data-bus-no]');
-            if (busBadge) {
+            if (busBadge && !busBadge.classList.contains('bus-result-item')) {
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -74,11 +88,14 @@ export class BusStopSearch {
                 return;
             }
 
-            // Check if clicked on stop name (to show stop location)
+            // 3. Stop Item
             const stopItem = e.target.closest('[data-stop-name]');
             if (stopItem && !stopItem.hasAttribute('data-bus-no')) {
                 e.preventDefault();
                 e.stopPropagation();
+
+                // If it's a bus result masquerading as stop (unlikely with new logic), ignore
+                if (stopItem.classList.contains('bus-result-item')) return;
 
                 const stopName = stopItem.dataset.stopName;
                 const lat = parseFloat(stopItem.dataset.lat);
@@ -95,7 +112,7 @@ export class BusStopSearch {
 
         const trimmedQuery = query.trim();
 
-        if (trimmedQuery.length < 2) {
+        if (trimmedQuery.length < 1) { // Allow 1 char for bus numbers
             this.hideResults();
             return;
         }
@@ -110,14 +127,50 @@ export class BusStopSearch {
     async performSearch(query) {
         try {
             console.log('📡 Fetching results...');
+            const qLower = query.toLowerCase();
 
-            const response = await fetch(`/api/search-stop?q=${encodeURIComponent(query)}&threshold=0.4`);
-            const data = await response.json();
+            // 1. Search Active Buses (Local)
+            const busResults = [];
+            const allBuses = getActiveBuses();
+            if (allBuses) {
+                Object.values(allBuses).forEach(info => {
+                    const bNo = String(info.bus_no).toLowerCase();
+                    if (bNo.includes(qLower)) {
+                        busResults.push({
+                            type: 'bus',
+                            bus_no: info.bus_no,
+                            status: info.offline ? 'Offline' : (info.crowd || 'Live'),
+                            isOffline: info.offline
+                        });
+                    }
+                });
+            }
 
-            console.log('📦 Response:', data);
+            // 2. Search Stops (API)
+            let stopResults = [];
+            // Only search API if query length >= 2 to save calls, unless it's a number
+            if (query.length >= 2 || !isNaN(query)) {
+                try {
+                    const response = await fetch(`/api/search-stop?q=${encodeURIComponent(query)}&threshold=0.4`);
+                    const data = await response.json();
+                    if (data.success && data.results.length > 0) {
+                        stopResults = data.results.map(r => ({ ...r, type: 'stop' }));
+                    }
+                } catch (e) {
+                    console.warn("Stop search API failed", e);
+                }
+            }
 
-            if (data.success && data.results.length > 0) {
-                this.displayResults(data.results);
+            const finalResults = [...busResults, ...stopResults];
+
+            console.log('📦 Combined Results:', finalResults);
+
+            if (finalResults.length > 0) {
+                this.displayResults(finalResults);
+
+                // Also trigger sidebar filter visually
+                if (window.setBusFilter) window.setBusFilter(query);
+
             } else {
                 this.displayNoResults(query);
             }
@@ -129,7 +182,7 @@ export class BusStopSearch {
     }
 
     displayResults(results) {
-        console.log('✓ Displaying', results.length, 'results');
+        console.log('✓ Rendering', results.length, 'results');
 
         // Find or create results container
         // Using our class .search-results-container
@@ -148,35 +201,66 @@ export class BusStopSearch {
 
         if (!resultsContainer) return;
 
-        // Build HTML with data attributes for click handling
-        const html = results.map(result => `
-            <div class="stop-result-item p-3 border-b border-slate-700"
-                 data-stop-name="${result.stop_name}"
-                 data-lat="${result.lat}"
-                 data-lng="${result.lng}">
-                
-                <div class="mb-2">
-                    <div class="font-medium text-white cursor-pointer hover:text-blue-400 transition-colors">
-                        📍 ${result.stop_name}
+        let html = '';
+
+        // Render Buses First
+        const buses = results.filter(r => r.type === 'bus');
+        if (buses.length > 0) {
+            html += `<div class="p-2 text-[10px] uppercase font-bold text-slate-500 bg-slate-900/50">Buses</div>`;
+            html += buses.map(bus => `
+                <div class="bus-result-item flex items-center justify-between p-3 border-b border-slate-700 hover:bg-slate-800 cursor-pointer transition-colors"
+                     data-bus-no="${bus.bus_no}">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full ${bus.isOffline ? 'bg-slate-600' : 'bg-blue-600'} flex items-center justify-center text-white font-bold text-xs">
+                            ${bus.bus_no}
+                        </div>
+                        <div>
+                            <p class="font-bold text-white text-sm">Bus ${bus.bus_no}</p>
+                            <p class="text-[10px] ${bus.isOffline ? 'text-slate-400' : 'text-green-400'}">
+                                ${bus.status}
+                            </p>
+                        </div>
                     </div>
-                    <div class="text-xs text-slate-400 mt-1">
-                        ${result.bus_count} bus${result.bus_count > 1 ? 'es' : ''} available
+                    <button class="text-xs bg-slate-700 hover:bg-blue-600 px-3 py-1 rounded-lg text-white transition-colors">
+                        Track
+                    </button>
+                </div>
+             `).join('');
+        }
+
+        // Render Stops
+        const stops = results.filter(r => r.type === 'stop');
+        if (stops.length > 0) {
+            html += `<div class="p-2 text-[10px] uppercase font-bold text-slate-500 bg-slate-900/50">Stops</div>`;
+            html += stops.map(result => `
+                <div class="stop-result-item p-3 border-b border-slate-700"
+                     data-stop-name="${result.stop_name}"
+                     data-lat="${result.lat}"
+                     data-lng="${result.lng}">
+
+                    <div class="mb-2">
+                        <div class="font-medium text-white cursor-pointer hover:text-blue-400 transition-colors">
+                            📍 ${result.stop_name}
+                        </div>
+                        <div class="text-xs text-slate-400 mt-1">
+                            ${result.bus_count} bus${result.bus_count > 1 ? 'es' : ''} available
+                        </div>
+                    </div>
+
+                    <!-- Clickable Bus Number Buttons -->
+                    <div class="flex gap-2 flex-wrap">
+                        ${result.buses.map(bus => `
+                            <button class="bus-locate-btn px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-sm transition-all hover:scale-105 active:scale-95 shadow-md"
+                                    data-bus-no="${bus}"
+                                    data-stop-name="${result.stop_name}"
+                                    title="Click to locate Bus ${bus} on map">
+                                🚌 ${bus}
+                            </button>
+                        `).join('')}
                     </div>
                 </div>
-                
-                <!-- Clickable Bus Number Buttons -->
-                <div class="flex gap-2 flex-wrap">
-                    ${result.buses.map(bus => `
-                        <button class="bus-locate-btn px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium text-sm transition-all hover:scale-105 active:scale-95 shadow-md"
-                                data-bus-no="${bus}"
-                                data-stop-name="${result.stop_name}"
-                                title="Click to locate Bus ${bus} on map">
-                            🚌 ${bus}
-                        </button>
-                    `).join('')}
-                </div>
-            </div>
-        `).join('');
+            `).join('');
+        }
 
         resultsContainer.innerHTML = html;
         resultsContainer.style.display = 'block';
