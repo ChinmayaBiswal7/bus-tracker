@@ -873,38 +873,40 @@ export function setBusFilter(filter) {
 }
 
 export function getActiveBuses() {
+    return lastBusData || {};
+}
 
-    // --- WAKE LOCK (Keep Screen On) ---
-    let wakeLock = null;
+// --- WAKE LOCK (Keep Screen On) ---
+let wakeLock = null;
 
-    async function requestWakeLock() {
-        try {
-            if ('wakeLock' in navigator) {
-                wakeLock = await navigator.wakeLock.request('screen');
-                console.log('💡 Screen Wake Lock active');
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('💡 Screen Wake Lock active');
 
-                // Re-acquire if visibility changes (e.g. user switches tabs and comes back)
-                document.addEventListener('visibilitychange', handleVisibilityChange);
-            }
-        } catch (err) {
-            console.warn(`Wake Lock Warning: ${err.name}, ${err.message}`);
+            // Re-acquire if visibility changes (e.g. user switches tabs and comes back)
+            document.addEventListener('visibilitychange', handleVisibilityChange);
         }
+    } catch (err) {
+        console.warn(`Wake Lock Warning: ${err.name}, ${err.message}`);
     }
+}
 
-    async function handleVisibilityChange() {
-        if (wakeLock !== null && document.visibilityState === 'visible') {
-            await requestWakeLock(); // Re-request
-        }
+async function handleVisibilityChange() {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock(); // Re-request
     }
+}
 
-    function releaseWakeLock() {
-        if (wakeLock !== null) {
-            wakeLock.release()
-                .then(() => {
-                    wakeLock = null;
-                    console.log('💡 Screen Wake Lock released');
-                });
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-        }
+function releaseWakeLock() {
+    if (wakeLock !== null) {
+        wakeLock.release()
+            .then(() => {
+                wakeLock = null;
+                console.log('💡 Screen Wake Lock released');
+            });
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
     }
+}
 
