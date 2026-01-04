@@ -132,9 +132,16 @@ export class BusStopSearch {
             // 1. Search Active Buses (Local)
             const busResults = [];
             const allBuses = getActiveBuses();
+
+            console.log(`[Search] Active Buses available:`, Object.keys(allBuses || {}).length);
+
             if (allBuses) {
                 Object.values(allBuses).forEach(info => {
-                    const bNo = String(info.bus_no).toLowerCase();
+                    // Robust check: Ensure bus_no exists
+                    if (!info || !info.bus_no) return;
+
+                    const bNo = String(info.bus_no).trim().toLowerCase();
+                    // Match Exact or Partial (e.g. "6" matches "61", "61" matches "61")
                     if (bNo.includes(qLower)) {
                         busResults.push({
                             type: 'bus',
@@ -268,6 +275,7 @@ export class BusStopSearch {
 
     displayNoResults(query) {
         let resultsContainer = document.querySelector('.search-results-container');
+        const activeBusCount = Object.keys(getActiveBuses() || {}).length;
 
         if (!resultsContainer) {
             const searchInput = document.getElementById('trackInput');
@@ -287,8 +295,9 @@ export class BusStopSearch {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                           d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
-                <p>No stops found for "<strong class="text-white">${query}</strong>"</p>
-                <p class="text-sm mt-1">Try a different search term</p>
+                <p>No matches for "<strong class="text-white">${query}</strong>"</p>
+                <p class="text-xs mt-2 text-slate-500">Scanned ${activeBusCount} active buses & stops.</p>
+                <p class="text-[10px] text-slate-600 mt-1">Try "Hostel" or "Square"</p>
             </div>
         `;
         resultsContainer.style.display = 'block';
