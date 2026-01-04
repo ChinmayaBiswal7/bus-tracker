@@ -291,6 +291,7 @@ class NotificationManager {
         // Let's set a longer duration if actions exist, e.g. 10s, or keep default.
         // User said "pops up every time", so probably auto-close is fine, they just want to stop FUTURE ones.
 
+        // Auto remove (only if no actions, or very long duration? Usually sticky if actions present)
         if (duration > 0) {
             setTimeout(() => {
                 if (popup.parentElement) {
@@ -298,6 +299,52 @@ class NotificationManager {
                     setTimeout(() => popup.remove(), 300);
                 }
             }, duration);
+        }
+
+        // --- FEEDBACK (Sound/Vibrate) ---
+        // 1. Vibrate
+        if (options.vibrate && navigator.vibrate) {
+            try {
+                navigator.vibrate(options.vibrate);
+            } catch (e) {
+                // Ignore focus/permission issues
+            }
+        }
+
+        // 2. Sound (Only if NOT silent)
+        if (options.silent !== true) {
+            this.playNotificationSound();
+        }
+    }
+
+    playNotificationSound() {
+        // Simple 'Ding' Sound (Base64)
+        const audio = new Audio("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"); // Short placeholder or real one?
+        // Let's use a real short beep (Base64 encoded simple ping)
+        // Using a very short, generic "pop" sound
+        const beep = "data:audio/mp3;base64,SUQzBAAAAAABAFRYWFgAAAASAAADbWFqb3JfYnJhbmQAbXA0MgBUWFhYAAAAEQAAA21pbm9yX3ZlcnNpb24AMABUWFhYAAAAHAAAA2NvbXBhdGlibGVfYnJhbmRzAGlzb21tcDQyAFRTU0UAAAAOAAADTGF2ZjU4LjQ1LjEwMAAAAAAAAAAAAAAA//uQZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWgAAAA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA//uQZAAP8AAAgAAAAAAgAAAAAAcAAABAAAAAAAAAAAAAAA";
+        // Actually, let's skip the huge base64 injection for now and just log, or use a shorter one if possible. 
+        // For reliability without external files, I will use a minimal oscillator if AudioContext allowed, or fail gracefully.
+
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+            osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.1);
+
+            gain.gain.setValueAtTime(0.1, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.start();
+            osc.stop(ctx.currentTime + 0.2);
+        } catch (e) {
+            console.warn("AudioContext block/error:", e);
         }
     }
 }

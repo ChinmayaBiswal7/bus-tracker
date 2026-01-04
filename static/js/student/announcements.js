@@ -81,22 +81,21 @@ document.addEventListener('DOMContentLoaded', loadNotificationMode);
 
 // Helper: Send Notification (Local)
 function sendLocalNotification(title, body, actions = []) {
-    // Mode 2: Silent (Popup Only -> Handled by logic, or we suppress sound)
-    const isSilent = (notificationMode === 2);
-    const canVibrate = (notificationMode === 0 || notificationMode === 1);
-
-    // We pass these flags to the generic notifier if supported, 
-    // OR we handle the sound/vibration here if the tool is simple.
-    // Assuming 'notifications.notifyAnnouncement' is our wrapper.
-
-    // If Silent Mode and app is in background, we might NOT want to show system notification at all?
-    // User requirement: "Silent" usually means Visual Only.
-
-    // Inject logic:
-    const options = {
-        silent: isSilent,
-        vibrate: canVibrate ? [200, 100, 200] : []
-    };
+    // Mode Logic
+    const options = {};
+    if (notificationMode === 0) {
+        // Normal: Sound + Vibrate
+        options.silent = false;
+        options.vibrate = [200, 100, 200];
+    } else if (notificationMode === 1) {
+        // Vibrate Only: Silent (No Sound) + Vibrate
+        options.silent = true;
+        options.vibrate = [200, 100, 200];
+    } else {
+        // Silent: No Sound, No Vibrate
+        options.silent = true;
+        options.vibrate = [];
+    }
 
     notifications.notifyAnnouncement(title, body, actions, options);
 }
