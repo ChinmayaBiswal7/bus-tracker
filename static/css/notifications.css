@@ -123,9 +123,7 @@
     /* Emerald */
 }
 
-.notification-success .notification-icon {
-    /* Optional: custom color for icon specific to type provided by JS mostly */
-}
+
 
 .notification-warning::before {
     background: #f59e0b;
