@@ -72,6 +72,15 @@ class NotificationManager {
 
     // Show basic notification (works even when app is closed)
     async showNotification(title, body, icon = '/static/icon-192.png', data = {}) {
+        // 1. Prefer In-App Popup if app is in foreground
+        // This ensures interactive buttons (like Mark as Read) work without Service Worker complexity
+        if (document.visibilityState === 'visible') {
+            console.log('📱 App in foreground, using In-App Popup');
+            // Pass data as options (which may contain actions)
+            this.showPopup(title, body, 'info', data);
+            return;
+        }
+
         if (this.permission !== 'granted') {
             console.warn('⚠️ Cannot show notification: permission not granted');
             // Fallback to in-app popup if permission denied/default
