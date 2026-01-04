@@ -519,19 +519,19 @@ class AnnouncementManager {
     }
 
     showInAppNotification(title, message, announcementId) {
-        if (document.querySelector(`[data - announcement - id= "${announcementId}"]`)) return;
+        if (document.querySelector(`[data-announcement-id="${announcementId}"]`)) return;
 
         const notification = document.createElement('div');
         notification.setAttribute('data-announcement-id', announcementId);
         notification.style.cssText = `
-    position: fixed; top: 80px; left: 50 %; transform: translateX(-50 %);
-    background: linear - gradient(135deg, #3b82f6 0 %, #2563eb 100 %);
-    color: white; padding: 16px 24px; border - radius: 12px;
-    box - shadow: 0 10px 40px rgba(59, 130, 246, 0.4); z - index: 9999;
-    max - width: 90 %; animation: slideDown 0.3s ease - out; cursor: pointer;
-    `;
+            position: fixed; top: 80px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white; padding: 16px 24px; border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(59, 130, 246, 0.4); z-index: 9999;
+            max-width: 90%; animation: slideDown 0.3s ease-out; cursor: pointer;
+        `;
         notification.innerHTML = `
-        < div style = "display:flex;align-items:start;gap:12px;" >
+            <div style="display:flex;align-items:start;gap:12px;">
                 <div style="font-size:24px;">📢</div>
                 <div style="flex:1;">
                     <strong style="font-size:15px;display:block;margin-bottom:4px;">${title}</strong>
