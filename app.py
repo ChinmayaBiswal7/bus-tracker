@@ -640,10 +640,11 @@ def send_multicast_notification(title_bus, body_text):
     try:
         topic = 'news' 
         message = messaging.Message(
-            notification=messaging.Notification(
-                title=f"📢 {title_bus}",
-                body=body_text,
-            ),
+            data={
+                'title': f"📢 {title_bus}",
+                'body': body_text,
+                'type': 'announcement'
+            },
             topic=topic,
         )
         response = messaging.send(message)
@@ -651,10 +652,9 @@ def send_multicast_notification(title_bus, body_text):
     except Exception as e:
         print('Error sending message:', e)
 
-# Start listener in a background thread
-# Start listener in a background thread
-# Start listener in a background thread
-gevent.spawn(listen_for_announcements)
+# Start listener in a background thread (Only in the reloader child process or production)
+if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
+    gevent.spawn(listen_for_announcements)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=3000, allow_unsafe_werkzeug=True)

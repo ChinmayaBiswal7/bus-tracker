@@ -17,14 +17,22 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
     console.log('[sw.js] Received background message ', payload);
-    const notificationTitle = payload.notification.title;
+
+    // Support both Data and Notification payloads (backward compat)
+    const data = payload.data || payload.notification;
+    const notificationTitle = data.title || data.title; // Handle inconsistent naming if needed
+
+    // If it's a data message, title might be inside data
+    const title = payload.data?.title || payload.notification?.title || "New Announcement";
+    const body = payload.data?.body || payload.notification?.body || "Check the app for updates.";
+
     const notificationOptions = {
-        body: payload.notification.body,
+        body: body,
         icon: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
         data: { url: '/' }
     };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    self.registration.showNotification(title, notificationOptions);
 });
 
 self.addEventListener('message', (event) => {
