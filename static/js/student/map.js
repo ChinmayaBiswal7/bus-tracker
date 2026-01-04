@@ -817,24 +817,20 @@ function generateDensityIcons(status) {
 }
 
 // Set Bus Filter (Called from Search/Main)
+// Set Bus Filter (Called from Search/Main)
 export function setBusFilter(filter) {
     if (Array.isArray(filter)) {
         // Normalize array: trim + lowercase
         currentBusFilter = filter.map(f => String(f).trim().toLowerCase());
+        console.log("[SET_FILTER] ARRAY:", currentBusFilter);
     } else {
         // Normalize string
         currentBusFilter = String(filter).trim().toLowerCase();
-    }
-    console.log("BUS FILTER SET:", currentBusFilter);
-    console.log("[SET_FILTER] INPUT:", filter);
-    if (Array.isArray(filter)) {
-        // Normalize array: trim + lowercase
-        currentBusFilter = filter.map(f => String(f).trim().toLowerCase());
-        console.log("[SET_FILTER] NORMALIZED ARRAY:", currentBusFilter);
-    } else {
-        // Normalize string
-        currentBusFilter = String(filter).trim().toLowerCase();
-        console.log("[SET_FILTER] NORMALIZED STRING:", currentBusFilter);
+        console.log("[SET_FILTER] STRING:", currentBusFilter);
     }
     renderBusList();
+}
+
+export function getActiveBuses() {
+    return lastBusData || {};
 }
