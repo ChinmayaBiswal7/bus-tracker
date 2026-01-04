@@ -75,11 +75,12 @@ function initializeAppComponents() {
     console.log("[Main] Initializing Components...");
     map = initMap();
     // NEW: Initialize search (User's Module)
+    // NEW: Initialize search (User's Module)
+    // initMap sets window.map, so use that. 
+    // Also assign to module-level searchUI variable for setFilter to work.
     if (typeof BusStopSearch !== 'undefined') {
-        window.searchUI = new BusStopSearch(map);
-    } else {
-        // Fallback if import worked but name check behaves oddly in modules
-        window.searchUI = new BusStopSearch(map);
+        searchUI = new BusStopSearch(window.map);
+        window.searchUI = searchUI; // Expose for debugging
     }
 
     initAnnouncements();
@@ -108,6 +109,18 @@ onAuthStateChanged(auth, (user) => {
 
         // Init App if not already done (idempotency check often good, but here simple call)
         initializeAppComponents();
+
+        // Auto-Check for Notifications (Prompt for new users)
+        setTimeout(() => {
+            if (Notification.permission === 'default') {
+                notifications.showPopup(
+                    "Stay Updated! 🔔",
+                    "Enable notifications to get bus arrival alerts.",
+                    "info",
+                    5000
+                );
+            }
+        }, 3000); // Delay slightly to not overwhelm
 
     } else {
         // Redirect if not logged in

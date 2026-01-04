@@ -597,8 +597,13 @@ function updateRoute() {
 
     runFallbackRouting(busLatLng, tripEta, tripDist);
 
+    // Calc vars locally for notification
+    const dist = map.distance([userLat, userLng], busLatLng);
+    const distKm = (dist / 1000).toFixed(1);
+    const etaMin = Math.ceil((distKm / 15) * 60); // Rough estimate till OSRM updates
+
     // Check Proximity for Notification
-    checkProximityAndNotify(busMarker.getLatLng(), distanceKm, finalTimeMin);
+    checkProximityAndNotify(busMarker.getLatLng(), distKm, etaMin);
 
     // DEBOUNCE: Only update OSRM every 2 seconds to prevent map jank
     if (window.routeDebounce) clearTimeout(window.routeDebounce);
