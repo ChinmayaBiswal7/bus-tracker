@@ -36,10 +36,20 @@ self.addEventListener('message', (event) => {
 const CACHE_NAME = 'bus-tracker-v6'; // Bump version
 
 // Handle Notification Click (Opens App)
+// Handle Notification Click (Opens App)
 self.addEventListener('notificationclick', function (event) {
-    event.notification.close();
+    const action = event.action;
+    const notification = event.notification;
+
+    notification.close();
+
+    if (action === 'close') {
+        return;
+    }
+
+    // Default behavior or 'view' action: Open/Focus App
     event.waitUntil(
-        clients.matchAll({ type: 'window' }).then(function (clientList) {
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (clientList) {
             // Check if app is already open
             for (var i = 0; i < clientList.length; i++) {
                 var client = clientList[i];

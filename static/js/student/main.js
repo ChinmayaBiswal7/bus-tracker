@@ -4,15 +4,28 @@ import { initMap, stopTrackingRoute, setBusFilter, startTrackingRoute, startTrac
 import { openSchedule, closeSchedule, initSchedule } from './schedule.js';
 import { openAnnouncements, closeAnnouncements, initAnnouncements } from './announcements.js';
 import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-directory.js';
-import { toggleSidebar, requestNotificationPermission, initTheme } from './ui.js';
+import { toggleSidebar, initTheme } from './ui.js';
 import { initFCM } from './fcm.js';
 import { initChat, toggleChat } from './chat.js';
 import { BusStopSearch } from './search.js'; // Search Module
+import { notifications } from '../notifications.js';
 
 
 // Attach Globals for HTML onclick attributes
 window.toggleSidebar = toggleSidebar;
-window.requestNotificationPermission = requestNotificationPermission;
+window.requestNotificationPermission = async () => {
+    const granted = await notifications.requestPermission();
+    if (granted) {
+        // Update UI (Ported from ui.js)
+        const notifyBtn = document.getElementById('btn-notify');
+        const notifyBadge = document.getElementById('notify-badge');
+        if (notifyBadge) notifyBadge.classList.add('hidden');
+        if (notifyBtn) notifyBtn.classList.replace('text-slate-400', 'text-green-400');
+
+        // Ensure FCM Token is retrieved
+        initFCM();
+    }
+};
 window.toggleChat = toggleChat;
 window.openSchedule = openSchedule;
 window.closeSchedule = closeSchedule;
@@ -103,4 +116,15 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // Keep Socket connection alive
-const socket = io(); 
+const socket = io();
+
+// Listen for Notification Permission (from popup or button)
+window.addEventListener('notification-permission-granted', () => {
+    console.log('[Main] Permission granted event received. Initializing FCM...');
+    initFCM();
+    // Update UI elements if present
+    const notifyBtn = document.getElementById('btn-notify');
+    const notifyBadge = document.getElementById('notify-badge');
+    if (notifyBadge) notifyBadge.classList.add('hidden');
+    if (notifyBtn) notifyBtn.classList.replace('text-slate-400', 'text-green-400');
+}); 
