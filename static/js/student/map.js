@@ -369,6 +369,12 @@ export function startTrackingRouteByBusNo(busNo) {
     // 4. Update Status/ETA
     updateRoute();
 
+    // Reset Proximity Flag for new bus
+    window.notifiedProximityBusId = null;
+
+    // Request Screen Keep-Awake
+    requestWakeLock();
+
     // 5. Logic: If we found the bus (Offline or Online), fly to it.
     if (targetBusId && lastBusData[targetBusId]) {
         console.log("[STUDENT] Found Bus in Data -> Locating:", busNo);
@@ -540,6 +546,11 @@ export function stopTrackingRoute() {
     if (targetBusId) {
         targetBusId = null;
     }
+
+    // Release Wake Lock
+    releaseWakeLock();
+    window.notifiedProximityBusId = null;
+
     const tripCard = document.getElementById('trip-info-card');
     if (tripCard) tripCard.classList.add('hidden');
 
@@ -597,20 +608,73 @@ function updateRoute() {
 
     runFallbackRouting(busLatLng, tripEta, tripDist);
 
-    // Calc vars locally for notification
-    const dist = map.distance([userLat, userLng], busLatLng);
-    const distKm = (dist / 1000).toFixed(1);
-    const etaMin = Math.ceil((distKm / 15) * 60); // Rough estimate till OSRM updates
+    // --- PROXIMITY ALERT LOGIC ---
+    // Check if within 1km (1000m)
+    const distMeters = map.distance([userLat, userLng], busLatLng);
 
-    // Check Proximity for Notification
-    checkProximityAndNotify(busMarker.getLatLng(), distKm, etaMin);
+    // Threshold: 1000m (1km)
+    if (distMeters < 1000) {
+        // Check if already notified for this specific bus session
+        if (!window.notifiedProximityBusId || window.notifiedProximityBusId !== targetBusId) {
+            console.log("🚨 Proximity Alert Triggered! Distance:", distMeters);
 
-    // DEBOUNCE: Only update OSRM every 2 seconds to prevent map jank
-    if (window.routeDebounce) clearTimeout(window.routeDebounce);
-    window.routeDebounce = setTimeout(() => {
-        executeOsrmRoute(waypoints);
-        updateTimelinePosition(busLatLng);
-    }, 2000);
+            // Trigger Notification
+            notifications.notifyBusArrival(
+                markers[targetBusId].bus_no || targetBusNo || "Bus",
+                `Arriving soon! Bus is ${Math.round(distMeters)}m away.`,
+                Math.round(distMeters / 1000 * 5) // Rough ETA estimate for alert
+            );
+
+            // Mark as notified to prevent spam
+            window.notifiedProximityBusId = targetBusId;
+        }
+    } else {
+        // Reset if we move far away? Maybe not needed for simple "arrival" logic.
+        // If we switch buses, targetBusId changes, so logic resets automatically.
+    }
+}
+
+// --- WAKE LOCK (Keep Screen On) ---
+let wakeLock = null;
+
+async function requestWakeLock() {
+    try {
+        if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('💡 Screen Wake Lock active');
+
+            // Re-acquire if visibility changes (e.g. user switches tabs and comes back)
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
+    } catch (err) {
+        console.warn(`Wake Lock Warning: ${err.name}, ${err.message}`);
+    }
+}
+
+async function handleVisibilityChange() {
+    if (wakeLock !== null && document.visibilityState === 'visible') {
+        await requestWakeLock(); // Re-request
+    }
+}
+
+function releaseWakeLock() {
+    if (wakeLock !== null) {
+        wakeLock.release()
+            .then(() => {
+                wakeLock = null;
+                console.log('💡 Screen Wake Lock released');
+            });
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }
+}
+checkProximityAndNotify(busMarker.getLatLng(), distKm, etaMin);
+
+// DEBOUNCE: Only update OSRM every 2 seconds to prevent map jank
+if (window.routeDebounce) clearTimeout(window.routeDebounce);
+window.routeDebounce = setTimeout(() => {
+    executeOsrmRoute(waypoints);
+    updateTimelinePosition(busLatLng);
+}, 2000);
 }
 
 // Proximity Notification State
@@ -624,7 +688,7 @@ function checkProximityAndNotify(busLatLng, distKm, etaMin) {
         lastNotifiedBusId = targetBusId;
     }
 
-    if (!hasNotifiedArrival && distKm < 0.8) { // 800m threshold
+    if (!hasNotifiedArrival && distKm < 1.0) { // 1km threshold
         const busNo = lastBusData[targetBusId]?.bus_no || "Unknown";
         console.log(`[NOTIFY] Bus ${busNo} is near (${distKm}km)`);
 
@@ -837,5 +901,38 @@ export function setBusFilter(filter) {
 }
 
 export function getActiveBuses() {
-    return lastBusData || {};
-}
+
+    // --- WAKE LOCK (Keep Screen On) ---
+    let wakeLock = null;
+
+    async function requestWakeLock() {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('💡 Screen Wake Lock active');
+
+                // Re-acquire if visibility changes (e.g. user switches tabs and comes back)
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+            }
+        } catch (err) {
+            console.warn(`Wake Lock Warning: ${err.name}, ${err.message}`);
+        }
+    }
+
+    async function handleVisibilityChange() {
+        if (wakeLock !== null && document.visibilityState === 'visible') {
+            await requestWakeLock(); // Re-request
+        }
+    }
+
+    function releaseWakeLock() {
+        if (wakeLock !== null) {
+            wakeLock.release()
+                .then(() => {
+                    wakeLock = null;
+                    console.log('💡 Screen Wake Lock released');
+                });
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        }
+    }
+
