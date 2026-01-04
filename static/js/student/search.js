@@ -331,84 +331,56 @@ export class BusStopSearch {
 
     async locateBus(busNo, stopName) {
         try {
-            console.log(`🔍 Looking for Bus ${busNo}...`);
+            console.log(`🔍 Looking for Bus ${busNo} in sidebar...`);
 
-            // METHOD 0: CHECK DATA SOURCE FIRST (Reliable Online/Offline Check)
-            const activeBuses = getActiveBuses();
-            let isOnline = false;
+            // METHOD: STRICT DOM CHECK (Reliable)
+            // If the bus is Online, it MUST be in the #bus-list or .tracking-list rendered by map.js
+            const busList = document.getElementById('bus-list') || document.querySelector('.tracking-list');
 
-            if (activeBuses) {
-                // Check if any active bus matches the requested number
-                isOnline = Object.values(activeBuses).some(b =>
-                    String(b.bus_no).trim().toLowerCase() === String(busNo).trim().toLowerCase()
-                );
+            if (!busList) {
+                console.warn('Sidebar list not found. Map might not be loaded.');
+                return;
             }
 
-            if (!isOnline) {
-                console.log(`⚪ Bus ${busNo} is confirmed OFFLINE via data source.`);
-                this.showNotification(`Bus ${busNo} is currently offline ⚪`, 'warning');
-                return; // ABORT: Do not attempt to click or locate
+            // Strict Selector Search
+            // We assume the sidebar items have data-bus-no attribute (standard practice)
+            // Or at least we look for the specific button
+
+            let targetBtn = null;
+
+            // 1. Try finding container with data-bus-no
+            // Because previous fuzzy search was clicking "random things"
+            const busItem = Array.from(busList.children).find(child => {
+                // Check data attribute or text content strictly
+                const bAttr = child.getAttribute('data-bus-no');
+                if (bAttr && String(bAttr) === String(busNo)) return true;
+
+                // Fallback: Check text strictly "Bus 61"
+                const text = child.textContent.trim();
+                return text.startsWith(`Bus ${busNo}`) || text.includes(`Bus ${busNo}\n`);
+            });
+
+            if (busItem) {
+                targetBtn = busItem.querySelector('.locate-btn') || busItem.querySelector('button');
             }
 
-            // Method 1: Look for bus in sidebar tracking list
-            // The sidebar usually has ID 'bus-list' or class 'tracking-list'
-            const busList = document.getElementById('bus-list') || document.body;
-            // Get all potential bus containers
-            const busItems = busList.querySelectorAll('div'); // Broad scan inside list
+            if (targetBtn) {
+                console.log(`✓ Found active bus in sidebar: ${busNo}`);
+                targetBtn.click();
 
-            let foundBus = false;
-
-            for (let item of busItems) {
-                const text = item.textContent || '';
-                // Check if this element contains the bus number nicely
-                // We look for "Bus X" or just the number with word boundaries
-                if (text.includes(`Bus ${busNo}`) || text.match(new RegExp(`\\b${busNo}\\b`))) {
-
-                    // Look for our known LOCATE button class
-                    const locateBtn = item.querySelector('.locate-btn') || item.querySelector('button');
-
-                    if (locateBtn && locateBtn.textContent.toUpperCase().includes('LOCATE')) {
-                        console.log(`✓ Found LOCATE button for Bus ${busNo}`);
-                        locateBtn.click();
-                        foundBus = true;
-
-                        // Show success message
-                        this.showNotification(`Bus ${busNo} located on map! 📍`, 'success');
-
-                        // Hide search results
-                        this.hideResults();
-                        return;
-                    }
-                }
+                // Show success
+                this.showNotification(`Bus ${busNo} located! 📍`, 'success');
+                this.hideResults();
+                return;
             }
 
-            // Method 2: Fallback to any button in the body with data attributes (less reliable but covers edge cases)
-            if (!foundBus) {
-                const busElement = document.querySelector(`[data-bus="${busNo}"]`) ||
-                    document.querySelector(`[data-bus-no="${busNo}"]`);
-
-                // Ensure it's NOT a search result item itself (infinite loop if we click the search result locate btn)
-                if (busElement && !busElement.closest('.search-results-container')) {
-                    const locateBtn = busElement.querySelector('button');
-                    if (locateBtn && locateBtn.textContent.toUpperCase().includes('LOCATE')) {
-                        locateBtn.click();
-                        foundBus = true;
-                        this.showNotification(`Bus ${busNo} located on map! 📍`, 'success');
-                        this.hideResults();
-                        return;
-                    }
-                }
-            }
-
-            // Bus not found or offline
-            if (!foundBus) {
-                console.log(`⚪ Bus ${busNo} is offline`);
-                this.showNotification(`Bus ${busNo} is currently offline ⚪`, 'warning');
-            }
+            // If we are here, the bus was NOT found in the active list
+            console.log(`⚪ Bus ${busNo} not found in active list.`);
+            this.showNotification(`Bus ${busNo} is currently offline ⚪`, 'warning');
 
         } catch (error) {
             console.error('❌ Locate error:', error);
-            this.showNotification(`Failed to locate Bus ${busNo}`, 'error');
+            this.showNotification(`Error locating Bus ${busNo}`, 'error');
         }
     }
 
