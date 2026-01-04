@@ -48,12 +48,8 @@ export function initAnnouncements() {
 
                 const msgTime = data.last_updated.toDate();
 
-                // Notification Logic:
-                // 1. Must be a NEW message (arrived after app loaded)
-                // 2. Must not have been notified already in this session
-                // 3. Must be relatively fresh (e.g. within last 5 mins) to avoid stale checks
+                // Notification Logic
                 if (change.type === "modified" || change.type === "added") {
-
                     // Check persistent read state AND session state
                     if (msgTime > appLoadTime && !notifiedIds.has(busId) && !readAnnouncementIds.has(busId)) {
                         console.log("Triggering Notification for:", data.bus_no);
@@ -68,26 +64,24 @@ export function initAnnouncements() {
                                     readAnnouncementIds.add(busId);
                                     // Persist
                                     localStorage.setItem('read_announcements', JSON.stringify([...readAnnouncementIds]));
-                                    // Also maybe show a toast? Optional.
                                 }
                             }]
                         );
                         notifiedIds.add(busId);
                     }
                 }
-            }
             });
-}
+        }
 
-snapshot.forEach(doc => {
-    const data = doc.data();
-    activeBuses.push({ id: doc.id, ...data });
-});
-updateBadge();
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            activeBuses.push({ id: doc.id, ...data });
+        });
+        updateBadge();
 
-if (overlayEl && !overlayEl.classList.contains('hidden')) {
-    renderBusList();
-}
+        if (overlayEl && !overlayEl.classList.contains('hidden')) {
+            renderBusList();
+        }
     });
 }
 
