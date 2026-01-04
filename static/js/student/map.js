@@ -808,31 +808,33 @@ function startRoutingTimer(busLatLng) {
 
 function generateDensityIcons(status) {
     status = (status || 'LOW').toUpperCase();
-    let bars = '';
 
-    // 3 Bars
-    // 1: Green, 2: Yellow, 3: Red
+    // Config: Count & Color
+    let count = 1;
+    let colorClass = 'text-green-500';
 
-    // Bar 1 (Always Visible)
-    const color1 = status === 'LOW' ? 'bg-green-500' : (status === 'MED' ? 'bg-yellow-500' : 'bg-red-500');
-    bars += `<div class="w-1.5 h-3 rounded-sm ${color1}"></div>`;
-
-    // Bar 2
-    if (status === 'MED' || status === 'HIGH') {
-        const color2 = status === 'MED' ? 'bg-yellow-500' : 'bg-red-500';
-        bars += `<div class="w-1.5 h-4 rounded-sm ${color2}"></div>`;
-    } else {
-        bars += `<div class="w-1.5 h-4 rounded-sm bg-slate-700/50"></div>`;
+    if (status === 'MED') {
+        count = 2;
+        colorClass = 'text-yellow-400';
+    } else if (status === 'HIGH') {
+        count = 3;
+        colorClass = 'text-red-500';
     }
 
-    // Bar 3
-    if (status === 'HIGH') {
-        bars += `<div class="w-1.5 h-5 rounded-sm bg-red-500"></div>`;
-    } else {
-        bars += `<div class="w-1.5 h-5 rounded-sm bg-slate-700/50"></div>`;
+    // Person SVG
+    const personSvg = `
+        <svg class="w-4 h-4 ${colorClass}" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
+        </svg>
+    `;
+
+    // Generate Icons
+    let iconsHtml = '';
+    for (let i = 0; i < count; i++) {
+        iconsHtml += personSvg;
     }
 
-    return `<div class="flex items-end gap-0.5" title="Crowd: ${status}">${bars}</div>`;
+    return `<div class="flex items-center gap-0.5" title="Crowd: ${status}">${iconsHtml}</div>`;
 }
 
 // Set Bus Filter (Called from Search/Main)
