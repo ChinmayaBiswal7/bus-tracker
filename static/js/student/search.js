@@ -333,6 +333,23 @@ export class BusStopSearch {
         try {
             console.log(`🔍 Looking for Bus ${busNo}...`);
 
+            // METHOD 0: CHECK DATA SOURCE FIRST (Reliable Online/Offline Check)
+            const activeBuses = getActiveBuses();
+            let isOnline = false;
+
+            if (activeBuses) {
+                // Check if any active bus matches the requested number
+                isOnline = Object.values(activeBuses).some(b =>
+                    String(b.bus_no).trim().toLowerCase() === String(busNo).trim().toLowerCase()
+                );
+            }
+
+            if (!isOnline) {
+                console.log(`⚪ Bus ${busNo} is confirmed OFFLINE via data source.`);
+                this.showNotification(`Bus ${busNo} is currently offline ⚪`, 'warning');
+                return; // ABORT: Do not attempt to click or locate
+            }
+
             // Method 1: Look for bus in sidebar tracking list
             // The sidebar usually has ID 'bus-list' or class 'tracking-list'
             const busList = document.getElementById('bus-list') || document.body;
