@@ -348,7 +348,10 @@ function renderMessage(container, data) {
     item.className = "bg-slate-800/40 border-l-2 border-blue-500 pl-3 py-1";
     item.innerHTML = `
     <p class="text-slate-300 text-sm leading-relaxed mb-1">${data.message}</p>
-    <p class="text-[10px] text-slate-500">${dateStr}
+    <p class="text-[10px] text-slate-500">${dateStr}</p>
+`;
+    container.appendChild(item);
+}
 
 // --- NEW ANNOUNCEMENT MANAGER (DEDUPLICATION FIX) ---
 
@@ -371,7 +374,7 @@ class AnnouncementManager {
             const seen = localStorage.getItem('seenAnnouncements');
             if (seen) {
                 this.seenAnnouncements = new Set(JSON.parse(seen));
-                console.log(`✓ Loaded ${ this.seenAnnouncements.size } seen announcements`);
+                console.log(`✓ Loaded ${this.seenAnnouncements.size} seen announcements`);
             }
         } catch (error) {
             console.error('Error loading seen announcements:', error);
@@ -380,7 +383,7 @@ class AnnouncementManager {
 
     saveSeenAnnouncements() {
         try {
-            localStorage.setItem('seenAnnouncements', 
+            localStorage.setItem('seenAnnouncements',
                 JSON.stringify([...this.seenAnnouncements]));
         } catch (error) {
             console.error('Error saving seen announcements:', error);
@@ -393,12 +396,12 @@ class AnnouncementManager {
         // handle timestamp object or string
         let ts = '';
         if (announcement.timestamp && announcement.timestamp.seconds) {
-             ts = announcement.timestamp.seconds;
+            ts = announcement.timestamp.seconds;
         } else {
-             ts = announcement.timestamp || '';
+            ts = announcement.timestamp || '';
         }
-        
-        return `${ busNo } -${ content.substring(0, 50) } -${ ts } `.replace(/\s/g, '');
+
+        return `${busNo} -${content.substring(0, 50)} -${ts} `.replace(/\s/g, '');
     }
 
     hasSeenAnnouncement(announcementId) {
@@ -408,13 +411,13 @@ class AnnouncementManager {
     markAnnouncementAsSeen(announcementId) {
         this.seenAnnouncements.add(announcementId);
         this.saveSeenAnnouncements();
-        console.log(`✓ Marked announcement as seen: ${ announcementId.substring(0, 20) }...`);
+        console.log(`✓ Marked announcement as seen: ${announcementId.substring(0, 20)}...`);
     }
 
     listenForAnnouncements() {
         // Socket.io
         if (typeof socket !== 'undefined' && socket) {
-            socket.off('new_announcement'); 
+            socket.off('new_announcement');
             socket.on('new_announcement', (data) => {
                 console.log('📢 New announcement received:', data);
                 this.handleNewAnnouncement(data);
@@ -427,8 +430,8 @@ class AnnouncementManager {
 
     listenToFirebaseAnnouncements() {
         const q = query(
-            collection(db, 'announcements'), 
-            orderBy('last_updated', 'desc'), 
+            collection(db, 'announcements'),
+            orderBy('last_updated', 'desc'),
             limit(5)
         );
 
@@ -478,18 +481,18 @@ class AnnouncementManager {
     showNotification(announcement, announcementId) {
         const busNo = announcement.bus_no || announcement.busNo || '';
         const message = announcement.message || announcement.body || 'New announcement';
-        const title = `📢 Bus ${ busNo } `;
+        const title = `📢 Bus ${busNo} `;
 
         console.log('🔔 Showing notification:', title);
 
         if (Notification.permission === 'granted') {
-             if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.ready.then((registration) => {
                     registration.showNotification(title, {
                         body: message,
                         icon: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
                         badge: 'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
-                        tag: announcementId, 
+                        tag: announcementId,
                         renotify: false,
                         vibrate: [200, 100, 200],
                         data: {
@@ -498,9 +501,9 @@ class AnnouncementManager {
                         }
                     });
                 });
-             } else {
-                 new Notification(title, { body: message, tag: announcementId });
-             }
+            } else {
+                new Notification(title, { body: message, tag: announcementId });
+            }
         }
 
         this.showInAppNotification(title, message, announcementId);
@@ -535,7 +538,7 @@ class AnnouncementManager {
                         style="background:none;border:none;color:white;font-size:20px;cursor:pointer;">✕</button>
             </div >
         `;
-        
+
         notification.onclick = (e) => {
             if (e.target.tagName !== 'BUTTON') {
                 this.markAnnouncementAsSeen(announcementId);
@@ -553,7 +556,7 @@ class AnnouncementManager {
     }
 
     markVisibleAnnouncementsAsSeen() {
-         // Placeholder for the scroll logic if needed
+        // Placeholder for the scroll logic if needed
     }
 }
 
@@ -570,9 +573,4 @@ if (!window.announcementManager) {
 }
 
 // Clear old seen announcements daily
-setInterval(() => {
-    // cleanup logic
-}, 86400000);</p>
-`;
-    container.appendChild(item);
-}
+}, 86400000);
