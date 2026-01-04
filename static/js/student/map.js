@@ -608,31 +608,6 @@ function updateRoute() {
 
     runFallbackRouting(busLatLng, tripEta, tripDist);
 
-    // --- PROXIMITY ALERT LOGIC ---
-    // Check if within 1km (1000m)
-    const distMeters = map.distance([userLat, userLng], busLatLng);
-
-    // Threshold: 1000m (1km)
-    if (distMeters < 1000) {
-        // Check if already notified for this specific bus session
-        if (!window.notifiedProximityBusId || window.notifiedProximityBusId !== targetBusId) {
-            console.log("🚨 Proximity Alert Triggered! Distance:", distMeters);
-
-            // Trigger Notification
-            notifications.notifyBusArrival(
-                markers[targetBusId].bus_no || targetBusNo || "Bus",
-                `Arriving soon! Bus is ${Math.round(distMeters)}m away.`,
-                Math.round(distMeters / 1000 * 5) // Rough ETA estimate for alert
-            );
-
-            // Mark as notified to prevent spam
-            window.notifiedProximityBusId = targetBusId;
-        }
-    } else {
-        // Reset if we move far away? Maybe not needed for simple "arrival" logic.
-        // If we switch buses, targetBusId changes, so logic resets automatically.
-    }
-
     // Calc vars locally for notification
     const dist = map.distance([userLat, userLng], busLatLng);
     const distKm = (dist / 1000).toFixed(1);
