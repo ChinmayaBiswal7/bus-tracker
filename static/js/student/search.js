@@ -353,7 +353,7 @@ export class BusStopSearch {
             const busItem = Array.from(busList.children).find(child => {
                 // Check data attribute or text content strictly
                 const bAttr = child.getAttribute('data-bus-no');
-                if (bAttr && String(bAttr) === String(busNo)) return true;
+                if (bAttr && String(bAttr).trim() === String(busNo).trim()) return true;
 
                 // Fallback: Check text strictly "Bus 61"
                 const text = child.textContent.trim();
@@ -361,6 +361,14 @@ export class BusStopSearch {
             });
 
             if (busItem) {
+                // CHECK STATUS: Don't click if offline (even if in list)
+                const status = busItem.getAttribute('data-status');
+                if (status === 'offline') {
+                    console.log(`⚪ Bus ${busNo} found in list but is OFFLINE.`);
+                    this.showNotification(`Bus ${busNo} is currently offline ⚪`, 'warning');
+                    return;
+                }
+
                 targetBtn = busItem.querySelector('.locate-btn') || busItem.querySelector('button');
             }
 
@@ -455,9 +463,7 @@ export class BusStopSearch {
                 iconAnchor: [20, 40]
             });
 
-            const marker = L.marker([stop.lat, stop.lng], {
-                icon: markerIcon
-            }).addTo(this.map);
+            this.map.addLayer(marker);
 
             marker.bindPopup(`
                 <div style="text-align: center; min-width: 150px;">
@@ -467,16 +473,21 @@ export class BusStopSearch {
 
             this.markers.push(marker);
 
-            this.map.flyTo([stop.lat, stop.lng], 16, {
-                duration: 1.5,
-                easeLinearity: 0.5
-            });
+            // Hide results to restore full UI view
+            this.hideResults();
+
+            // Defer animation slightly to prevent UI locking
+            setTimeout(() => {
+                this.map.flyTo([stop.lat, stop.lng], 16, {
+                    duration: 1.5,
+                    easeLinearity: 0.5
+                });
+            }, 100);
 
             console.log('✓ Navigation successful');
 
         } catch (error) {
             console.error('❌ Navigation error:', error);
-            // Don't alert general errors to avoid spamming user if map is busy
             console.warn("Failed to navigate. Map might be busy.");
         }
     }

@@ -106,6 +106,9 @@ function renderBusList() {
             isMatch = true; // No filter = Show all
         }
 
+        // Show only Online buses in sidebar (User Request)
+        if (info.offline) return;
+
         if (isMatch) {
             activeEntries.push({ id, info });
         }
@@ -128,6 +131,7 @@ function renderBusList() {
         const item = document.createElement('div');
         // Add Identifying Attribute for Search Sync
         item.setAttribute('data-bus-no', info.bus_no);
+        item.setAttribute('data-status', info.offline ? 'offline' : 'online');
         item.className = "group flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-700 hover:border-blue-500 cursor-pointer transition-all";
 
         // Row Click: Track Bus
