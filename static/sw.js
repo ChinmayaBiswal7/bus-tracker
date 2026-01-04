@@ -33,7 +33,7 @@ self.addEventListener('message', (event) => {
     }
 });
 
-const CACHE_NAME = 'bus-tracker-v6'; // Bump version
+const CACHE_NAME = 'bus-tracker-v7-force-update'; // Bump version to force fresh cache
 
 // Handle Notification Click (Opens App)
 // Handle Notification Click (Opens App)

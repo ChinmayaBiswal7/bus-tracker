@@ -136,18 +136,18 @@ export class BusStopSearch {
             console.log(`[Search] Active Buses available:`, Object.keys(allBuses || {}).length);
 
             if (allBuses) {
-                Object.values(allBuses).forEach(info => {
-                    // Robust check: Ensure bus_no exists
-                    if (!info || !info.bus_no) return;
+                // Use entries to get the ID as fallback
+                Object.entries(allBuses).forEach(([id, info]) => {
+                    // Robust: Use bus_no if present, otherwise ID (or empty string)
+                    const bStr = String(info?.bus_no || id).trim().toLowerCase();
 
-                    const bNo = String(info.bus_no).trim().toLowerCase();
-                    // Match Exact or Partial (e.g. "6" matches "61", "61" matches "61")
-                    if (bNo.includes(qLower)) {
+                    // Match Exact or Partial
+                    if (bStr.includes(qLower)) {
                         busResults.push({
                             type: 'bus',
-                            bus_no: info.bus_no,
-                            status: info.offline ? 'Offline' : (info.crowd || 'Live'),
-                            isOffline: info.offline
+                            bus_no: info?.bus_no || id, // Display ID if bus_no missing
+                            status: (info && info.offline) ? 'Offline' : ((info && info.crowd) || 'Live'),
+                            isOffline: (info && info.offline) ? true : false
                         });
                     }
                 });
