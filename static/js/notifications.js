@@ -96,7 +96,7 @@ class NotificationManager {
                     body: body,
                     icon: icon,
                     badge: '/static/icon-72.png',
-                    vibrate: [200, 100, 200],
+                    vibrate: data.vibrate !== undefined ? data.vibrate : [200, 100, 200],
                     data: data,
                     actions: [
                         { action: 'view', title: 'View' },
@@ -104,7 +104,7 @@ class NotificationManager {
                     ],
                     tag: data.tag || 'campus-ride-notification',
                     requireInteraction: false,
-                    silent: false
+                    silent: data.silent !== undefined ? data.silent : false
                 });
                 console.log('✓ Notification sent via Service Worker');
             } else {
@@ -113,8 +113,9 @@ class NotificationManager {
                     body: body,
                     icon: icon,
                     badge: '/static/icon-72.png',
-                    vibrate: [200, 100, 200],
-                    data: data
+                    vibrate: data.vibrate !== undefined ? data.vibrate : [200, 100, 200],
+                    data: data,
+                    silent: data.silent !== undefined ? data.silent : false
                 });
                 console.log('✓ Basic notification sent');
             }
@@ -157,7 +158,7 @@ class NotificationManager {
     }
 
     // Announcement notification
-    notifyAnnouncement(title, message, actions = []) {
+    notifyAnnouncement(title, message, actions = [], options = {}) {
         this.showNotification(
             `📢 ${title}`,
             message,
@@ -165,7 +166,8 @@ class NotificationManager {
             {
                 type: 'announcement',
                 tag: 'announcement',
-                actions: actions
+                actions: actions,
+                ...options // Pass silent/vibrate flags
             }
         );
     }

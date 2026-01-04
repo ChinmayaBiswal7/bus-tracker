@@ -6,10 +6,99 @@ let unsubscribeMessages = {};
 
 import { notifications } from '../notifications.js';
 
-// Helper: Send Notification (Local)
+// --- Notification State ---
+// 0: Normal (Sound + Vibrate)
+// 1: Vibrate Only
+// 2: Silent (Popup Only)
+let notificationMode = 0;
+
+function loadNotificationMode() {
+    const stored = localStorage.getItem('notification_mode');
+    if (stored !== null) {
+        notificationMode = parseInt(stored, 10);
+    }
+    updateNotificationIcon();
+}
+
+function saveNotificationMode() {
+    localStorage.setItem('notification_mode', notificationMode);
+    updateNotificationIcon();
+}
+
+// Global Toggle Function (Attached to Window for HTML access)
+window.toggleNotificationMode = async function () {
+    // 1. Ensure Permission First
+    if (Notification.permission !== 'granted') {
+        const result = await Notification.requestPermission();
+        if (result !== 'granted') {
+            alert("Please enable notifications to use this feature.");
+            return;
+        }
+    }
+
+    // 2. Cycle Mode
+    notificationMode = (notificationMode + 1) % 3;
+    saveNotificationMode();
+
+    // 3. Feedback Toast/console
+    const modes = ["Normal (Sound On)", "Vibrate Only", "Silent Mode"];
+    console.log(`Notification Mode: ${modes[notificationMode]}`);
+
+    // Optional: Small vibration feedback
+    if (navigator.vibrate) navigator.vibrate(50);
+}
+
+function updateNotificationIcon() {
+    const btn = document.getElementById('btn-notify');
+    if (!btn) return;
+
+    // Icons
+    const ICON_NORMAL = `<svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>`;
+
+    const ICON_VIBRATE = `<svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2zM11 13a1 1 0 100 2 1 1 0 000-2zm0-4a1 1 0 100 2 1 1 0 000-2z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22 10a2 2 0 01-2 2m2-6a2 2 0 01-2 2m-2-2a2 2 0 01-2 2m-2-2a2 2 0 01-2 2M2 10a2 2 0 012 2m-2-6a2 2 0 012 2m2-2a2 2 0 012 2m2-2a2 2 0 012 2"></path></svg>`;
+
+    const ICON_SILENT = `<svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>`;
+
+    let html = '';
+    let label = '';
+
+    switch (notificationMode) {
+        case 0: html = ICON_NORMAL; label = "Normal"; break;
+        case 1: html = ICON_VIBRATE; label = "Vibrate Only"; break;
+        case 2: html = ICON_SILENT; label = "Silent"; break;
+    }
+
+    // Preserve badge if it exists
+    const badge = `<span id="notify-badge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse ${document.getElementById('notify-badge')?.classList.contains('hidden') ? 'hidden' : ''}"></span>`;
+
+    btn.innerHTML = html + badge;
+    btn.setAttribute('title', `Mode: ${label} (Click to change)`);
+}
+
+// Trigger load on init
+document.addEventListener('DOMContentLoaded', loadNotificationMode);
+
+
 // Helper: Send Notification (Local)
 function sendLocalNotification(title, body, actions = []) {
-    notifications.notifyAnnouncement(title, body, actions);
+    // Mode 2: Silent (Popup Only -> Handled by logic, or we suppress sound)
+    const isSilent = (notificationMode === 2);
+    const canVibrate = (notificationMode === 0 || notificationMode === 1);
+
+    // We pass these flags to the generic notifier if supported, 
+    // OR we handle the sound/vibration here if the tool is simple.
+    // Assuming 'notifications.notifyAnnouncement' is our wrapper.
+
+    // If Silent Mode and app is in background, we might NOT want to show system notification at all?
+    // User requirement: "Silent" usually means Visual Only.
+
+    // Inject logic:
+    const options = {
+        silent: isSilent,
+        vibrate: canVibrate ? [200, 100, 200] : []
+    };
+
+    notifications.notifyAnnouncement(title, body, actions, options);
 }
 
 export function initAnnouncements() {
@@ -32,6 +121,9 @@ export function initAnnouncements() {
     } catch (e) {
         console.warn("Failed to load read announcements:", e);
     }
+
+    // Init state
+    loadNotificationMode();
 
     onSnapshot(qBuses, (snapshot) => {
         activeBuses = [];
@@ -121,6 +213,8 @@ export function openAnnouncements() {
         renderBusList();
         localStorage.setItem('lastReadTime', new Date().toISOString());
         updateBadge();
+        // Ensure icon is correct
+        updateNotificationIcon();
     }
     if (window.innerWidth < 768) toggleSidebar();
 }
