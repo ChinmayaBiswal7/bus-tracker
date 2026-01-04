@@ -332,69 +332,104 @@ export class BusStopSearch {
     async locateBus(busNo, stopName) {
         try {
             console.log(`🔍 Looking for Bus ${busNo}...`);
-            if (window.startTrackingRouteByBusNo) {
-                const found = window.startTrackingRouteByBusNo(String(busNo));
 
-                if (found) {
-                    this.showSuccessMessage(`Tracking Bus ${busNo}`);
-                } else {
-                    // Bus is in Excel but not in our Tracking System (Offline/Unknown)
-                    this.showBusOfflineMessage(busNo, stopName);
+            // Method 1: Look for bus in sidebar tracking list
+            // The sidebar usually has ID 'bus-list' or class 'tracking-list'
+            const busList = document.getElementById('bus-list') || document.body;
+            // Get all potential bus containers
+            const busItems = busList.querySelectorAll('div'); // Broad scan inside list
+
+            let foundBus = false;
+
+            for (let item of busItems) {
+                const text = item.textContent || '';
+                // Check if this element contains the bus number nicely
+                // We look for "Bus X" or just the number with word boundaries
+                if (text.includes(`Bus ${busNo}`) || text.match(new RegExp(`\\b${busNo}\\b`))) {
+
+                    // Look for our known LOCATE button class
+                    const locateBtn = item.querySelector('.locate-btn') || item.querySelector('button');
+
+                    if (locateBtn && locateBtn.textContent.toUpperCase().includes('LOCATE')) {
+                        console.log(`✓ Found LOCATE button for Bus ${busNo}`);
+                        locateBtn.click();
+                        foundBus = true;
+
+                        // Show success message
+                        this.showNotification(`Bus ${busNo} located on map! 📍`, 'success');
+
+                        // Hide search results
+                        this.hideResults();
+                        return;
+                    }
                 }
-            } else {
-                console.warn("startTrackingRouteByBusNo function not found in window.");
-                this.showBusOfflineMessage(busNo, stopName);
             }
+
+            // Method 2: Fallback to any button in the body with data attributes (less reliable but covers edge cases)
+            if (!foundBus) {
+                const busElement = document.querySelector(`[data-bus="${busNo}"]`) ||
+                    document.querySelector(`[data-bus-no="${busNo}"]`);
+
+                // Ensure it's NOT a search result item itself (infinite loop if we click the search result locate btn)
+                if (busElement && !busElement.closest('.search-results-container')) {
+                    const locateBtn = busElement.querySelector('button');
+                    if (locateBtn && locateBtn.textContent.toUpperCase().includes('LOCATE')) {
+                        locateBtn.click();
+                        foundBus = true;
+                        this.showNotification(`Bus ${busNo} located on map! 📍`, 'success');
+                        this.hideResults();
+                        return;
+                    }
+                }
+            }
+
+            // Bus not found or offline
+            if (!foundBus) {
+                console.log(`⚪ Bus ${busNo} is offline`);
+                this.showNotification(`Bus ${busNo} is currently offline ⚪`, 'warning');
+            }
+
         } catch (error) {
             console.error('❌ Locate error:', error);
-            this.showBusOfflineMessage(busNo, stopName);
+            this.showNotification(`Failed to locate Bus ${busNo}`, 'error');
         }
     }
 
-    showBusOfflineMessage(busNo, stopName) {
+    showNotification(message, type = 'info') {
+        const colors = {
+            success: { bg: 'bg-green-900/90', text: 'text-green-200', icon: '✓', border: 'border-green-500/50' },
+            warning: { bg: 'bg-yellow-900/90', text: 'text-yellow-200', icon: '⚠️', border: 'border-yellow-500/50' },
+            error: { bg: 'bg-red-900/90', text: 'text-red-200', icon: '❌', border: 'border-red-500/50' },
+            info: { bg: 'bg-blue-900/90', text: 'text-blue-200', icon: 'ℹ️', border: 'border-blue-500/50' }
+        };
+
+        const style = colors[type] || colors.info;
+
         const notification = document.createElement('div');
-        notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-yellow-900/90 text-yellow-200 px-6 py-3 rounded-lg shadow-xl z-[9999] animate-bounce';
+        notification.className = `fixed top-24 left-1/2 transform -translate-x-1/2 ${style.bg} ${style.text} border ${style.border} px-6 py-4 rounded-xl shadow-2xl z-[9999] flex items-center gap-3 backdrop-blur-sm animate-bounce-in`;
         notification.innerHTML = `
-            <div class="flex items-center gap-3">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                </svg>
-                <div>
-                    <strong>Bus ${busNo} is Offline</strong>
-                    <div class="text-xs mt-1">Not currently tracking near ${stopName}</div>
-                </div>
-            </div>
+            <span class="text-xl">${style.icon}</span>
+            <span class="font-bold tracking-wide">${message}</span>
         `;
 
         document.body.appendChild(notification);
 
+        // Add simple dash animation style if needed, or rely on tailwind
+        // "animate-bounce-in" might not exist, using standard transition logic below works better
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, -20px)';
+        notification.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+
+        requestAnimationFrame(() => {
+            notification.style.opacity = '1';
+            notification.style.transform = 'translate(-50%, 0)';
+        });
+
         setTimeout(() => {
-            notification.style.transition = 'opacity 0.5s';
             notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 500);
+            notification.style.transform = 'translate(-50%, -20px)';
+            setTimeout(() => notification.remove(), 400);
         }, 3000);
-    }
-
-    showSuccessMessage(message) {
-        const notification = document.createElement('div');
-        notification.className = 'fixed top-20 left-1/2 transform -translate-x-1/2 bg-green-900/90 text-green-200 px-6 py-3 rounded-lg shadow-xl z-[9999]';
-        notification.innerHTML = `
-            <div class="flex items-center gap-3">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                </svg>
-                <strong>${message}</strong>
-            </div>
-        `;
-
-        document.body.appendChild(notification);
-
-        setTimeout(() => {
-            notification.style.transition = 'opacity 0.5s';
-            notification.style.opacity = '0';
-            setTimeout(() => notification.remove(), 500);
-        }, 2000);
     }
 
     selectStop(stop) {

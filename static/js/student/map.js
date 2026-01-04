@@ -347,6 +347,7 @@ export function startTrackingRouteByBusNo(busNo) {
 
     if (mapContainer && routePanel) {
         routePanel.classList.remove('hidden');
+        routePanel.classList.add('flex'); // Ensure flex layout is active
         if (fullscreenToggle) fullscreenToggle.classList.remove('hidden');
         if (tripCard) tripCard.classList.remove('hidden');
     }
@@ -559,7 +560,8 @@ export function stopTrackingRoute() {
     const fullscreenToggle = document.getElementById('fullscreen-toggle');
     if (routePanel) {
         routePanel.classList.add('hidden');
-        routePanel.classList.remove('flex');
+        // Do NOT remove flex, as it breaks layout on re-opening
+        // routePanel.classList.remove('flex'); 
     }
     if (fullscreenToggle) fullscreenToggle.classList.add('hidden');
     setTimeout(() => map.invalidateSize(), 300);
