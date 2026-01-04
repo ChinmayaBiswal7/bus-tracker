@@ -88,15 +88,24 @@ body {
 
 /* Search Results Container */
 .search-results-container {
+    position: absolute;
+    /* Float over content */
+    top: calc(100% + 8px);
+    /* Below input with gap */
+    left: 0;
+    width: 100%;
+    z-index: 3000;
+    /* High z-index to sit above everything */
+
     max-height: 60vh;
-    /* Increased from 400px */
     overflow-y: auto;
-    margin-top: 12px;
     border-radius: 8px;
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(10px);
+    background: rgba(15, 23, 42, 0.98);
+    /* Less transparent for readability */
+    backdrop-filter: blur(12px);
     border: 1px solid rgba(59, 130, 246, 0.2);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    /* Stronger shadow */
 }
 
 /* Individual Stop Result */
@@ -159,7 +168,6 @@ body {
     .search-results-container {
         max-height: 75vh;
         /* Much taller on mobile */
-        margin-top: 8px;
     }
 
     .stop-result-item {
