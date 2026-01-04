@@ -632,49 +632,21 @@ function updateRoute() {
         // Reset if we move far away? Maybe not needed for simple "arrival" logic.
         // If we switch buses, targetBusId changes, so logic resets automatically.
     }
-}
 
-// --- WAKE LOCK (Keep Screen On) ---
-let wakeLock = null;
+    // Calc vars locally for notification
+    const dist = map.distance([userLat, userLng], busLatLng);
+    const distKm = (dist / 1000).toFixed(1);
+    const etaMin = Math.ceil((distKm / 15) * 60); // Rough estimate till OSRM updates
 
-async function requestWakeLock() {
-    try {
-        if ('wakeLock' in navigator) {
-            wakeLock = await navigator.wakeLock.request('screen');
-            console.log('💡 Screen Wake Lock active');
+    // Check Proximity for Notification
+    checkProximityAndNotify(busMarker.getLatLng(), distKm, etaMin);
 
-            // Re-acquire if visibility changes (e.g. user switches tabs and comes back)
-            document.addEventListener('visibilitychange', handleVisibilityChange);
-        }
-    } catch (err) {
-        console.warn(`Wake Lock Warning: ${err.name}, ${err.message}`);
-    }
-}
-
-async function handleVisibilityChange() {
-    if (wakeLock !== null && document.visibilityState === 'visible') {
-        await requestWakeLock(); // Re-request
-    }
-}
-
-function releaseWakeLock() {
-    if (wakeLock !== null) {
-        wakeLock.release()
-            .then(() => {
-                wakeLock = null;
-                console.log('💡 Screen Wake Lock released');
-            });
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }
-}
-checkProximityAndNotify(busMarker.getLatLng(), distKm, etaMin);
-
-// DEBOUNCE: Only update OSRM every 2 seconds to prevent map jank
-if (window.routeDebounce) clearTimeout(window.routeDebounce);
-window.routeDebounce = setTimeout(() => {
-    executeOsrmRoute(waypoints);
-    updateTimelinePosition(busLatLng);
-}, 2000);
+    // DEBOUNCE: Only update OSRM every 2 seconds to prevent map jank
+    if (window.routeDebounce) clearTimeout(window.routeDebounce);
+    window.routeDebounce = setTimeout(() => {
+        executeOsrmRoute(waypoints);
+        updateTimelinePosition(busLatLng);
+    }, 2000);
 }
 
 // Proximity Notification State
