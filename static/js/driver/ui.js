@@ -158,3 +158,50 @@ export function showToast(msg, type = 'success') {
         div.addEventListener('animationend', () => div.remove());
     }, 3000);
 }
+export function openProfile() {
+    const modal = document.getElementById('profile-modal');
+    if (modal) modal.classList.remove('hidden');
+
+    // Populate Data
+
+    // Retrieve from DOM or Global State (set by main.js)
+
+    // Retrieve from DOM or Global State (set by main.js)
+    const email = document.body.getAttribute('data-user-email') || 'driver@example.com';
+    const name = document.body.getAttribute('data-user-name') || 'Bus Driver';
+
+    // Initials from Name
+    const init = name.charAt(0).toUpperCase() + (name.split(' ')[1]?.[0] || name.charAt(1) || '').toUpperCase();
+
+    const pName = document.getElementById('profile-name');
+    const pEmail = document.getElementById('profile-email');
+    const pInit = document.getElementById('profile-initials');
+    const pStatus = document.getElementById('profile-session-status');
+    const pVeh = document.getElementById('profile-vehicle');
+
+    if (pName) pName.textContent = name;
+    if (pEmail) pEmail.textContent = email;
+    if (pInit) pInit.textContent = init;
+
+    // Check Button State for Session Status
+    const btnMain = document.getElementById('btnMain');
+    const isSessionActive = btnMain && btnMain.textContent.includes("TERMINATE");
+
+    if (pStatus) {
+        pStatus.textContent = isSessionActive ? "ACTIVE BROADCAST" : "OFFLINE";
+        pStatus.className = isSessionActive ? "text-green-400 font-mono text-sm tracking-wider font-bold" : "text-slate-400 font-mono text-sm tracking-wider";
+    }
+
+    const busInput = document.getElementById('busInput');
+    if (pVeh && busInput) {
+        pVeh.textContent = busInput.value || "--";
+    }
+}
+
+export function closeProfile() {
+    const modal = document.getElementById('profile-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+window.openProfile = openProfile;
+window.closeProfile = closeProfile;

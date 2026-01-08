@@ -12,11 +12,36 @@ let targetBusNo = null; // NEW: Single Source of Truth
 let userLat = null, userLng = null;
 let watchId = null;
 let markers = {};
+let stopMarkers = {}; // NEW: Cache for active stop markers
 let fallbackLine = null;
 let routingTimer = null; // Internal timer
 let lastBusData = {};
 let currentBusFilter = '';
+let speedHistory = {}; // NEW: { busId: [speed1, speed2, ...] }
 const socket = io();
+
+let userVotes = new Set(); // Track user's active votes
+
+// --- STOP ATTENDANCE LOGIC ---
+// Listen for resets from Driver (Arrival)
+socket.on('stop_reset', (data) => {
+    // Clear local vote if we had one
+    if (userVotes.has(data.stop_name)) {
+        userVotes.delete(data.stop_name);
+        // Force refresh popup if open
+        if (stopMarkers[data.stop_name]) {
+            const m = stopMarkers[data.stop_name];
+            if (m.isPopupOpen()) {
+                updateStopMarkerPopup(m, data.stop_name, data.bus_no);
+            }
+        }
+    }
+
+    if (stopMarkers[data.stop_name]) {
+        stopMarkers[data.stop_name].stopCount = 0;
+        updateStopMarkerPopup(stopMarkers[data.stop_name], data.stop_name, data.bus_no);
+    }
+});
 
 // Initialize Map
 export function initMap() {
@@ -25,8 +50,10 @@ export function initMap() {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '© OpenStreetMap, © CartoDB',
+        subdomains: 'abcd',
+        maxZoom: 20
     }).addTo(map);
 
     // User Icon (Custom Scratch SVG)
@@ -80,6 +107,48 @@ function setupSocketListeners() {
 
         // 3. Render Sidebar List
         renderBusList();
+    });
+
+    // --- NEW: Handle Explicit Disconnect ---
+    socket.on('bus_disconnected', (sid) => {
+        console.log(`[SOCKET] Bus disconnected: ${sid}`);
+        if (markers[sid]) {
+            map.removeLayer(markers[sid]);
+            delete markers[sid];
+        }
+        // Also clean up if it was the target
+        if (targetBusId === sid) {
+            notifications.showPopup("Bus Offline", "The bus you were tracking has ended its session.", "info");
+            stopTrackingRoute();
+        }
+    });
+
+    // --- NEW: Bus Stop Attendance Listeners ---
+    socket.on('stop_update', (data) => {
+        // Only update if we are tracking this bus
+        if (targetBusNo && String(data.bus_no) === String(targetBusNo)) {
+            const marker = stopMarkers[data.stop_name];
+            if (marker) {
+                marker.stopCount = data.count || 0;
+                updateStopMarkerPopup(marker, data.stop_name, data.bus_no);
+
+                // Visual feedback if count > 0
+                if (marker.stopCount > 0) {
+                    marker.setStyle({ radius: 8, fillColor: '#ef4444', color: '#fff' }); // Red & Bigger
+                }
+            }
+        }
+    });
+
+    socket.on('stop_reset', (data) => {
+        if (targetBusNo && String(data.bus_no) === String(targetBusNo)) {
+            const marker = stopMarkers[data.stop_name];
+            if (marker) {
+                marker.stopCount = 0;
+                updateStopMarkerPopup(marker, data.stop_name, data.bus_no);
+                marker.setStyle({ radius: 5, fillColor: '#f0abfc', color: '#86198f' }); // Reset Style
+            }
+        }
     });
 }
 
@@ -244,9 +313,16 @@ function updateBusMarker(busId, info) {
 
     if (markers[busId]) {
         markers[busId].setLatLng([info.lat, info.lng]).setIcon(icon);
+        markers[busId].setOpacity(1); // Restore visibility if it was Hidden by Ghost Mode
     } else {
         markers[busId] = L.marker([info.lat, info.lng], { icon: icon }).addTo(map)
             .bindPopup(`<b class="text-slate-900">Bus ${info.bus_no}</b><br>${generateDensityIcons(info.crowd || 'LOW')}`)
+            .bindTooltip(`<div class="text-center"><b class="text-slate-900">Bus ${info.bus_no}</b><br>${generateDensityIcons(info.crowd || 'LOW')}</div>`, {
+                direction: 'top',
+                offset: [0, -30],
+                opacity: 1,
+                className: 'custom-tooltip' // Tailwind styles in CSS
+            })
             .on('click', () => {
                 map.setView([info.lat, info.lng], 16);
                 startTrackingRouteByBusNo(String(info.bus_no));
@@ -256,18 +332,32 @@ function updateBusMarker(busId, info) {
     markers[busId].speed = info.speed || 0; // Store real GPS speed (km/h) 
     markers[busId].crowd = info.crowd || 'LOW';
 
-    // Update Popup Content (Density instead of Time)
-    if (markers[busId] && markers[busId].getPopup()) {
+    // --- NEW: Populate Speed History ---
+    if (!speedHistory[busId]) speedHistory[busId] = [];
+    if (info.speed && info.speed > 5) { // Only record significant movement (>5km/h)
+        speedHistory[busId].push(info.speed);
+        if (speedHistory[busId].length > 20) speedHistory[busId].shift(); // Keep last 20 readings
+    }
+
+    // Update Popup & Tooltip Content
+    if (markers[busId]) {
         const popupContent = `
             <div class="flex items-center justify-between gap-2 min-w-[80px]">
                 <b class="text-slate-900 text-sm">Bus ${info.bus_no}</b>
                 ${generateDensityIcons(markers[busId].crowd)}
             </div>
         `;
-        if (markers[busId].getPopup().isOpen()) {
+
+        // Update Popup
+        if (markers[busId].getPopup() && markers[busId].getPopup().isOpen()) {
             markers[busId].setPopupContent(popupContent);
         } else {
-            markers[busId].bindPopup(popupContent);
+            markers[busId].setPopupContent(popupContent);
+        }
+
+        // Update Tooltip (Hover Card)
+        if (markers[busId].getTooltip()) {
+            markers[busId].setTooltipContent(popupContent);
         }
     }
 }
@@ -391,6 +481,15 @@ export function startTrackingRouteByBusNo(busNo) {
         if (map && b.lat && b.lng) {
             console.log("📍 Flying to Bus Location:", b.lat, b.lng);
             map.flyTo([b.lat, b.lng], 16, { duration: 1.5 });
+
+            // Open the "Info Card" (Popup) immediately
+            if (markers[targetBusId]) {
+                setTimeout(() => {
+                    markers[targetBusId].openPopup();
+                }, 1500); // Wait for flyTo or do it immediately? FlyTo animation might be weird. Let's do it after a slight delay or immediately. Leaflet handles it.
+                // Actually, doing it immediately is better for responsiveness.
+                markers[targetBusId].openPopup();
+            }
         }
 
         // Force Emit to Driver
@@ -473,7 +572,10 @@ let currentStopsLayer = null;
 async function drawBusPath(busNo) {
     // Clear previous
     if (currentRouteLayer) map.removeLayer(currentRouteLayer);
-    if (currentStopsLayer) map.removeLayer(currentStopsLayer);
+    if (currentStopsLayer) {
+        map.removeLayer(currentStopsLayer);
+        stopMarkers = {}; // Clear cache
+    }
 
     try {
         const res = await fetch(`/api/routes/${busNo}`);
@@ -483,6 +585,9 @@ async function drawBusPath(busNo) {
 
         // 1. Draw Polyline (Road Snapped using OSRM)
         if (data.path && data.path.length > 0) {
+            // Ensure stops are sorted by order
+            data.stops.sort((a, b) => (a.stop_order || 0) - (b.stop_order || 0));
+
             // Convert simple path points to LatLng waypoints for OSRM
             const waypoints = data.stops.map(s => L.latLng(s.lat, s.lng));
 
@@ -501,6 +606,7 @@ async function drawBusPath(busNo) {
                     // actually L.Routing.line returns a layer that might have its own opinion.
                     // The safest way for a solid route line:
                     const routeCoords = routes[0].coordinates;
+                    currentRouteCoordinates = routeCoords; // Save for Prediction Logic
                     const staticLine = L.polyline(routeCoords, {
                         color: '#d946ef', // Fuchsia-500
                         weight: 6,
@@ -520,22 +626,42 @@ async function drawBusPath(busNo) {
             });
         }
 
-        // 2. Draw Stops
         if (data.stops && data.stops.length > 0) {
             currentStopsLayer = L.layerGroup().addTo(map);
             data.stops.forEach(stop => {
-                L.circleMarker([stop.lat, stop.lng], {
-                    radius: 5,
-                    color: '#86198f', // Dark Fuchsia Border
-                    fillColor: '#f0abfc', // Light Fuchsia Fill
-                    fillOpacity: 1,
-                    weight: 2
-                }).bindTooltip(stop.stop_name, {
-                    permanent: false,
-                    direction: 'top',
-                    offset: [0, -5],
-                    className: 'text-xs font-bold text-fuchsia-500 bg-slate-900/90 border-0 rounded px-2 py-1'
+                // NEW: Bus Stop Icon (SVG)
+                // NEW: Labeled Bus Stop Icon
+                const stopIcon = L.divIcon({
+                    className: '', // No default styles
+                    html: `
+                    <div class="flex flex-col items-center group cursor-pointer transition-transform hover:scale-110" style="margin-top: -30px;">
+                        <!-- Icon -->
+                        <div class="w-6 h-6 bg-white border-2 border-slate-900 rounded-md flex items-center justify-center shadow-md mb-1">
+                            <span class="text-xs">🚏</span>
+                        </div>
+                        <!-- Label (Visible Always) -->
+                        <div class="bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm whitespace-nowrap backdrop-blur-sm border border-slate-700">
+                            ${stop.stop_name}
+                        </div>
+                    </div>
+                    `,
+                    iconSize: [100, 50], // Wide enough for label
+                    iconAnchor: [50, 25], // Center
+                    popupAnchor: [0, -25]
+                });
+
+                const marker = L.marker([stop.lat, stop.lng], {
+                    icon: stopIcon
                 }).addTo(currentStopsLayer);
+
+                // Init Count
+                marker.stopCount = 0;
+
+                // Store in cache
+                stopMarkers[stop.stop_name] = marker;
+
+                // Bind Popup with Interaction
+                updateStopMarkerPopup(marker, stop.stop_name, busNo);
             });
 
         }
@@ -547,6 +673,13 @@ async function drawBusPath(busNo) {
 
     } catch (e) {
         console.error("Failed to load route path:", e);
+    }
+}
+
+export function minimizeRoutePanel() {
+    const routePanel = document.getElementById('route-panel');
+    if (routePanel) {
+        routePanel.classList.add('hidden');
     }
 }
 
@@ -894,5 +1027,328 @@ function releaseWakeLock() {
             });
         document.removeEventListener('visibilitychange', handleVisibilityChange);
     }
+}
+
+// --- OFFLINE PREDICTION Logic (Dead Reckoning) ---
+let predictionInterval = null;
+let currentRouteCoordinates = []; // Stores the full lat/lng path of the route
+let ghostBusMarker = null;
+
+function checkOfflineStatus() {
+    if (!targetBusId || !lastBusData[targetBusId]) return;
+
+    const bus = lastBusData[targetBusId];
+    if (!bus.last_updated) return;
+
+    // Parse UTC Date
+    const lastUpdate = new Date(bus.last_updated + "Z"); // Ensure UTC treatment
+    const now = new Date();
+    const diffMs = now - lastUpdate;
+    const diffMins = Math.floor(diffMs / 60000);
+
+    // Threshold: 5 Minutes
+    if (diffMins >= 5 && !bus.offline_prediction_active) {
+        console.warn(`[OFFLINE] Bus ${bus.bus_no} is silent for ${diffMins} mins.`);
+
+        // Show Popup asking for consent
+        showOfflinePredictionPopup(bus.bus_no, diffMins, bus.speed, lastUpdate);
+
+        // Mark as checked to prevent loop
+        bus.offline_prediction_active = true;
+    }
+}
+
+function showOfflinePredictionPopup(busNo, mins, speed, lastTime) {
+    // Create Modal
+    const modal = document.createElement('div');
+    modal.className = "fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in zoom-in duration-300";
+    modal.innerHTML = `
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative overflow-hidden">
+             <!-- Signal Waves Animation -->
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-500/20 rounded-full animate-ping"></div>
+
+            <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                <span class="text-2xl">📡</span> Signal Lost
+            </h3>
+            <p class="text-slate-300 text-sm mb-4">
+                Bus <b>${busNo}</b> stopped sending signals <b>${mins} mins ago</b>.
+            </p>
+            
+            <div class="bg-slate-800/50 rounded-lg p-3 mb-4 text-xs text-slate-400 space-y-1">
+                <p>Last Speed: <span class="text-white font-mono">${speed?.toFixed(1) || 0} km/h</span></p>
+                <p>Last Seen: <span class="text-white font-mono">${lastTime.toLocaleTimeString()}</span></p>
+            </div>
+
+            <p class="text-xs text-slate-500 mb-6 italic">
+                Do you want to see the <b>Estimated Location</b> based on its last speed?
+            </p>
+
+            <div class="flex gap-3">
+                <button id="predict-cancel" class="flex-1 py-2.5 rounded-xl border border-slate-600 text-slate-300 font-bold text-sm hover:bg-slate-800 transition-colors">
+                    No, Cancel
+                </button>
+                <button id="predict-confirm" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+                    Show Ghost Bus 👻
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById('predict-cancel').onclick = () => {
+        modal.remove();
+    };
+
+    document.getElementById('predict-confirm').onclick = () => {
+        modal.remove();
+        startGhostBusPrediction(speed, lastTime);
+    };
+}
+
+function startGhostBusPrediction(lastSpeedKmph, lastTime) {
+    if (!currentRouteCoordinates || currentRouteCoordinates.length === 0) {
+        notifications.showPopup("Prediction Failed", "Route path not available for ghost bus.", "error");
+        return;
+    }
+
+    // --- SMART PREDICTION LOGIC ---
+    let predictionSpeed = lastSpeedKmph;
+
+    // CASE: Bus was stopped (Traffic Light/Stop) when signal lost
+    if (!lastSpeedKmph || lastSpeedKmph < 1) {
+        // Attempt to get Session Average
+        const history = speedHistory[targetBusNo] || []; // targetBusNo is global source of truth
+        if (history.length > 0) {
+            const sum = history.reduce((a, b) => a + b, 0);
+            predictionSpeed = sum / history.length;
+            console.log(`[PREDICTION] Bus was stopped. Using Session Avg Speed: ${predictionSpeed.toFixed(1)} km/h`);
+        } else {
+            // No history? Use Default City Speed
+            predictionSpeed = 30; // 30 km/h default
+            console.log(`[PREDICTION] Bus was stopped. No history. Using Default Speed: 30 km/h`);
+        }
+    }
+
+    console.log(`[PREDICTION] Starting Dead Reckoning. Speed: ${predictionSpeed.toFixed(1)} km/h`);
+
+    // HIDE Real Marker (No duplicate visuals)
+    if (markers[targetBusId]) {
+        markers[targetBusId].setOpacity(0); // Fade out instead of remove, to keep state
+        if (markers[targetBusId].closePopup) markers[targetBusId].closePopup();
+        if (markers[targetBusId].closeTooltip) markers[targetBusId].closeTooltip();
+    }
+
+    // Setup Ghost Bus Marker
+    const ghostIcon = L.divIcon({
+        className: 'ghost-bus-icon',
+        html: `
+            <div class="relative w-12 h-12 flex items-center justify-center opacity-70">
+                <span class="text-4xl filter drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">👻</span>
+                <span class="absolute -bottom-2 bg-slate-900 text-[8px] text-white px-1 rounded">ESTIMATED</span>
+            </div>
+        `,
+        iconSize: [48, 48],
+        iconAnchor: [24, 24]
+    });
+
+    // Initial Render
+    if (ghostBusMarker) map.removeLayer(ghostBusMarker);
+    ghostBusMarker = L.marker([0, 0], { icon: ghostIcon, zIndexOffset: 900 }).addTo(map);
+
+    // Initial Calculation
+    updateGhostPosition(predictionSpeed, lastTime);
+
+    // Update every second (Simulate movement)
+    if (predictionInterval) clearInterval(predictionInterval);
+    predictionInterval = setInterval(() => {
+        updateGhostPosition(predictionSpeed, lastTime);
+    }, 1000);
+}
+
+function updateGhostPosition(speedKmph, lastTime) {
+    const now = new Date();
+    const elapsedHours = (now - lastTime) / 3600000; // ms -> hours
+    const distTraveledKm = speedKmph * elapsedHours;
+    const distTraveledMeters = distTraveledKm * 1000;
+
+    // Dead Reckoning: Walk the line
+    // 1. Find start point (Bus last known pos) on route
+    // 2. Add distance
+
+    // For simplicity/robustness: We assume the bus WAS on the route.
+    // We walk from index 0 of the route to find the point closest to "distance from start".
+
+    // BETTER APPROACH for "Resume":
+    // We need to know where the bus was ON THE LINE when it died.
+    // Finding closest point on polyline is heavy. 
+    // Optimization: We check checking distance from Stop 0? 
+    // No, simplest is: Calculate total distance of route. Find point at (StartDist + Traveled).
+
+    // Let's use a Helper to find the "Point at Distance X" along the polyline.
+    // BUT we need to know "Distance of Bus from Start" at t=0.
+    // We can estimate that by finding the closest point on path to `lastBusData.lat/lng`.
+
+    if (targetBusId && lastBusData[targetBusId]) {
+        const bus = lastBusData[targetBusId];
+        const busLatLng = L.latLng(bus.lat, bus.lng);
+
+        // Find initial distance on path
+        const startDist = getDistanceFromStart(busLatLng, currentRouteCoordinates);
+
+        const totalDist = startDist + distTraveledMeters;
+
+        const predictedLatLng = getPointAtDistance(totalDist, currentRouteCoordinates);
+
+        if (predictedLatLng) {
+            ghostBusMarker.setLatLng(predictedLatLng);
+            ghostBusMarker.bindPopup(`
+                <div class="text-center">
+                    <b>👻 Ghost Bus</b><br>
+                    <span class="text-xs">Estimated Location</span><br>
+                    <span class="text-[10px] text-slate-400">assuming constant speed</span>
+                </div>
+             `).openPopup();
+        } else {
+            // End of route
+            console.log("Prediction: End of route reached.");
+            clearInterval(predictionInterval);
+        }
+    }
+}
+
+// Helper: Find rough distance of a point ALONG the polyline
+function getDistanceFromStart(point, coords) {
+    let minDist = Infinity;
+    let closestIndex = 0;
+
+    // 1. Find closest vertex (Simpler than projection)
+    for (let i = 0; i < coords.length; i++) {
+        const d = map.distance(point, coords[i]);
+        if (d < minDist) {
+            minDist = d;
+            closestIndex = i;
+        }
+    }
+
+    // 2. Sum distance up to that index
+    let dist = 0;
+    for (let i = 0; i < closestIndex; i++) {
+        dist += map.distance(coords[i], coords[i + 1]);
+    }
+    return dist;
+}
+
+// Helper: Get LatLng at specific distance along polyline
+function getPointAtDistance(targetDist, coords) {
+    let accDist = 0;
+
+    for (let i = 0; i < coords.length - 1; i++) {
+        const segDist = map.distance(coords[i], coords[i + 1]);
+
+        if (accDist + segDist >= targetDist) {
+            // Target is inside this segment
+            const remaining = targetDist - accDist;
+            const ratio = remaining / segDist;
+
+            // Interpolate
+            const lat = coords[i].lat + (coords[i + 1].lat - coords[i].lat) * ratio;
+            const lng = coords[i].lng + (coords[i + 1].lng - coords[i].lng) * ratio;
+
+            return L.latLng(lat, lng);
+        }
+
+        accDist += segDist;
+    }
+
+    return null; // Reached end
+}
+
+// Start Main Timer for Checks
+setInterval(checkOfflineStatus, 10000); // Check every 10s
+
+// --- NEW: Popup Helper (Moved to Scope Safe Zone) ---
+function updateStopMarkerPopup(marker, stopName, busNo) {
+
+    const count = marker.stopCount || 0;
+
+    const container = document.createElement('div');
+    container.className = "flex flex-col items-center gap-1 min-w-[140px] p-1";
+
+    // Header
+    const title = document.createElement('div');
+    title.className = "font-bold text-slate-900 mb-1";
+    title.textContent = stopName;
+    container.appendChild(title);
+
+    // Count Badge
+    if (count > 0) {
+        const badge = document.createElement('div');
+        badge.className = "text-xs font-bold text-red-600 mb-2";
+        badge.textContent = `🔴 ${count} Waiting`;
+        container.appendChild(badge);
+    } else {
+        const badge = document.createElement('div');
+        badge.className = "text-xs text-slate-500 mb-2";
+        badge.textContent = "No one waiting yet";
+        container.appendChild(badge);
+    }
+
+    // Button Logic
+    const hasVoted = userVotes.has(stopName);
+    const btn = document.createElement('button');
+
+    if (hasVoted) {
+        // Render Cancel Button
+        btn.className = "bg-red-900/50 border border-red-500 hover:bg-red-700 text-red-200 text-xs font-bold py-1.5 px-3 rounded-full w-full transition-all active:scale-95";
+        btn.innerHTML = `❌ Cancel Request`;
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            console.log(`[VOTE] Cancel for Stop: ${stopName}`);
+
+            // Optimistic UI
+            btn.innerHTML = `Wait Here (+1)`;
+            btn.className = "bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 px-3 rounded-full w-full transition-all active:scale-95";
+
+            userVotes.delete(stopName);
+            socket.emit('cancel_stop', {
+                bus_no: busNo,
+                stop_name: stopName
+            });
+
+            // Re-bind to ensure state consistency next time
+            setTimeout(() => updateStopMarkerPopup(marker, stopName, busNo), 100);
+        };
+    } else {
+        // Render Vote Button
+        btn.className = "bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 px-3 rounded-full w-full transition-all active:scale-95";
+        btn.innerHTML = `🙋‍♂️ Wait Here (+1)`;
+
+        btn.onclick = (e) => {
+            e.stopPropagation();
+            console.log(`[VOTE] +1 for Stop: ${stopName}`);
+
+            // Optimistic UI
+            btn.innerHTML = `✅ Posted!`;
+            btn.classList.add('bg-green-600');
+            btn.classList.remove('bg-blue-600');
+
+            userVotes.add(stopName);
+            socket.emit('request_stop', {
+                bus_no: busNo,
+                stop_name: stopName,
+                lat: marker.getLatLng().lat,
+                lng: marker.getLatLng().lng
+            });
+
+            setTimeout(() => {
+                updateStopMarkerPopup(marker, stopName, busNo);
+            }, 1000);
+        };
+    }
+
+    container.appendChild(btn);
+
+    marker.bindPopup(container);
 }
 

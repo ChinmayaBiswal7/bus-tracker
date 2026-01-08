@@ -25,7 +25,13 @@ onAuthStateChanged(auth, (user) => {
     if (user) {
         console.log("Driver Module Loaded:", user.email);
         const body = document.getElementById('main-body');
-        if (body) body.style.display = 'block';
+        if (body) {
+            body.style.display = 'block';
+            body.setAttribute('data-user-email', user.email);
+            // Smart Fallback: If no display name, parse from email
+            const fallbackName = user.displayName || user.email.split('@')[0].replace(/[0-9]/g, '').replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            body.setAttribute('data-user-name', fallbackName || 'Driver');
+        }
 
         // Init Components
         initMap();

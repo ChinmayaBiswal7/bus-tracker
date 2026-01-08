@@ -6,6 +6,7 @@ let watchId = null;
 let isSharing = false;
 const socket = io(); // Singleton
 let studentMarkers = {};
+let stopMarkers = {}; // NEW: Cache for stop markers
 let activeBusNo = null;
 let currentCrowdStatus = 'LOW';
 
@@ -52,6 +53,56 @@ socket.on('student_location_update', (data) => {
             .bindPopup("Student Waiting");
     }
 });
+
+// --- NEW: Bus Stop Listeners ---
+socket.on('stop_update', (data) => {
+    if (activeBusNo && String(data.bus_no).trim().toUpperCase() === String(activeBusNo).trim().toUpperCase()) {
+        updateStopUI(data.stop_name, data.count);
+    }
+});
+
+socket.on('stop_reset', (data) => {
+    if (activeBusNo && String(data.bus_no).trim().toUpperCase() === String(activeBusNo).trim().toUpperCase()) {
+        updateStopUI(data.stop_name, 0);
+    }
+});
+
+function updateStopUI(stopName, count) {
+    const marker = stopMarkers[stopName];
+    if (!marker) return;
+
+    if (count > 0) {
+        // ACTIVE: Red + Pulse
+        const redIcon = L.divIcon({
+            className: 'stop-marker-active',
+            html: `
+                <div class="relative flex items-center justify-center">
+                    <div class="w-8 h-8 rounded-full bg-red-600 border-2 border-white flex items-center justify-center text-white font-bold text-sm shadow-md z-10">
+                        ${count}
+                    </div>
+                    <div class="absolute inset-0 bg-red-500 rounded-full animate-ping opacity-50 -z-10"></div>
+                </div>
+            `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+        marker.setIcon(redIcon);
+        marker.setZIndexOffset(1000); // Bring to front
+    } else {
+        // RESET: Default Gray
+        marker.setIcon(createDefaultStopIcon());
+        marker.setZIndexOffset(0);
+    }
+}
+
+function createDefaultStopIcon() {
+    return L.divIcon({
+        className: 'stop-marker-default',
+        html: `<div class="w-3 h-3 rounded-full bg-slate-400 border border-slate-600 opacity-50"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+    });
+}
 
 export function initMap() {
     if (map) return;
@@ -140,6 +191,7 @@ export function toggleSession() {
         btnMain.innerHTML = `<span class="animate-pulse">⏳</span> INITIALIZING...`;
         btnMain.className = "w-full py-4 bg-slate-700 text-slate-300 rounded-2xl font-bold text-lg cursor-wait flex items-center justify-center gap-3";
 
+        loadRouteStops(busNo); // NEW: Load stops
         attemptGPS('GPS_HIGH', busNo);
     } else {
         // STOP
@@ -314,9 +366,35 @@ export function stopSession() {
     Object.values(studentMarkers).forEach(marker => map.removeLayer(marker));
     studentMarkers = {};
 
+    // Clear Stop Markers
+    Object.values(stopMarkers).forEach(marker => map.removeLayer(marker));
+    stopMarkers = {};
+
     // Reset Stats
     if (statAcc) { statAcc.textContent = "--"; statAcc.className = "block text-white font-bold text-xs"; }
     if (statLat) statLat.textContent = "--";
     if (statLng) statLng.textContent = "--";
     if (statStatus) { statStatus.textContent = "IDLE"; statStatus.className = "block text-slate-400 font-bold text-xs"; }
+}
+
+async function loadRouteStops(busNo) {
+    try {
+        const res = await fetch(`/api/routes/${busNo}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (data.stops) {
+            data.stops.forEach(stop => {
+                const marker = L.marker([stop.lat, stop.lng], {
+                    icon: createDefaultStopIcon()
+                }).addTo(map);
+
+                // Store
+                stopMarkers[stop.stop_name] = marker;
+            });
+            console.log(`[DRIVER] Loaded ${data.stops.length} stops.`);
+        }
+    } catch (e) {
+        console.warn("[DRIVER] Failed to load stops:", e);
+    }
 }

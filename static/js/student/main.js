@@ -1,6 +1,6 @@
 import { auth } from '../firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { initMap, stopTrackingRoute, setBusFilter, startTrackingRoute, startTrackingRouteByBusNo } from './map.js';
+import { initMap, stopTrackingRoute, setBusFilter, startTrackingRoute, startTrackingRouteByBusNo, minimizeRoutePanel } from './map.js';
 import { openSchedule, closeSchedule, initSchedule } from './schedule.js';
 import { openAnnouncements, closeAnnouncements, initAnnouncements } from './announcements.js';
 import { openDrivers, closeDrivers, closeProfile, showProfile } from './driver-directory.js';
@@ -38,6 +38,7 @@ window.showProfile = showProfile;
 window.stopTrackingRoute = stopTrackingRoute;
 window.startTrackingRoute = startTrackingRoute;
 window.startTrackingRouteByBusNo = startTrackingRouteByBusNo; // Correctly mapped to BusNo function
+window.minimizeRoutePanel = minimizeRoutePanel;
 
 window.setFilter = async function () {
     const input = document.getElementById('trackInput');
@@ -101,7 +102,9 @@ onAuthStateChanged(auth, (user) => {
         console.log("User logged in:", user.email);
 
         // Show UI
-        document.getElementById('main-body').style.display = 'block';
+        const body = document.getElementById('main-body');
+        body.style.display = 'block';
+        body.setAttribute('data-user-email', user.email);
 
         // Update Name
         const nameEl = document.getElementById('user-display-name');

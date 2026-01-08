@@ -134,14 +134,7 @@
 
 
 
-            <!-- Full Screen Toggle (Hidden by default) -->
-            <button id="fullscreen-toggle"
-                class="absolute top-4 right-4 bg-slate-800/90 p-2 rounded-lg text-white shadow-lg z-[400] hidden hover:bg-slate-700 transition-all border border-slate-600">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5-5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                </svg>
-            </button>
+            <!-- Full Screen Toggle Removed -->
 
             <!-- Trip Info Card (Floating) -->
             <div id="trip-info-card"
@@ -542,7 +535,7 @@
                         <span id="rp-dest" class="text-slate-200 text-sm font-medium">Route Details</span>
                     </h3>
                 </div>
-                <button onclick="stopTrackingRoute()"
+                <button onclick="minimizeRoutePanel()"
                     class="p-2 bg-slate-800 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-colors">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />

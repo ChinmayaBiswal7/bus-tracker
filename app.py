@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 import json
 import difflib
 import pandas as pd
+import math
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -91,6 +92,16 @@ class LocationHistory(db.Model):
     lat = db.Column(db.Float)
     lng = db.Column(db.Float)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class StopRequest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    bus_no = db.Column(db.String(20))
+    stop_name = db.Column(db.String(100))
+    count = db.Column(db.Integer, default=0)
+    lat = db.Column(db.Float)
+    lng = db.Column(db.Float)
+    is_arrived = db.Column(db.Boolean, default=False)
+    last_updated = db.Column(db.DateTime, default=datetime.utcnow)
 
 # Ensure DB tables exist
 with app.app_context():
@@ -373,6 +384,55 @@ def chat():
     *   **No-Flicker Login:** The login page uses a **static loading overlay** to mask the white screen while checking session status.
     *   **Driver Sync:** Drivers see students on their map as **Blue Human Icons** with a pulse, matching exactly what students see.
 
+    --- SOURCE CODE DIGEST (Internal implementation details) ---
+    
+    ### 1. `static/js/student/map.js` (The Core Map Logic)
+    *   **Global Variables:**
+        -   `targetBusNo` (String): The bus currently being tracked.
+        -   `markers` (Object): Stores L.marker instances by busId.
+        -   `stopMarkers` (Object): Stores circular L.marker instances for bus stops.
+        -   `lastBusData` (Object): The latest payload from `update_buses` socket event.
+    *   **Key Functions:**
+        -   `initMap()`: Initializes Leaflet map, User Icon (SVG), and Socket listeners.
+        -   `startTrackingRouteByBusNo(busNo)`: 
+            1. Sets `targetBusNo`.
+            2. Calls `drawBusPath(busNo)` to render the polyline.
+            3. Calls `requestWakeLock()` to keep screen on.
+        -   `drawBusPath(busNo)`: Fetches `/api/routes/{busNo}`, draws `L.polyline` (Neon Purple), and renders stop markers.
+        -   `updateGhostPosition(speed, lastTime)`: Uses Dead Reckoning to move marker along `routeLine` when offline.
+    *   **Socket Events:**
+        -   `'stop_update'`: Updates the "count" bubble on a stop marker (Red if count > 0).
+        -   `'stop_reset'`: Resets count to 0 (Purple).
+        
+    ### 2. `app.py` (The Backend Brain)
+    *   **Database Models:**
+        -   `StopRequest`: { `bus_no`, `stop_name`, `count`, `is_arrived` }
+        -   `Bus`: { `bus_no`, `lat`, `lng`, `speed`, `is_active` }
+    *   **API Endpoints:**
+        -   `GET /api/search_stops?q=...`: Uses `difflib.get_close_matches` to find stops.
+        -   `GET /api/routes/<bus_no>`: Returns `{ path: [[lat,lng]...], stops: [...] }`.
+    *   **Socket Logic (`handle_driver_update`):**
+        -   Updates `Bus` table.
+        -   Checks Geofence:
+            -   **Arrival:** `dist < 50m` -> Set `is_arrived=True`.
+            -   **Departure:** `dist > 100m` AND `is_arrived` -> Reset count, broadcast `stop_reset`.
+
+    ### 3. `static/js/driver/tracking.js` (Driver Logic)
+    *   **GPS:** Uses `navigator.geolocation.watchPosition` with `enableHighAccuracy: true`.
+    *   **Broadcasting:** Emits `driver_update` event every 3 seconds.
+
+    --- CODE SIGNATURES (Reference) ---
+    1. **Dead Reckoning Formula:**
+       ```javascript
+       const distTraveledMeters = (speedKmph * (now - lastTime) / 3600000) * 1000;
+       ```
+    2. **Haversine Distance (Python):**
+       ```python
+       def haversine(lat1, lon1, lat2, lon2):
+           # R = 6371000 meters
+           # Standard sphere formula
+       ```
+
     --- YOUR BEHAVIOR ---
     1.  **Be Educational:** If asked "How does search work?", explain the fuzzy matching.
     2.  **Be Helpful:** Answer strictly based on the features above.
@@ -496,44 +556,65 @@ def subscribe_to_topic():
 # --- Socket Events ---
 
 def get_active_buses_payload():
-    active_buses = Bus.query.filter_by(is_active=True).all()
+    # Fetch ALL buses to ensure we capture ad-hoc ones that went offline
+    all_buses_db = Bus.query.all()
     payload = {}
     
-    # 1. Add Active Buses
-    for b in active_buses:
-        payload[b.sid] = {
-            'bus_no': b.bus_no,
-            'lat': b.lat,
-            'lng': b.lng,
-            'accuracy': b.accuracy,
-            'speed': b.speed,
-            'heading': b.heading,
-            'crowd': b.crowd_status or 'LOW',
-            'offline': False
-        }
+    active_bus_nos = set()
 
-    # 2. Add Offline Buses (from Cache)
-    active_bus_nos = {b.bus_no for b in active_buses}
-    
+    # 1. Process DB Buses (Active & Inactive)
+    for b in all_buses_db:
+        if b.is_active:
+            active_bus_nos.add(b.bus_no)
+            payload[b.sid] = {
+                'bus_no': b.bus_no,
+                'lat': b.lat,
+                'lng': b.lng,
+                'accuracy': b.accuracy,
+                'speed': b.speed,
+                'heading': b.heading,
+                'crowd': b.crowd_status or 'LOW',
+                'last_updated': b.last_updated.isoformat() if b.last_updated else None,
+                'offline': False
+            }
+        else:
+            # It's an inactive bus from DB (Ad-hoc or regular)
+            # We want to show it as Offline
+            dummy_sid = f"OFFLINE_DB_{b.bus_no}"
+            payload[dummy_sid] = {
+                'bus_no': b.bus_no,
+                'lat': b.lat,
+                'lng': b.lng,
+                'speed': 0,
+                'crowd': 'LOW',
+                'last_updated': b.last_updated.isoformat() if b.last_updated else None,
+                'offline': True
+            }
+
+    # 2. Add via Excel Cache (if not already in DB list)
+    # This covers buses that have routes but have NEVER been driven yet
     for bus_no, route_data in ROUTES_CACHE.items():
-        if bus_no not in active_bus_nos:
-            # Use the first stop as the "location" for offline buses (or 0,0)
-            # This is needed so map.js has *something*, but we will flag it as offline
+        # Check if we already have this bus from DB (Active or Inactive)
+        # We need to check against all DB buses, not just active ones
+        is_known = False
+        for db_bus in all_buses_db:
+            if db_bus.bus_no == bus_no:
+                is_known = True
+                break
+        
+        if not is_known:
             start_lat = 0
             start_lng = 0
             if route_data.get('stops'):
                 start_lat = route_data['stops'][0]['lat']
                 start_lng = route_data['stops'][0]['lng']
             
-            # Use a dummy SID for offline buses (e.g. "OFFLINE_BUS_42")
-            dummy_sid = f"OFFLINE_{bus_no}"
+            dummy_sid = f"OFFLINE_STATIC_{bus_no}"
             payload[dummy_sid] = {
                 'bus_no': bus_no,
                 'lat': start_lat,
                 'lng': start_lng,
-                'accuracy': 0,
                 'speed': 0,
-                'heading': 0,
                 'crowd': 'LOW',
                 'offline': True
             }
@@ -563,6 +644,17 @@ def handle_search(bus_no):
 @socketio.on('connect')
 def handle_connect():
     emit('update_buses', get_active_buses_payload())
+    
+    # Send initial stop counts
+    active_stops = StopRequest.query.filter(StopRequest.count > 0).all()
+    for s in active_stops:
+        emit('stop_update', {
+            'bus_no': s.bus_no,
+            'stop_name': s.stop_name,
+            'count': s.count,
+            'lat': s.lat,
+            'lng': s.lng
+        })
 
 @socketio.on('disconnect')
 def handle_disconnect():
@@ -587,6 +679,8 @@ def handle_driver_update(data):
             bus.is_active = False
             db.session.commit()
             emit('bus_disconnected', sid, broadcast=True)
+            # FORCE SYNC: Broadcast full list to ensure removal
+            emit('update_buses', get_active_buses_payload(), broadcast=True)
         return
 
     bus_no = data.get('bus_no')
@@ -617,6 +711,27 @@ def handle_driver_update(data):
     
     db.session.commit()
 
+    # --- Geofence Logic for Stop Reset ---
+    # Check active requests for this bus
+    active_requests = StopRequest.query.filter_by(bus_no=bus_no).all()
+    for req in active_requests:
+        if req.lat and req.lng:
+            dist = haversine(bus.lat, bus.lng, req.lat, req.lng)
+            
+            # 1. Arrival (< 50m)
+            if dist < 50 and not req.is_arrived:
+                req.is_arrived = True
+                db.session.commit()
+                # Optional: specific event for arrival
+            
+            # 2. Departure (> 100m) AND was arrived -> RESET
+            elif dist > 100 and req.is_arrived:
+                if req.count > 0:
+                    req.count = 0
+                    req.is_arrived = False
+                    db.session.commit()
+                    emit('stop_reset', {'bus_no': bus_no, 'stop_name': req.stop_name}, broadcast=True)
+    
     # BROADCAST FULL STATE
     emit('update_buses', get_active_buses_payload(), broadcast=True)
 
@@ -631,6 +746,41 @@ def handle_student_update(data):
     data['id'] = request.sid
     # Broadcast to everyone (Drivers will filter by bus_no)
     emit('student_location_update', data, broadcast=True)
+
+@socketio.on('request_stop')
+def handle_stop_request(data):
+    bus_no = data.get('bus_no')
+    stop_name = data.get('stop_name')
+    lat = data.get('lat')
+    lng = data.get('lng')
+
+    req = StopRequest.query.filter_by(bus_no=bus_no, stop_name=stop_name).first()
+    if not req:
+        req = StopRequest(bus_no=bus_no, stop_name=stop_name, lat=lat, lng=lng, count=0)
+        db.session.add(req)
+
+    req.count += 1
+    req.last_updated = datetime.utcnow()
+    db.session.commit()
+
+    emit('stop_update', {
+        'bus_no': bus_no,
+        'stop_name': stop_name,
+        'count': req.count,
+        'lat': lat,
+        'lng': lng
+    }, broadcast=True)
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371000  # meters
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    
+    a = math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 # --- Background Listener for Announcements ---
 def listen_for_announcements():
@@ -743,5 +893,51 @@ def send_multicast_notification(title_bus, body_text):
 if os.environ.get('WERKZEUG_RUN_MAIN') == 'true' or not app.debug:
     gevent.spawn(listen_for_announcements)
 
+# --- NEW: Cancel Stop Request ---
+@socketio.on('cancel_stop')
+def handle_cancel_stop(data):
+    bus_no = data.get('bus_no')
+    stop_name = data.get('stop_name')
+    
+    stop_req = StopRequest.query.filter_by(bus_no=bus_no, stop_name=stop_name).first()
+    if stop_req and stop_req.count > 0:
+        stop_req.count -= 1
+        stop_req.last_updated = datetime.utcnow()
+        db.session.commit()
+        
+        emit('stop_update', {
+            'bus_no': bus_no,
+            'stop_name': stop_name,
+            'count': stop_req.count,
+            'lat': stop_req.lat,
+            'lng': stop_req.lng
+        }, broadcast=True)
+
+def cleanup_stale_requests():
+    """Background task to reset counters older than 1 hour."""
+    while True:
+        try:
+            socketio.sleep(60) # Check every minute
+            with app.app_context():
+                expiration_time = datetime.utcnow() - timedelta(hours=1)
+                stale_requests = StopRequest.query.filter(
+                    StopRequest.last_updated < expiration_time,
+                    StopRequest.count > 0
+                ).all()
+                
+                if stale_requests:
+                    print(f"[CLEANUP] Found {len(stale_requests)} stale requests. Resetting...")
+                    for req in stale_requests:
+                        req.count = 0
+                        req.is_arrived = False
+                        socketio.emit('stop_reset', {
+                            'bus_no': req.bus_no, 
+                            'stop_name': req.stop_name
+                        })
+                    db.session.commit()
+        except Exception as e:
+            print(f"[CLEANUP ERROR] {e}")
+
 if __name__ == '__main__':
+    socketio.start_background_task(cleanup_stale_requests)
     socketio.run(app, debug=True, host='0.0.0.0', port=3000, allow_unsafe_werkzeug=True)
