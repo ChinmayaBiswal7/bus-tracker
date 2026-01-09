@@ -291,6 +291,14 @@ function renderSearchResults(results, container) {
                 locateEntity(res.type, res.id);
                 container.classList.add('hidden');
                 document.getElementById('admin-search').value = '';
+
+                // Close Sidebar on Mobile if open
+                if (window.innerWidth < 768 && window.toggleSidebar) {
+                    const sidebar = document.getElementById('admin-panel');
+                    if (!sidebar.classList.contains('translate-x-full')) {
+                        window.toggleSidebar();
+                    }
+                }
             };
             container.appendChild(el);
         });

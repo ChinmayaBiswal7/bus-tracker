@@ -37,7 +37,15 @@
     <div id="map" class="flex-grow h-full bg-slate-900 z-0"></div>
 
     <!-- ADMIN PANEL OVERLAY -->
-    <div class="fixed top-0 right-0 h-full w-96 glass-panel z-20 flex flex-col shadow-2xl transition-transform transform translate-x-0"
+    <!-- Mobile Toggle -->
+    <button onclick="toggleSidebar()"
+        class="fixed top-4 right-4 z-40 md:hidden p-3 bg-slate-900/80 backdrop-blur-md border border-white/20 rounded-xl text-white shadow-xl active:scale-95 transition-all">
+        <svg id="menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+    </button>
+
+    <div class="fixed top-0 right-0 h-full w-80 md:w-96 glass-panel z-30 flex flex-col shadow-2xl transition-transform transform translate-x-full md:translate-x-0 duration-300 ease-in-out"
         id="admin-panel">
 
         <!-- Header -->

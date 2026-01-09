@@ -4,6 +4,31 @@ let currentTarget = 'student';
 export function initAdminUI() {
     window.setTarget = setTarget;
     window.sendAnnouncement = sendAnnouncement;
+    window.toggleSidebar = toggleSidebar;
+
+    // Mobile specific: Close sidebar when clicking map
+    const mapDiv = document.getElementById('map');
+    if (mapDiv) {
+        mapDiv.addEventListener('click', () => {
+            const sidebar = document.getElementById('admin-panel');
+            // Only close if it's currently open (removed translate-x-full)
+            if (window.innerWidth < 768 && !sidebar.classList.contains('translate-x-full')) {
+                toggleSidebar();
+            }
+        });
+    }
+}
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('admin-panel');
+    const icon = document.getElementById('menu-icon');
+
+    sidebar.classList.toggle('translate-x-full');
+
+    // Optional: Animate icon or change it
+    // If hidden (translate-x-full), show Menu icon
+    // If visible, maybe show Close icon?
+    // For now, simpler is better.
 }
 
 function setTarget(target) {
