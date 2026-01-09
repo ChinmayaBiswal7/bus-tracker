@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Admin Mission Control | Bus Tracker</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+
+    <!-- Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(12px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="flex">
+
+    <!-- MAP CONTAINER -->
+    <div id="map" class="flex-grow h-full bg-slate-900 z-0"></div>
+
+    <!-- ADMIN PANEL OVERLAY -->
+    <div class="fixed top-0 right-0 h-full w-96 glass-panel z-20 flex flex-col shadow-2xl transition-transform transform translate-x-0"
+        id="admin-panel">
+
+        <!-- Header -->
+        <div class="p-6 border-b border-white/10 flex items-center justify-between">
+            <div>
+                <h1 class="text-white font-bold text-xl tracking-tight">Mission Control</h1>
+                <p class="text-xs text-slate-400 font-mono">ADMIN ACCESS GRANTED</p>
+            </div>
+            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        </div>
+
+        <!-- SEARCH SECTION -->
+        <div class="px-6 pt-6 pb-2">
+            <div class="relative group">
+                <input type="text" id="admin-search" placeholder="Locate Bus or Stop..."
+                    class="w-full bg-slate-800/50 border border-slate-700/50 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500 focus:bg-slate-800 transition-all placeholder-slate-500 uppercase font-mono tracking-wider"
+                    autocomplete="off">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-4 w-4 text-slate-500 group-focus-within:text-blue-500 transition-colors" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
+                <!-- Search Results Dropdown -->
+                <div id="admin-search-results"
+                    class="hidden absolute top-full left-0 right-0 mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto z-50 custom-scrollbar">
+                    <!-- Results injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Announcement Section -->
+        <div class="p-6 flex-1 overflow-y-auto">
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Broadcast</h2>
+
+            <!-- Tabs -->
+            <div class="flex bg-slate-800 rounded-lg p-1 mb-4">
+                <button onclick="setTarget('student')" id="tab-student"
+                    class="flex-1 py-2 text-xs font-bold rounded-md bg-blue-600 text-white shadow-sm transition-all">STUDENTS</button>
+                <button onclick="setTarget('driver')" id="tab-driver"
+                    class="flex-1 py-2 text-xs font-bold rounded-md text-slate-400 hover:text-white transition-all">DRIVERS</button>
+            </div>
+
+            <!-- Form -->
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-slate-400 block mb-1">Message Content</label>
+                    <textarea id="announce-msg"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors h-32 resize-none"
+                        placeholder="Type your announcement here..."></textarea>
+                </div>
+
+                <button onclick="sendAnnouncement()" id="btn-send"
+                    class="w-full py-3 bg-white text-slate-900 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                    </svg>
+                    <span>SEND BROADCAST</span>
+                </button>
+            </div>
+
+            <hr class="border-white/5 my-8">
+
+            <!-- Active Buses List (Mini) -->
+            <h2 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Live Fleet</h2>
+            <div id="bus-list-mini" class="space-y-2">
+                <!-- Populated by JS -->
+                <p class="text-xs text-slate-600 italic text-center">Scanning...</p>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="p-4 border-t border-white/10 bg-black/20 flex gap-2">
+            <button onclick="window.location.href='/'"
+                class="flex-1 py-2 border border-slate-700 text-slate-400 rounded-lg text-xs font-bold hover:bg-white/5 transition-colors">
+                HOME
+            </button>
+            <button onclick="logout()"
+                class="flex-1 py-2 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-xs font-bold hover:bg-red-500 hover:text-white transition-colors">
+                LOGOUT
+            </button>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast"
+        class="fixed top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl border border-white/10 flex items-center gap-3 transform -translate-y-20 transition-all duration-500 z-50 opacity-0 pointer-events-none">
+        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        <span class="text-sm font-bold tracking-wide" id="toast-msg">Notification</span>
+    </div>
+
+    <!-- Config -->
+    <script type="module" src="{{ url_for('static', filename='js/firebase-config.js') }}"></script>
+
+    <!-- Admin Modules -->
+    <script type="module" src="{{ url_for('static', filename='js/admin/main.js') }}"></script>
+</body>
+
+</html>

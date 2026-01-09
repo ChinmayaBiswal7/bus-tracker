@@ -1,9 +1,10 @@
 import { auth } from '../firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { initMap, toggleSession, stopSession, setMode, setCrowdStatus } from './tracking.js';
+import { initMap, toggleSession, stopSession, setMode, setCrowdStatus, setServiceType } from './tracking.js';
 import { initAnnouncements } from './announcements.js';
 import { initSchedule, addTimeSlot, saveSchedule } from './schedule.js';
 import { initChat } from './chat.js';
+import { initDriverAnnouncements, markNewsRead } from './driver_announcements.js'; // NEW
 import { togglePanel, closePanels, toggleSidebar } from './ui.js';
 
 // Global Exports for HTML onclick
@@ -14,8 +15,10 @@ window.toggleSession = toggleSession;
 window.stopSession = stopSession;
 window.setMode = setMode;
 window.setCrowdStatus = setCrowdStatus;
+window.setServiceType = setServiceType; // NEW
 window.addTimeSlot = addTimeSlot;
 window.saveSchedule = saveSchedule;
+window.markNewsRead = markNewsRead; // NEW
 window.logout = function () {
     auth.signOut().then(() => window.location.href = '/').catch(console.error);
 };
@@ -38,6 +41,7 @@ onAuthStateChanged(auth, (user) => {
         initAnnouncements();
         initSchedule();
         initChat();
+        initDriverAnnouncements(); // NEW
     } else {
         window.location.href = '/login?role=driver';
     }

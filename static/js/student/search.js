@@ -114,6 +114,7 @@ export class BusStopSearch {
 
         if (trimmedQuery.length < 1) { // Allow 1 char for bus numbers
             this.hideResults();
+            if (window.setBusFilter) window.setBusFilter(''); // RESET SIDEBAR
             return;
         }
 
@@ -158,10 +159,11 @@ export class BusStopSearch {
             // Only search API if query length >= 2 to save calls, unless it's a number
             if (query.length >= 2 || !isNaN(query)) {
                 try {
-                    const response = await fetch(`/api/search-stop?q=${encodeURIComponent(query)}&threshold=0.4`);
+                    const response = await fetch(`/api/search_stops?q=${encodeURIComponent(query)}`);
                     const data = await response.json();
-                    if (data.success && data.results.length > 0) {
-                        stopResults = data.results.map(r => ({ ...r, type: 'stop' }));
+                    // Backend returns direct array of results
+                    if (Array.isArray(data) && data.length > 0) {
+                        stopResults = data.map(r => ({ ...r, type: 'stop' }));
                     }
                 } catch (e) {
                     console.warn("Stop search API failed", e);

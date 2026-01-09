@@ -97,6 +97,11 @@ if (form) {
                 const docRef = doc(db, 'drivers', user.uid);
                 const docSnap = await getDoc(docRef);
                 if (docSnap.exists()) isValidRole = true;
+            } else if (role === 'admin') {
+                // Check if user exists in 'admins' collection
+                const docRef = doc(db, 'admins', user.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) isValidRole = true;
             } else {
                 const docRef = doc(db, 'users', user.uid);
                 const docSnap = await getDoc(docRef);
@@ -110,6 +115,8 @@ if (form) {
                 // This prevents students logging into driver portal
                 if (role === 'driver') {
                     throw new Error("Access Denied: You are not registered as a driver.");
+                } else if (role === 'admin') {
+                    throw new Error("Access Denied: You are not an authorized administrator.");
                 } else {
                     // For student, maybe relaxed?
                 }
@@ -117,7 +124,9 @@ if (form) {
 
             // Redirect with small delay for persistence
             setTimeout(() => {
-                window.location.href = role === 'driver' ? '/driver' : '/student';
+                if (role === 'driver') window.location.href = '/driver';
+                else if (role === 'admin') window.location.href = '/admin';
+                else window.location.href = '/student';
             }, 500);
 
         } catch (error) {

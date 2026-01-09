@@ -54,6 +54,7 @@ if (form) {
             });
 
             // 3. Save Role to Firestore
+            // 3. Save Role to Firestore
             if (role === 'driver') {
                 await setDoc(doc(db, "drivers", user.uid), {
                     name: username,
@@ -62,6 +63,13 @@ if (form) {
                     mobile: mobile,
                     joined: serverTimestamp(),
                     is_active: false // Approval needed? Or default false
+                });
+            } else if (role === 'admin') {
+                await setDoc(doc(db, "admins", user.uid), {
+                    name: username,
+                    email: email,
+                    role: 'admin',
+                    joined: serverTimestamp()
                 });
             } else {
                 await setDoc(doc(db, "users", user.uid), {
@@ -74,7 +82,9 @@ if (form) {
 
             // 4. Redirect
             // alert("Account Created! Redirecting...");
-            window.location.href = role === 'driver' ? '/driver' : '/student';
+            if (role === 'driver') window.location.href = '/driver';
+            else if (role === 'admin') window.location.href = '/admin';
+            else window.location.href = '/student';
 
         } catch (error) {
             console.error(error);

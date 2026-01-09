@@ -17,14 +17,16 @@
 
         <!-- Role Indicator Bar -->
         <div
-            class="absolute top-0 left-0 w-full h-2 {% if role == 'driver' %}bg-emerald-500{% else %}bg-blue-500{% endif %}">
+            class="absolute top-0 left-0 w-full h-2 {% if role == 'driver' %}bg-emerald-500{% elif role == 'admin' %}bg-purple-600{% else %}bg-blue-500{% endif %}">
         </div>
 
         <h2 class="text-3xl font-bold text-white mb-2 text-center">
-            {% if role == 'driver' %}Driver Registration 📝{% else %}Create Account 🚀{% endif %}
+            {% if role == 'driver' %}Driver Registration 📝{% elif role == 'admin' %}Admin Setup 🚀{% else %}Create
+            Account 🚀{% endif %}
         </h2>
         <p class="text-slate-400 text-center mb-8">
-            {% if role == 'driver' %}Join the fleet{% else %}Join the campus network{% endif %}
+            {% if role == 'driver' %}Join the fleet{% elif role == 'admin' %}Secure Mission Control Access{% else %}Join
+            the campus network{% endif %}
         </p>
 
         <div id="error-box"
@@ -35,7 +37,7 @@
             <div>
                 <label class="text-slate-300 text-sm ml-1">Choose Username</label>
                 <input type="text" id="username" required
-                    class="w-full mt-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none {% if role == 'driver' %}focus:border-emerald-500{% else %}focus:border-blue-500{% endif %} transition-colors">
+                    class="w-full mt-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none {% if role == 'driver' %}focus:border-emerald-500{% elif role == 'admin' %}focus:border-purple-500{% else %}focus:border-blue-500{% endif %} transition-colors">
             </div>
             {% if role == 'driver' %}
             <div>
@@ -47,13 +49,13 @@
             <div>
                 <label class="text-slate-300 text-sm ml-1">Email</label>
                 <input type="email" id="email" required
-                    class="w-full mt-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none {% if role == 'driver' %}focus:border-emerald-500{% else %}focus:border-blue-500{% endif %} transition-colors">
+                    class="w-full mt-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none {% if role == 'driver' %}focus:border-emerald-500{% elif role == 'admin' %}focus:border-purple-500{% else %}focus:border-blue-500{% endif %} transition-colors">
             </div>
             <div>
                 <label class="text-slate-300 text-sm ml-1">Password</label>
                 <div class="relative">
                     <input type="password" id="password" required
-                        class="w-full mt-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none {% if role == 'driver' %}focus:border-emerald-500{% else %}focus:border-blue-500{% endif %} transition-colors pr-10">
+                        class="w-full mt-1 bg-slate-700 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none {% if role == 'driver' %}focus:border-emerald-500{% elif role == 'admin' %}focus:border-purple-500{% else %}focus:border-blue-500{% endif %} transition-colors pr-10">
                     <button type="button" onclick="togglePassword()"
                         class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors focus:outline-none">
                         <!-- Eye Icon -->
@@ -75,14 +77,14 @@
                 </div>
             </div>
             <button type="submit" id="submit-btn"
-                class="w-full py-4 {% if role == 'driver' %}bg-emerald-600 hover:bg-emerald-500{% else %}bg-blue-600 hover:bg-blue-500{% endif %} text-white font-bold rounded-xl transition-all transform active:scale-95 shadow-lg mt-4">
+                class="w-full py-4 {% if role == 'driver' %}bg-emerald-600 hover:bg-emerald-500{% elif role == 'admin' %}bg-purple-600 hover:bg-purple-500{% else %}bg-blue-600 hover:bg-blue-500{% endif %} text-white font-bold rounded-xl transition-all transform active:scale-95 shadow-lg mt-4">
                 CREATE ACCOUNT
             </button>
         </form>
 
         <p class="text-slate-500 text-center mt-6 text-sm">
             Already have an account? <a href="/login?role={{ role }}"
-                class="{% if role == 'driver' %}text-emerald-400 hover:text-emerald-300{% else %}text-blue-400 hover:text-blue-300{% endif %} font-bold">Login</a>
+                class="{% if role == 'driver' %}text-emerald-400 hover:text-emerald-300{% elif role == 'admin' %}text-purple-400 hover:text-purple-300{% else %}text-blue-400 hover:text-blue-300{% endif %} font-bold">Login</a>
         </p>
 
         <div class="text-center mt-4">

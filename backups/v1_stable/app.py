@@ -33,10 +33,8 @@ from firebase_admin import messaging
 
 from routes.schedule import schedule_bp
 from routes.contact import contact_bp
-from routes.admin import admin_bp # NEW
 app.register_blueprint(schedule_bp)
 app.register_blueprint(contact_bp)
-app.register_blueprint(admin_bp) # NEW
 
 # --- AI & Other Imports ---
 import os
@@ -200,17 +198,11 @@ def build_routes():
         
         ROUTES_CACHE = routes
         print(f"[INFO] Loaded {len(routes)} routes from Excel.")
-        print(f"[INFO] Loaded {len(routes)} routes from Excel.")
     except Exception as e:
         print(f"[ERROR] Failed to load routes: {e}")
 
 # Load on startup (Reloads when file changes)       
 build_routes()
-
-# --- EXPOSE GLOBALS TO MODULES ---
-server.extensions.StopRequest = StopRequest
-server.extensions.ROUTES_CACHE = ROUTES_CACHE
-server.extensions.db = db
 
 @app.route('/api/routes/<bus_no>')
 def get_route(bus_no):
@@ -667,11 +659,6 @@ def handle_connect():
             'lng': s.lng
         })
 
-@socketio.on('get_buses')
-def handle_get_buses():
-    """Manual request for bus data"""
-    emit('update_buses', get_active_buses_payload())
-
 @socketio.on('disconnect')
 def handle_disconnect():
     bus = Bus.query.filter_by(sid=request.sid).first()
@@ -874,14 +861,11 @@ def listen_for_announcements():
                 
                 print(f"[INFO] New Announcement: {data}")
                 
-                try:
-                    message_text = data.get('message', 'New Announcement')
-                    bus_no = data.get('bus_no', 'BUS')
-                    
-                    # Send Push Notification
-                    send_multicast_notification(bus_no, message_text)
-                except Exception as e:
-                    print(f"[ERROR] Failed to process announcement: {e}")
+                message_text = data.get('message', 'New Announcement')
+                bus_no = data.get('bus_no', 'BUS')
+                
+                # Send Push Notification
+                send_multicast_notification(bus_no, message_text)
 
     # Watch the collection group 'messages'
     col_query = server.extensions.f_db.collection_group('messages') 

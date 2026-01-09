@@ -4,6 +4,9 @@ import os
 import json
 
 f_db = None
+db = None # Populated by app.py (SQLAlchemy)
+StopRequest = None # Populated by app.py
+ROUTES_CACHE = {} # Populated by app.py
 
 def init_firebase():
     global f_db

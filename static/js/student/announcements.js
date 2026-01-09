@@ -100,11 +100,17 @@ function sendLocalNotification(title, body, actions = []) {
     notifications.notifyAnnouncement(title, body, actions, options);
 }
 
+// Track Admin Listener
+let unsubscribeAdmin = null;
+
 export function initAnnouncements() {
     const overlayEl = document.getElementById('announcement-overlay');
     const badgeEl = document.getElementById('badge-count');
 
-    // Listener
+    // 1. Subscribe to Admin/General Messages
+    subscribeToAdminMessages();
+
+    // Listener for Bus Messages
     const qBuses = query(collection(db, "announcements"), orderBy("last_updated", "desc"), limit(50));
 
     const appLoadTime = new Date(); // Time when this script loaded
@@ -226,9 +232,70 @@ export function closeAnnouncements() {
     if (overlayEl) overlayEl.classList.add('hidden');
 }
 
+function subscribeToAdminMessages() {
+    // Listen to GLOBAL messages
+    const q = query(
+        collection(db, "university", "kiit", "messages"),
+        orderBy("timestamp", "desc"),
+        limit(20)
+    );
+
+    unsubscribeAdmin = onSnapshot(q, (snapshot) => {
+        const listEl = document.getElementById('full-announcement-list');
+        if (!listEl) return;
+
+        // Create or Get Admin Section
+        let adminSection = document.getElementById('admin-announcements-section');
+        if (!adminSection) {
+            adminSection = document.createElement('div');
+            adminSection.id = 'admin-announcements-section';
+            adminSection.className = "mb-4 pb-4 border-b border-slate-700/50";
+            adminSection.innerHTML = `
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="p-1.5 bg-purple-500/20 rounded-md">
+                        <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xs font-bold text-purple-300 uppercase tracking-wider">University Updates</h3>
+                </div>
+                <div id="admin-messages-list" class="space-y-2"></div>
+            `;
+            // Insert at top
+            listEl.prepend(adminSection);
+        }
+
+        const container = document.getElementById('admin-messages-list');
+        container.innerHTML = ''; // Re-render logic for simplicity on update
+
+        if (snapshot.empty) {
+            adminSection.remove(); // Hide if empty
+            return;
+        }
+
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            renderMessage(container, { ...data, is_admin: true });
+
+            // Notification Check (Simple: if added and recent)
+            if (!snapshot.metadata.hasPendingWrites) {
+                // checking if this is a new message could be done by comparing timestamp
+                // But simplified: Notification logic is handled by app.forEach bus logic usually.
+                // Here we just render.
+            }
+        });
+    });
+}
+
 function renderBusList() {
     const listEl = document.getElementById('full-announcement-list');
     if (!listEl) return; // Should exist if ID is correct
+
+    // Ensure Admin Section is Top (if exists)
+    const adminSection = document.getElementById('admin-announcements-section');
+    if (adminSection) {
+        listEl.prepend(adminSection);
+    }
 
     const currentIds = new Set(activeBuses.map(b => b.id));
 
@@ -344,10 +411,17 @@ function renderMessage(container, data) {
         dateStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ', ' + d.toLocaleDateString();
     }
 
+    const isAdmin = data.is_admin || false;
+    const borderClass = isAdmin ? "border-amber-500 bg-amber-900/10" : "border-blue-500 bg-slate-800/40";
+    const badge = isAdmin ? `<span class="inline-block bg-amber-500 text-slate-900 text-[9px] font-bold px-1.5 py-0.5 rounded-sm mr-2 align-middle">ADMIN</span>` : "";
+
     const item = document.createElement('div');
-    item.className = "bg-slate-800/40 border-l-2 border-blue-500 pl-3 py-1";
+    item.className = `${borderClass} border-l-2 pl-3 py-2 rounded-r-lg mb-2`;
     item.innerHTML = `
-    <p class="text-slate-300 text-sm leading-relaxed mb-1">${data.message}</p>
+    <div class="mb-1">
+        ${badge}
+        <span class="text-slate-200 text-sm leading-relaxed">${data.message}</span>
+    </div>
     <p class="text-[10px] text-slate-500">${dateStr}</p>
 `;
     container.appendChild(item);
