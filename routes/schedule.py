@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from firebase_admin import firestore
+from firebase_admin import firestore, messaging
 import server.extensions
 from datetime import datetime
 
@@ -42,6 +42,22 @@ def publish_schedule():
             "bus_no": bus_no
         }, merge=True)
         print("[DEBUG] Metadata updated. Success!")
+
+        # --- SEND NOTIFICATION ---
+        try:
+            print("[INFO] Sending Schedule Notification...")
+            # Topic 'news' is subscribed to by all students
+            msg = messaging.Message(
+                notification=messaging.Notification(
+                    title="📅 Schedule Update",
+                    body=f"New schedule published for Bus {bus_no} on {date}."
+                ),
+                topic='news'
+            )
+            response = messaging.send(msg)
+            print(f"[INFO] Schedule Notification sent: {response}")
+        except Exception as ne:
+             print(f"[WARN] Failed to send notification: {ne}")
 
         return jsonify({"status": "success", "message": "Schedule published"}), 200
 
