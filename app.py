@@ -959,4 +959,6 @@ def cleanup_stale_requests():
 
 if __name__ == '__main__':
     socketio.start_background_task(cleanup_stale_requests)
-    socketio.run(app, debug=True, host='0.0.0.0', port=3000, allow_unsafe_werkzeug=True)
+    # Use PORT from environment for Render, default to 3000 locally
+    port = int(os.environ.get('PORT', 3000))
+    socketio.run(app, debug=True, host='0.0.0.0', port=port, allow_unsafe_werkzeug=True)
