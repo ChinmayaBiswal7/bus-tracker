@@ -243,3 +243,86 @@ input[type="time"] {
         opacity: 0;
     }
 }
+
+/* --- LIGHT MODE SUPPORT --- */
+body.light-mode {
+    background: #f1f5f9;
+    /* Slate 100 */
+    color: #0f172a;
+}
+
+body.light-mode header {
+    background: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    color: #0f172a;
+}
+
+body.light-mode header h1,
+body.light-mode header .text-white {
+    color: #0f172a !important;
+}
+
+body.light-mode header .text-slate-300,
+body.light-mode header .text-slate-400 {
+    color: #64748b !important;
+    /* Slate 500 */
+}
+
+body.light-mode header button:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .glass-card,
+body.light-mode .sidebar {
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+body.light-mode .nav-icon {
+    color: #64748b;
+}
+
+body.light-mode .nav-icon:hover:not(.active) {
+    background: rgba(0, 0, 0, 0.05);
+    color: #0f172a;
+}
+
+body.light-mode .pop-panel h2,
+body.light-mode .pop-panel h3,
+body.light-mode .text-white {
+    color: #0f172a !important;
+}
+
+body.light-mode .text-slate-400,
+body.light-mode .text-slate-500 {
+    color: #64748b !important;
+}
+
+body.light-mode input,
+body.light-mode textarea {
+    background: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+}
+
+body.light-mode .bg-slate-800,
+body.light-mode .bg-slate-900 {
+    background-color: #f8fafc !important;
+    /* Slate 50 */
+    border-color: #e2e8f0 !important;
+}
+
+body.light-mode #map {
+    filter: none !important;
+    /* Reset map invert */
+}
+
+body.light-mode .radar-ring {
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+body.light-mode .chat-ai {
+    background: rgba(0, 0, 0, 0.05);
+    color: #334155;
+}

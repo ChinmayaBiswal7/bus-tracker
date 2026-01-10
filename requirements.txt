@@ -11,4 +11,5 @@ grpcio
 requests
 pandas
 openpyxl
+python-dotenv
 

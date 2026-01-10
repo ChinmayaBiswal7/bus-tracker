@@ -156,8 +156,8 @@ export class BusStopSearch {
 
             // 2. Search Stops (API)
             let stopResults = [];
-            // Only search API if query length >= 2 to save calls, unless it's a number
-            if (query.length >= 2 || !isNaN(query)) {
+            // Only search API if query length >= 1
+            if (query.length >= 1) {
                 try {
                     const response = await fetch(`/api/search_stops?q=${encodeURIComponent(query)}`);
                     const data = await response.json();
@@ -291,19 +291,54 @@ export class BusStopSearch {
             }
         }
 
-        if (!resultsContainer) return;
+        if (activeBusCount === 0) {
+            // Check server health to confirm if it's a bug
+            fetch('/api/debug/status')
+                .then(res => res.json())
+                .then(debug => {
+                    if (debug.routes_loaded === 0) {
+                        resultsContainer.innerHTML = `
+                                 <div class="p-6 text-center text-red-400">
+                                     <p>⚠️ <strong>Server Data Error</strong></p>
+                                     <p class="text-xs mt-2">Routes failed to load on backend.</p>
+                                     <p class="text-[10px] mt-1">Loaded: ${debug.routes_loaded} routes</p>
+                                 </div>
+                             `;
+                    } else {
+                        // Correctly show no results
+                        resultsContainer.innerHTML = `
+                                 <div class="p-6 text-center text-slate-400">
+                                     <svg class="w-12 h-12 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                               d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                     </svg>
+                                     <p>No matches for "<strong class="text-white">${query}</strong>"</p>
+                                     <p class="text-xs mt-2 text-slate-500">Scanned ${activeBusCount} active buses.</p>
+                                     <p class="text-[10px] text-slate-600 mt-1">Try "Hostel" or "Square"</p>
+                                 </div>
+                             `;
+                    }
+                })
+                .catch(() => {
+                    resultsContainer.innerHTML = `
+                                <div class="p-6 text-center text-slate-400">
+                                    <p>No matches for "<strong>${query}</strong>"</p>
+                                </div>
+                            `;
+                });
+        } else {
+            resultsContainer.innerHTML = `
+                    <div class="p-6 text-center text-slate-400">
+                        <svg class="w-12 h-12 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p>No matches for "<strong class="text-white">${query}</strong>"</p>
+                        <p class="text-xs mt-2 text-slate-500">Scanned ${activeBusCount} active buses & stops.</p>
+                    </div>
+                `;
+        }
 
-        resultsContainer.innerHTML = `
-            <div class="p-6 text-center text-slate-400">
-                <svg class="w-12 h-12 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <p>No matches for "<strong class="text-white">${query}</strong>"</p>
-                <p class="text-xs mt-2 text-slate-500">Scanned ${activeBusCount} active buses & stops.</p>
-                <p class="text-[10px] text-slate-600 mt-1">Try "Hostel" or "Square"</p>
-            </div>
-        `;
         resultsContainer.style.display = 'block';
     }
 

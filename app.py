@@ -40,6 +40,8 @@ app.register_blueprint(admin_bp) # NEW
 
 # --- AI & Other Imports ---
 import os
+from dotenv import load_dotenv
+load_dotenv() # Load .env file
 from groq import Groq
 
 # Initialize Groq (Llama 3)
@@ -178,7 +180,10 @@ def build_routes():
     """Reads Excel and builds a dictionary of routes."""
     global ROUTES_CACHE
     try:
-        excel_path = "data/bus_routes.xlsx"
+        # FIXED: Use absolute path for reliability
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        excel_path = os.path.join(base_dir, "data", "bus_routes.xlsx")
+        
         if not os.path.exists(excel_path):
             print(f"[WARN] Route file not found: {excel_path}")
             return
@@ -189,7 +194,7 @@ def build_routes():
         
         routes = {}
         for bus_no, group in df.groupby("bus_no"):
-            # Force stop_order to be int for correct sorting (1, 2, 10 not 1, 10, 2)
+            # Force stop_order to be int for correct sorting
             group['stop_order'] = pd.to_numeric(group['stop_order'], errors='coerce')
             group = group.sort_values("stop_order")
             
@@ -199,8 +204,7 @@ def build_routes():
             }
         
         ROUTES_CACHE = routes
-        print(f"[INFO] Loaded {len(routes)} routes from Excel.")
-        print(f"[INFO] Loaded {len(routes)} routes from Excel.")
+        print(f"[INFO] Loaded {len(routes)} routes from {excel_path}")
     except Exception as e:
         print(f"[ERROR] Failed to load routes: {e}")
 
@@ -211,6 +215,16 @@ build_routes()
 server.extensions.StopRequest = StopRequest
 server.extensions.ROUTES_CACHE = ROUTES_CACHE
 server.extensions.db = db
+
+@app.route('/api/debug/status')
+def debug_status():
+    """Debug endpoint to check server health"""
+    return jsonify({
+        "routes_loaded": len(ROUTES_CACHE),
+        "routes_keys": list(ROUTES_CACHE.keys())[:5], # Show first 5 buses
+        "map_active_buses": len(Bus.query.filter_by(is_active=True).all()),
+        "search_engine_active": bool(search_engine)
+    })
 
 @app.route('/api/routes/<bus_no>')
 def get_route(bus_no):
@@ -238,6 +252,13 @@ def search_stops():
     if not query:
         return jsonify([])
 
+    # SAFETY CHECK: Reload routes if cache is empty
+    global ROUTES_CACHE
+    if not ROUTES_CACHE:
+        print("[WARN] ROUTES_CACHE empty during search. Reloading...")
+        build_routes()
+
+
     # 1. Gather all unique stops and their buses
     stop_map = {} # "Stop Name" -> Set(Bus Numbers)
     # 1. Gather all unique stop names
@@ -248,19 +269,36 @@ def search_stops():
     
     unique_stops = list(all_stops)
     
-    # 2. Find matches
-    # PRIORITY A: Direct Substring (e.g. "kiit" in "KIIT Campus 6")
-    matches = [s for s in unique_stops if query in s.lower()]
+    # 2. Find matches - "Google-like" Priority
+    matches = []
+    
+    # Priority 1: Starts With (Case Insensitive)
+    starts_with = [s for s in unique_stops if s.lower().startswith(query)]
+    starts_with.sort() # Alphabetical
+    
+    # Priority 2: Contains (Case Insensitive)
+    contains = [s for s in unique_stops if query in s.lower() and s not in starts_with]
+    contains.sort()
+    
+    matches.extend(starts_with)
+    matches.extend(contains)
 
-    # PRIORITY B: Fuzzy Match (only if specific enough)
-    if len(query) > 3:
-        fuzzy_matches = difflib.get_close_matches(query, unique_stops, n=5, cutoff=0.5)
-        # Add fuzzy matches if not already in substring matches
-        for m in fuzzy_matches:
-            if m not in matches:
-                matches.append(m)
+    # Priority 3: Fuzzy Match (Approximate)
+    # Enable for shorter queries too to handle "simr" -> "similar"
+    if len(query) >= 2:
+        # Create map for case-insensitive fuzzy matching
+        # "kiit" -> "KIIT Campus 6"
+        lower_map = {s.lower(): s for s in unique_stops}
+        
+        # Get close matches against LOWER case keys
+        fuzzy_sims = difflib.get_close_matches(query, lower_map.keys(), n=5, cutoff=0.4)
+        
+        for sim in fuzzy_sims:
+            original_name = lower_map[sim]
+            if original_name not in matches:
+                matches.append(original_name)
 
-    print(f"[DEBUG] Search '{query}' -> Found Stops: {matches}")
+    print(f"[DEBUG] Search '{query}' -> Found Stops: {len(matches)}")
 
     # 3. Map Stops -> Buses
     results = []

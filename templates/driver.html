@@ -21,6 +21,8 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
         rel="stylesheet">
     <script src="/static/pwa-update.js"></script>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0f172a">
 
     <link rel="stylesheet" href="/static/css/driver.css">
 </head>
@@ -48,9 +50,31 @@
             <h1 class="text-lg font-bold text-white tracking-tight">Driver OS</h1>
         </div>
         <!-- Status Indicators -->
-        <div class="flex items-center gap-2">
-            <div id="statusDot" class="w-2.5 h-2.5 rounded-full bg-slate-600 ring-2 ring-slate-800"></div>
-            <span id="serverStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Idle</span>
+        <div class="flex items-center gap-3">
+            <!-- Top Install Button -->
+            <button id="header-install-btn"
+                class="hidden bg-blue-600/90 p-1.5 rounded-full border border-blue-500 text-white hover:bg-blue-500 transition-all shadow-lg animate-pulse"
+                title="Install App">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button id="theme-toggle"
+                class="bg-slate-800/80 p-1.5 rounded-full border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                </svg>
+            </button>
+
+            <div class="flex items-center gap-2">
+                <div id="statusDot" class="w-2.5 h-2.5 rounded-full bg-slate-600 ring-2 ring-slate-800"></div>
+                <span id="serverStatus"
+                    class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Idle</span>
+            </div>
         </div>
     </header>
 
@@ -124,7 +148,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
-                <span class="md:hidden font-bold text-sm">Telemetry</span>
+                <span class="md:hidden font-bold text-sm">Speedometer</span>
             </div>
         </div>
 
@@ -149,6 +173,8 @@
                 class="cursor-pointer w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-xs font-bold text-white border border-white/20 mb-2 md:mb-4 hidden md:flex hover:bg-slate-600 transition-colors">
                 DS
             </div>
+
+
             <div class="nav-icon mb-0 flex items-center justify-start pl-6 md:justify-center md:pl-0 gap-4 md:gap-0 p-3 md:p-0 w-full md:w-12 md:h-12"
                 onclick="logout()" style="color: #ef4444;">
                 <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -160,6 +186,59 @@
             </div>
         </div>
     </div>
+
+    <!-- PWA Script & Theme Logic -->
+    <script>
+        // --- PWA Install Logic ---
+        let deferredPrompt;
+        const headerInstallBtn = document.getElementById('header-install-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+
+            if (headerInstallBtn) headerInstallBtn.classList.remove('hidden');
+
+            const promptInstall = async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`User response: ${outcome}`);
+                    deferredPrompt = null;
+                    if (headerInstallBtn) headerInstallBtn.classList.add('hidden');
+                }
+            };
+
+            if (headerInstallBtn) headerInstallBtn.onclick = promptInstall;
+        });
+
+        window.addEventListener('appinstalled', () => {
+            if (headerInstallBtn) headerInstallBtn.classList.add('hidden');
+            deferredPrompt = null;
+        });
+
+        // --- Theme Toggle Logic ---
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        // Check saved theme
+        if (localStorage.getItem('theme') === 'light') {
+            body.classList.add('light-mode');
+        }
+
+        if (themeToggleBtn) {
+            themeToggleBtn.addEventListener('click', () => {
+                body.classList.toggle('light-mode');
+                const isLight = body.classList.contains('light-mode');
+                localStorage.setItem('theme', isLight ? 'light' : 'dark');
+
+                // Optional: Update icon
+                themeToggleBtn.innerHTML = isLight
+                    ? `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`
+                    : `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>`;
+            });
+        }
+    </script>
 
 
     <!-- PANEL 1: DRIVE CONFIG (Redesigned "Flash Card") -->
@@ -414,7 +493,7 @@
     <div id="panel-speed" class="pop-panel glass-card p-5 flex flex-col items-center">
         <!-- ... (Existing Speedometer Content) ... -->
         <div class="w-full flex justify-between items-center mb-2">
-            <h3 class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Live Telemetry</h3>
+            <h3 class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Speedometer</h3>
             <button onclick="closePanels()"
                 class="mobile-close p-1.5 bg-slate-700/50 rounded-full text-slate-400 hover:text-white">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

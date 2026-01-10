@@ -6,12 +6,12 @@ const socket = io();
 
 export function initMap() {
     // Center on Bhubaneswar
-    map = L.map('map', { zoomControl: false }).setView([20.2961, 85.8245], 13);
+    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20.2961, 85.8245], 13);
 
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    // L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap, © CartoDB',
+        attribution: '',
         subdomains: 'abcd',
         maxZoom: 20
     }).addTo(map);

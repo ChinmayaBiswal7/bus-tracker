@@ -139,6 +139,11 @@ self.addEventListener('fetch', (event) => {
                     return response;
                 }
 
+                // IMPORTANT: Do NOT cache POST requests (or anything other than GET)
+                if (event.request.method !== 'GET') {
+                    return response;
+                }
+
                 // Clone response to cache
                 const responseToCache = response.clone();
                 caches.open(CACHE_NAME)

@@ -45,13 +45,13 @@ socket.on('stop_reset', (data) => {
 
 // Initialize Map
 export function initMap() {
-    map = L.map('map', { zoomControl: false }).setView([20.2961, 85.8245], 13);
+    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([20.2961, 85.8245], 13);
     window.map = map; // For debug/global access if needed
 
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    // L.control.zoom({ position: 'bottomright' }).addTo(map); // Removed User Request
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap, © CartoDB',
+        attribution: '',
         subdomains: 'abcd',
         maxZoom: 20
     }).addTo(map);

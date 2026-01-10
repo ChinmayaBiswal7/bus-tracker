@@ -280,6 +280,9 @@ function handleGPS(pos, busNo, stage) {
         }
         if (statusDot) statusDot.className = "w-2.5 h-2.5 rounded-full bg-green-500 ring-2 ring-green-900 transition-colors";
 
+        // Auto-close Mission Control Panel on success
+        if (window.closePanels) window.closePanels();
+
         // Update Marker Icon
         const newIcon = (activeMode === 'EV') ? createEvIcon() : createBusIcon();
         if (userMarker) userMarker.setIcon(newIcon);
